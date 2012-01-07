@@ -7,52 +7,26 @@ import java.util.TreeSet;
 
 public class KeyTimestamps {
 	
-	private NavigableSet<Long> readTimestamps;
-	private NavigableSet<Long> writeTimestamps;
+	private NavigableSet<VersionTimestamp> readTimestamps;
 	
 	public KeyTimestamps() {
 		super();
-		this.readTimestamps = new TreeSet<Long>();
-		this.writeTimestamps = new TreeSet<Long>();
+		this.readTimestamps = new TreeSet<VersionTimestamp>();
 	}
 
-	public KeyTimestamps(Collection<Long> readTimestamps,
-			Collection<Long> writeTimestamps) {
+	public KeyTimestamps(Collection<VersionTimestamp> readTimestamps,
+			Collection<VersionTimestamp> writeTimestamps) {
 		super();
-		this.readTimestamps = new TreeSet<Long>(readTimestamps);
-		this.writeTimestamps = new TreeSet<Long>(writeTimestamps);
+		this.readTimestamps = new TreeSet<VersionTimestamp>(readTimestamps);
 	}
 
-	public Collection<Long> getReadTimestamps() {
+	public Collection<VersionTimestamp> getReadTimestamps() {
 		return Collections.unmodifiableCollection(readTimestamps);
 	}
 
-	public void setReadTimestamps(Collection<Long> readTimestamps) {
-		this.readTimestamps = new TreeSet<Long>(readTimestamps);
+	public void setReadTimestamps(Collection<VersionTimestamp> readTimestamps) {
+		this.readTimestamps = new TreeSet<VersionTimestamp>(readTimestamps);
 	}
 
-	public Collection<Long> getWriteTimestamps() {
-		return Collections.unmodifiableCollection(writeTimestamps);
-	}
-
-	public void setWriteTimestamps(Collection<Long> writeTimestamps) {
-		this.writeTimestamps = new TreeSet<Long>(writeTimestamps);
-	}
-	
-	public void addReadTimestamp(Long timestamp) {
-		readTimestamps.add(timestamp);
-	}
-
-	public void addWriteTimestamp(Long timestamp) {
-		writeTimestamps.add(timestamp);
-	}
-	
-	public Long getPrecedingReadTimestamp(Long timestamp) {
-		return readTimestamps.floor(timestamp);
-	}
-
-	public Long getPrecedingWriteTimestamp(Long timestamp) {
-		return writeTimestamps.floor(timestamp);
-	}
 	
 }
