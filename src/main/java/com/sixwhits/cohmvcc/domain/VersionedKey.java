@@ -1,11 +1,26 @@
 package com.sixwhits.cohmvcc.domain;
 
+import java.io.Serializable;
+
+import com.tangosol.io.pof.annotation.Portable;
+import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.cache.KeyAssociation;
 
-public class VersionedKey<K> implements KeyAssociation {
+@Portable
+public class VersionedKey<K> implements KeyAssociation, Serializable {
 	
-	private final K nativeKey;
-	private final TransactionId txTimeStamp;
+	private static final long serialVersionUID = 8459004703379236862L;
+	
+	public static final int POF_KEY = 0;
+	@PortableProperty(POF_KEY)
+	private K nativeKey;
+	
+	public static final int POF_TX = 1;
+	@PortableProperty(POF_TX)
+	private TransactionId txTimeStamp;
+	
+	public VersionedKey() {
+	}
 	
 	public VersionedKey(K nativeKey, TransactionId txTimeStamp) {
 		super();

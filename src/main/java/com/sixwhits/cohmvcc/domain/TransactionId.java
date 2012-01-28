@@ -1,12 +1,34 @@
 package com.sixwhits.cohmvcc.domain;
 
+import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
-public class TransactionId implements Comparable<TransactionId> {
+import com.tangosol.io.pof.annotation.Portable;
+import com.tangosol.io.pof.annotation.PortableProperty;
+
+@Portable
+public class TransactionId implements Comparable<TransactionId>, Serializable {
     
-    private final long timeStampMillis;
-    private final int contextId;
-    private final int subSequence;
+	private static final long serialVersionUID = 1887978179867482252L;
+	
+	public static final int POF_TS = 0;
+	@PortableProperty(POF_TS)
+    private long timeStampMillis;
+	
+	public static final int POF_CONTEXT = 1;
+	@PortableProperty(POF_CONTEXT)
+    private int contextId;
+	
+	public static final int POF_SUBSEQ = 2;
+	@PortableProperty(POF_SUBSEQ)
+    private int subSequence;
 
+	public TransactionId() {
+        super();
+	}
+	
     public TransactionId(long timeStampMillis, int contextId, int subSequence) {
         super();
         this.timeStampMillis = timeStampMillis;
@@ -77,6 +99,14 @@ public class TransactionId implements Comparable<TransactionId> {
         }
         return true;
     }
+
+    private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+	@Override
+	public String toString() {
+		return "TransactionId [" + dateFormat.format(new Date(timeStampMillis))
+				+ "(" + contextId + ")(" + subSequence
+				+ ")]";
+	}
 
     
 }

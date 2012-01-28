@@ -1,10 +1,28 @@
 package com.sixwhits.cohmvcc.domain;
 
-public class TransactionalValue<V> {
-    private final TransactionStatus status;
-    private final V value;
+import java.io.Serializable;
+
+import com.tangosol.io.pof.annotation.Portable;
+import com.tangosol.io.pof.annotation.PortableProperty;
+
+@Portable
+public class TransactionalValue<V> implements Serializable {
+	
+	private static final long serialVersionUID = -51935479594043900L;
+	
+	public static final int POF_STATUS = 0;
+	@PortableProperty(POF_STATUS)
+	private TransactionStatus status;
+
+	public static final int POF_VALUE = 1;
+	@PortableProperty(POF_VALUE)
+    private V value;
     
-    public TransactionalValue(TransactionStatus status, V value) {
+    public TransactionalValue() {
+		super();
+	}
+
+	public TransactionalValue(TransactionStatus status, V value) {
         super();
         this.status = status;
         this.value = value;
@@ -38,7 +56,8 @@ public class TransactionalValue<V> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        TransactionalValue other = (TransactionalValue) obj;
+        @SuppressWarnings("rawtypes")
+		TransactionalValue other = (TransactionalValue) obj;
         if (status != other.status) {
             return false;
         }
@@ -56,7 +75,5 @@ public class TransactionalValue<V> {
     public String toString() {
         return value + "...[" + status + "]";
     }
-    
-    
 
 }
