@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.index;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -66,19 +67,27 @@ public class MVCCSurfaceFilterGridTest {
 		putTestValue(testCache, 100, BASETIME, "oldest version");
 		putTestValue(testCache, 100, BASETIME +1000, "medium version");
 		putTestValue(testCache, 100, BASETIME +2000, "newest version");
+		putTestValue(testCache, 101, BASETIME +1000, "oldest version");
+		putTestValue(testCache, 101, BASETIME +2000, "medium version");
+		putTestValue(testCache, 101, BASETIME +3000, "newest version");
+		putTestValue(testCache, 102, BASETIME, "oldest version");
+		putTestValue(testCache, 102, BASETIME +100, "medium version");
+		putTestValue(testCache, 102, BASETIME +200, "newest version");
+		
+		Map<VersionedKey<Integer>,TransactionalValue<String>> expected = new HashMap<VersionedKey<Integer>,TransactionalValue<String>>();
+		putTestValue(expected, 100, BASETIME, "oldest version");
+		putTestValue(expected, 102, BASETIME +200, "newest version");
 		
 		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue<String>>> result = queryForTime(testCache, BASETIME+999);
 		
-		Assert.assertEquals(1, result.size());
-		Map.Entry<VersionedKey<Integer>,TransactionalValue<String>> entry = result.iterator().next();
-		VersionedKey<Integer> k = (VersionedKey<Integer>) entry.getKey();
-		Assert.assertEquals(Integer.valueOf(100), k.getNativeKey());
-		Assert.assertEquals(BASETIME, k.getTxTimeStamp().getTimeStampMillis());
-		
+		Assert.assertEquals(2, result.size());
+		Assert.assertTrue(result.containsAll(expected.entrySet()));
+		Assert.assertTrue(expected.entrySet().containsAll(result));
 		
 	}
 	
-	private void putTestValue(NamedCache cache, int key, long timestamp, String value) {
+	@SuppressWarnings("unchecked")
+	private void putTestValue(@SuppressWarnings("rawtypes") Map cache, int key, long timestamp, String value) {
 		VersionedKey<Integer> vkey = new VersionedKey<Integer>(key, new TransactionId(timestamp, 0, 0));
 		TransactionalValue<String> tvalue = new TransactionalValue<String>(TransactionStatus.committed, value);
 		cache.put(vkey, tvalue);
