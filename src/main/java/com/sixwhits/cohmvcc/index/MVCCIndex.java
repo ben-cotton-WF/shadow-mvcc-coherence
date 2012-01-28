@@ -30,7 +30,6 @@ public class MVCCIndex<K> implements MapIndex {
 
 	private ConcurrentMap<K, NavigableMap<TransactionId,Binary>> index = new ConcurrentHashMap<K, NavigableMap<TransactionId,Binary>>();
 	
-	@SuppressWarnings("unused")
 	private BackingMapContext bmc;
 	private PofExtractor keyExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY);
 	private PofExtractor tsExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_TX), AbstractExtractor.KEY);
@@ -73,19 +72,15 @@ public class MVCCIndex<K> implements MapIndex {
 //		}
 //	}
 
-	public Set floorSet(Set candidateSet, TransactionId ts) {
-		Set result = new HashSet();
-		for (Object candidate : candidateSet) {
-			Object obj;
-			if (candidate instanceof Binary) {
-				Serializer serializer = bmc.getManagerContext().getCacheService().getSerializer();
-				VersionedKey<K> vk = (VersionedKey<K>) ExternalizableHelper.fromBinary((Binary) candidate, serializer);
-				Binary floorKey = floor(vk.getNativeKey(), ts);
-				if (floorKey != null) {
-					result.add(floorKey);
-				}
-			} else {
-				throw new UnsupportedOperationException("Can't yet handle non-binary candidate sets");
+	public Set<Binary> floorSet(Set<Binary> candidateSet, TransactionId ts) {
+		Set<Binary> result = new HashSet<Binary>();
+		for (Binary candidate : candidateSet) {
+			Serializer serializer = bmc.getManagerContext().getCacheService().getSerializer();
+			@SuppressWarnings("unchecked")
+			VersionedKey<K> vk = (VersionedKey<K>) ExternalizableHelper.fromBinary(candidate, serializer);
+			Binary floorKey = floor(vk.getNativeKey(), ts);
+			if (floorKey != null) {
+				result.add(floorKey);
 			}
 		}
 		return result;
@@ -110,7 +105,7 @@ public class MVCCIndex<K> implements MapIndex {
 	}
 		
 	@Override
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void insert(Entry entry) {
 		K sKey;		
 		TransactionId ts;
@@ -124,7 +119,7 @@ public class MVCCIndex<K> implements MapIndex {
 	}
 
 	@Override
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void delete(Entry entry) {
 		K sKey;		
 		TransactionId ts;

@@ -12,7 +12,6 @@ import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
 import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
 
-import com.oracle.common.collections.AbstractKeyBasedMap.EntrySet;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionStatus;
 import com.sixwhits.cohmvcc.domain.TransactionalValue;
@@ -53,6 +52,7 @@ public class MVCCSurfaceFilterGridTest {
 		putTestValue(testCache, 100, BASETIME, "oldest version");
 		putTestValue(testCache, 100, BASETIME +1000, "medium version");
 		putTestValue(testCache, 100, BASETIME +2000, "newest version");
+		@SuppressWarnings("rawtypes")
 		Set result = testCache.entrySet(new EqualsFilter(new PofExtractor(null, TransactionalValue.POF_VALUE), "medium version"));
 		
 		Assert.assertEquals(1, result.size());
@@ -67,10 +67,10 @@ public class MVCCSurfaceFilterGridTest {
 		putTestValue(testCache, 100, BASETIME +1000, "medium version");
 		putTestValue(testCache, 100, BASETIME +2000, "newest version");
 		
-		Set<Map.Entry> result = queryForTime(testCache, BASETIME+999);
+		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue<String>>> result = queryForTime(testCache, BASETIME+999);
 		
 		Assert.assertEquals(1, result.size());
-		Map.Entry entry = result.iterator().next();
+		Map.Entry<VersionedKey<Integer>,TransactionalValue<String>> entry = result.iterator().next();
 		VersionedKey<Integer> k = (VersionedKey<Integer>) entry.getKey();
 		Assert.assertEquals(Integer.valueOf(100), k.getNativeKey());
 		Assert.assertEquals(BASETIME, k.getTxTimeStamp().getTimeStampMillis());
@@ -84,7 +84,8 @@ public class MVCCSurfaceFilterGridTest {
 		cache.put(vkey, tvalue);
 	}
 	
-	private Set queryForTime(NamedCache cache, long timestamp) {
+	@SuppressWarnings("unchecked")
+	private Set<Map.Entry<VersionedKey<Integer>,TransactionalValue<String>>> queryForTime(NamedCache cache, long timestamp) {
 		TransactionId tid = new TransactionId(timestamp, 0, 0);
 		return cache.entrySet(new MVCCSurfaceFilter(tid));
 		
