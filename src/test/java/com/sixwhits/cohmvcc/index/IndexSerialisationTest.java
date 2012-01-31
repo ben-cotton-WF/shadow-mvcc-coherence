@@ -1,6 +1,8 @@
 package com.sixwhits.cohmvcc.index;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Collections;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +24,16 @@ public class IndexSerialisationTest {
 	@Test
 	public void testMVCCSurfaceFilter() {
 		
-		MVCCSurfaceFilter vo = new MVCCSurfaceFilter(new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457));
+		MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457));
+		assertPofFidelity(vo);
+	}
+
+	@Test
+	public void testMVCCSurfaceFilterWithKeys() {
+		
+		MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(
+				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
+				Collections.singleton(new Integer(99)));
 		assertPofFidelity(vo);
 	}
 	

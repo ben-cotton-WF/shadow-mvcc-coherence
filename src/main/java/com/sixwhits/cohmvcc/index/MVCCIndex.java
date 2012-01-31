@@ -12,12 +12,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.tangosol.io.Serializer;
 import com.tangosol.io.pof.reflect.SimplePofPath;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
-import com.tangosol.util.ExternalizableHelper;
+import com.tangosol.util.Converter;
 import com.tangosol.util.MapIndex;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.extractor.AbstractExtractor;
@@ -34,50 +33,20 @@ public class MVCCIndex<K> implements MapIndex {
 	private PofExtractor keyExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY);
 	private PofExtractor tsExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_TX), AbstractExtractor.KEY);
 	
-	public MVCCIndex(BackingMapContext bmc) {
-		this.bmc = bmc; 
-	}
-
-	public Set<K> getNativeKeys() {
-		return index.keySet();
+	public static String getReadLogName(String cacheName) {
+		return cacheName + "-rdl";
 	}
 	
-//	public NavigableSet<TransactionId> getSeries(K sKey) {
-//	    NavigableSet<TransactionId> line = getLine(sKey);
-//		if (line != null) {
-//			synchronized (line) {
-//				return new TreeSet<TransactionId>(line);
-//			}
-//		}
-//		else {
-//			return null;
-//		}
-//	}
-//
-//	public VersionedKey<K> ceiling(K sKey, TransactionId ts) {
-//		NavigableSet<TransactionId> line = getLine(sKey);
-//		if (line != null) {
-//			synchronized(line) {
-//				if (ts == null) {
-//				    TransactionId tsl = line.last();
-//				    return tsl == null ? null : new VersionedKey<K>(sKey, tsl);
-//				} else {
-//					TransactionId tsl = line.ceiling(ts);
-//                    return tsl == null ? null : new VersionedKey<K>(sKey, tsl);
-//				}
-//			}
-//		}
-//		else {
-//			return null;
-//		}
-//	}
+	public MVCCIndex(BackingMapContext bmc) {
+		this.bmc = bmc;
+	}
 
 	public Set<Binary> floorSet(Set<Binary> candidateSet, TransactionId ts) {
 		Set<Binary> result = new HashSet<Binary>();
 		for (Binary candidate : candidateSet) {
-			Serializer serializer = bmc.getManagerContext().getCacheService().getSerializer();
+			Converter converter = bmc.getManagerContext().getKeyFromInternalConverter();
 			@SuppressWarnings("unchecked")
-			VersionedKey<K> vk = (VersionedKey<K>) ExternalizableHelper.fromBinary(candidate, serializer);
+			VersionedKey<K> vk = (VersionedKey<K>) converter.convert(candidate);
 			Binary floorKey = floor(vk.getNativeKey(), ts);
 			if (floorKey != null) {
 				result.add(floorKey);
@@ -173,7 +142,7 @@ public class MVCCIndex<K> implements MapIndex {
 			}
 		}
 	}
-
+	
 	@Override
     public Object get(Object oKey) {
         throw new UnsupportedOperationException();

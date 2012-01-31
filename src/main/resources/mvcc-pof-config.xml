@@ -33,6 +33,11 @@
       <type-id>1006</type-id>
       <class-name>com.sixwhits.cohmvcc.index.MVCCSurfaceFilter</class-name>
     </user-type>
+    <user-type>
+      <type-id>1007</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.IsolationLevel</class-name>
+      <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
+    </user-type>
 
   </user-type-list>
 
