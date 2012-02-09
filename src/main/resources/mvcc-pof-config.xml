@@ -38,6 +38,22 @@
       <class-name>com.sixwhits.cohmvcc.domain.IsolationLevel</class-name>
       <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
     </user-type>
+    <user-type>
+      <type-id>1008</type-id>
+      <class-name>com.sixwhits.cohmvcc.processor.MVCCEntryProcessorWrapper</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1009</type-id>
+      <class-name>com.sixwhits.cohmvcc.exception.FutureReadException</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1010</type-id>
+      <class-name>com.sixwhits.cohmvcc.exception.UncommittedReadException</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1011</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.TransactionSetWrapper</class-name>
+    </user-type>
 
   </user-type-list>
 

@@ -4,76 +4,93 @@ import java.io.Serializable;
 
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
+import com.tangosol.util.Binary;
 
 @Portable
-public class TransactionalValue<V> implements Serializable {
+public class TransactionalValue implements Serializable {
 	
 	private static final long serialVersionUID = -51935479594043900L;
 	
-	public static final int POF_STATUS = 0;
-	@PortableProperty(POF_STATUS)
-	private TransactionStatus status;
+	public static final int POF_COMMITTED = 0;
+	@PortableProperty(POF_COMMITTED)
+	private boolean committed;
+	public static final int POF_DELETED = 1;
+	@PortableProperty(POF_DELETED)
+	private boolean deleted;
 
-	public static final int POF_VALUE = 1;
+	public static final int POF_VALUE = 2;
 	@PortableProperty(POF_VALUE)
-    private V value;
+    private Binary value;
     
     public TransactionalValue() {
 		super();
 	}
 
-	public TransactionalValue(TransactionStatus status, V value) {
+	public TransactionalValue(boolean committed, boolean deleted, Binary value) {
         super();
-        this.status = status;
-        this.value = value;
+        this.committed = committed;
+        this.deleted = deleted;
+        this.value = deleted ? null : value;
     }
 
-    public TransactionStatus getStatus() {
-        return status;
+	public TransactionalValue(boolean committed, boolean deleted) {
+        super();
+        this.committed = committed;
+        this.deleted = deleted;
+        this.value = null;
     }
 
-    public V getValue() {
+    public boolean isCommitted() {
+        return committed;
+    }
+
+    public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setCommitted(boolean committed) {
+		this.committed = committed;
+	}
+
+	public Binary getValue() {
         return value;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((status == null) ? 0 : status.hashCode());
-        result = prime * result + ((value == null) ? 0 : value.hashCode());
-        return result;
-    }
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (committed ? 1231 : 1237);
+		result = prime * result + (deleted ? 1231 : 1237);
+		result = prime * result + ((value == null) ? 0 : value.hashCode());
+		return result;
+	}
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        @SuppressWarnings("rawtypes")
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
 		TransactionalValue other = (TransactionalValue) obj;
-        if (status != other.status) {
-            return false;
-        }
-        if (value == null) {
-            if (other.value != null) {
-                return false;
-            }
-        } else if (!value.equals(other.value)) {
-            return false;
-        }
-        return true;
-    }
+		if (committed != other.committed)
+			return false;
+		if (deleted != other.deleted)
+			return false;
+		if (value == null) {
+			if (other.value != null)
+				return false;
+		} else if (!value.equals(other.value))
+			return false;
+		return true;
+	}
 
-    @Override
-    public String toString() {
-        return value + "...[" + status + "]";
-    }
+	@Override
+	public String toString() {
+		return  (deleted ? "[deleted]" : value) + (committed ? "" : "[uncommitted]");
+	}
+
 
 }

@@ -33,10 +33,6 @@ public class MVCCIndex<K> implements MapIndex {
 	private PofExtractor keyExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY);
 	private PofExtractor tsExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_TX), AbstractExtractor.KEY);
 	
-	public static String getReadLogName(String cacheName) {
-		return cacheName + "-rdl";
-	}
-	
 	public MVCCIndex(BackingMapContext bmc) {
 		this.bmc = bmc;
 	}
@@ -67,8 +63,23 @@ public class MVCCIndex<K> implements MapIndex {
                     return tsl == null ? null : tsl.getValue();
 				}
 			}
+		} else {
+			return null;
 		}
-		else {
+	}
+	public TransactionId ceilingTid(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+		if (line != null) {
+			synchronized(line) {
+				if (ts == null) {
+                    Entry<TransactionId,Binary> tsl = line.lastEntry();
+                    return tsl == null ? null : tsl.getKey();
+				} else {
+					Entry<TransactionId,Binary> tsl = line.ceilingEntry(ts);
+                    return tsl == null ? null : tsl.getKey();
+				}
+			}
+		} else {
 			return null;
 		}
 	}

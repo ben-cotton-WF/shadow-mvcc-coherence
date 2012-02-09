@@ -1,4 +1,4 @@
-package com.sixwhits.cohmvcc.cache;
+package com.sixwhits.cohmvcc.cache.internal;
 
 import java.util.Collection;
 import java.util.Comparator;

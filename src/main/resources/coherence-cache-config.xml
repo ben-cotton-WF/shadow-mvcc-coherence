@@ -23,7 +23,7 @@ Elements" page on the Coherence Wiki (http://wiki.tangosol.com).
 				<init-params>
 					<init-param>
 						<param-type>String</param-type>
-						<param-value>mvcc-pof-config.xml</param-value>
+						<param-value system-property="pof-config-file">mvcc-pof-config.xml</param-value>
 					</init-param>
 				</init-params>
 			</instance>
