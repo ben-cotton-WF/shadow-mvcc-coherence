@@ -21,9 +21,6 @@ public abstract class AbstractMVCCProcessor<K> extends AbstractProcessor {
 
 	private static final long serialVersionUID = -8977457529050193716L;
 	public static final int POF_TID = 1;
-
-	public abstract Object process(Entry entryarg);
-
 	@PortableProperty(POF_TID)
 	protected TransactionId transactionId;
 	public static final int POF_ISOLATION = 2;
@@ -45,6 +42,8 @@ public abstract class AbstractMVCCProcessor<K> extends AbstractProcessor {
 	public AbstractMVCCProcessor() {
 		super();
 	}
+
+	public abstract Object process(Entry entryarg);
 
 	protected NavigableSet<TransactionId> getReadTransactions(Entry entry) {
 		TransactionSetWrapper tsw = (TransactionSetWrapper)entry.getValue();

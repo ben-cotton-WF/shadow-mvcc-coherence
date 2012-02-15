@@ -164,7 +164,7 @@ public class MVCCEntryProcessorWrapperTest {
 		Assert.assertEquals(2, versionCache.size());
 		
 		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
-		Assert.assertEquals(new TransactionalValue(true, true), versionCache.get(new VersionedKey<Integer>(99, ts2)));
+		Assert.assertEquals(new TransactionalValue(true, true, null), versionCache.get(new VersionedKey<Integer>(99, ts2)));
 
 		Assert.assertEquals(keyCache.size(), 1);
 		
@@ -197,7 +197,7 @@ public class MVCCEntryProcessorWrapperTest {
 		Assert.assertEquals(2, versionCache.size());
 		
 		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
-		Assert.assertEquals(new TransactionalValue(true, true), versionCache.get(new VersionedKey<Integer>(99, ts2)));
+		Assert.assertEquals(new TransactionalValue(true, true, null), versionCache.get(new VersionedKey<Integer>(99, ts2)));
 
 		Assert.assertEquals(keyCache.size(), 1);
 

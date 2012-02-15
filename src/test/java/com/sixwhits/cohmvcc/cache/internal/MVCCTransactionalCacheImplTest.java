@@ -1,5 +1,7 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
+import java.util.concurrent.Semaphore;
+
 import junit.framework.Assert;
 
 import org.junit.After;
@@ -44,7 +46,7 @@ public class MVCCTransactionalCacheImplTest {
 	@Test
 	public void testPutCommitRead() {
 		
-		System.out.println("******InsertCommitRead");
+		System.out.println("******PutCommitRead");
 		
 		final TransactionId ts = new TransactionId(BASETIME, 0, 0);
 		Integer theKey = 99;
@@ -55,10 +57,72 @@ public class MVCCTransactionalCacheImplTest {
 		asynchCommit(ts, theKey);
 		
 		TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-		Assert.assertEquals(theValue, cache.get(ts2, IsolationLevel.repeatableRead, false, theKey));
+		Assert.assertEquals(theValue, cache.get(ts2, IsolationLevel.repeatableRead, theKey));
 
 	}
 
+	@Test
+	public void testPutRemoveRead() {
+		
+		System.out.println("******PutRemoveRead");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+60000, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+120000, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		
+		Assert.assertNull(cache.put(ts1, IsolationLevel.repeatableRead, true, theKey, theValue));
+		cache.remove(ts2, IsolationLevel.repeatableRead, true, theKey);
+		
+		Assert.assertNull(cache.get(ts3, IsolationLevel.readCommitted, theKey));
+
+	}
+	@Test
+	public void testPutRemoveReadCommit() {
+		
+		System.out.println("******PutRemoveRead");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+60000, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+120000, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		
+		Assert.assertNull(cache.put(ts1, IsolationLevel.repeatableRead, true, theKey, theValue));
+		cache.remove(ts2, IsolationLevel.repeatableRead, false, theKey);
+		
+		Semaphore flag = new Semaphore(0);
+		asynchCommit(flag, ts2, theKey);
+		
+		Assert.assertEquals(theValue, cache.get(ts3, IsolationLevel.readUncommitted, theKey));
+		
+		flag.release();
+		
+		Assert.assertNull(cache.get(ts3, IsolationLevel.readCommitted, theKey));
+
+	}
+
+	@Test
+	public void testPutRemoveReadRollback() {
+		
+		System.out.println("******PutRemoveRead");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+60000, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+120000, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		
+		Assert.assertNull(cache.put(ts1, IsolationLevel.repeatableRead, true, theKey, theValue));
+		cache.remove(ts2, IsolationLevel.repeatableRead, false, theKey);
+		
+		asynchRollback(ts2, theKey);
+		
+		Assert.assertEquals(theValue, cache.get(ts3, IsolationLevel.readCommitted, theKey));
+
+	}
+	
 	@Test
 	public void testInsertRollbackRead() {
 		
@@ -73,7 +137,7 @@ public class MVCCTransactionalCacheImplTest {
 		asynchRollback(ts, theKey);
 		
 		TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-		Assert.assertNull(cache.get(ts2, IsolationLevel.repeatableRead, false, theKey));
+		Assert.assertNull(cache.get(ts2, IsolationLevel.repeatableRead, theKey));
 
 	}
 
@@ -185,6 +249,21 @@ public class MVCCTransactionalCacheImplTest {
 		}).start();
 	}
 	
+	private void asynchCommit(final Semaphore flag, final TransactionId ts, final Integer key) {
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					flag.acquire();
+				} catch (InterruptedException e) {
+				}
+				NamedCache vcache = CacheFactory.getCache(cache.vcacheName);
+				vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
+			}
+		}).start();
+	}
+
 	private void asynchRollback(final TransactionId ts, final Integer key) {
 		Thread rbThread = new Thread(new Runnable() {
 			

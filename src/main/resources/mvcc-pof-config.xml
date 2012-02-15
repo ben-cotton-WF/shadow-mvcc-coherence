@@ -78,6 +78,14 @@
       <type-id>1017</type-id>
       <class-name>com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper</class-name>
     </user-type>
+    <user-type>
+      <type-id>1018</type-id>
+      <class-name>com.sixwhits.cohmvcc.cache.internal.UnconditionalRemoveProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1019</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper</class-name>
+    </user-type>
 
   </user-type-list>
 

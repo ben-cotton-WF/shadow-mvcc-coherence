@@ -30,14 +30,7 @@ public class TransactionalValue implements Serializable {
         super();
         this.committed = committed;
         this.deleted = deleted;
-        this.value = deleted ? null : value;
-    }
-
-	public TransactionalValue(boolean committed, boolean deleted) {
-        super();
-        this.committed = committed;
-        this.deleted = deleted;
-        this.value = null;
+        this.value = (committed && deleted) ? null : value;
     }
 
     public boolean isCommitted() {
@@ -50,6 +43,9 @@ public class TransactionalValue implements Serializable {
 
 	public void setCommitted(boolean committed) {
 		this.committed = committed;
+		if (deleted) {
+			value = null;
+		}
 	}
 
 	public Binary getValue() {

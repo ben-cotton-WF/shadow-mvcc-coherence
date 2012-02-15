@@ -18,6 +18,7 @@ import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
 import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
+import com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper;
 import com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper;
 import com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor;
 import com.tangosol.net.CacheFactory;
@@ -34,7 +35,6 @@ import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.aggregator.Count;
 import com.tangosol.util.extractor.IdentityExtractor;
-import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.PartitionedFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
 
@@ -58,8 +58,8 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V get(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key) {
-		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, autoCommit, vcacheName);
+	public V get(TransactionId tid, IsolationLevel isolationLevel, K key) {
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
 		return (V) invokeUntilCommitted(key, tid, ep);
 	}
 	
@@ -76,6 +76,13 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		invokeUntilCommitted(key, tid, ep);
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key) {
+		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, new UnconditionalRemoveProcessor(), isolationLevel, autoCommit, vcacheName);
+		return (V) invokeUntilCommitted(key, tid, ep);
+	}
+
 	@Override
 	public Object invoke(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, EntryProcessor agent) {
 		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, agent, isolationLevel, autoCommit, vcacheName);
@@ -88,6 +95,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 				return keyCache.invoke(key, ep);
 			} catch (RuntimeException ex) {
 				if (ex.getCause() instanceof UncommittedReadException) {
+					@SuppressWarnings("unchecked")
 					VersionedKey<K> awaitedKey = (VersionedKey<K>) ((UncommittedReadException)ex.getCause()).getKey();
 					waitForCommit(awaitedKey);
 				} else if (ex.getCause() instanceof FutureReadException) {
@@ -170,12 +178,6 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	public boolean containsValue(TransactionId tid, IsolationLevel isolationLevel, Object value) {
 		// TODO Auto-generated method stub
 		return false;
-	}
-
-	@Override
-	public Object remove(TransactionId tid, Object key) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override

@@ -42,7 +42,7 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 		
 		BinaryEntry entry = (BinaryEntry) entryarg;
 		
-		EntryWrapper childEntry = new EntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+		ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
 		
 		Object result = delegate.process(childEntry);
 		
@@ -58,7 +58,8 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 			
 			Binary binaryKey = (Binary) childEntry.getContext().getKeyToInternalConverter().convert(new VersionedKey<K>((K) childEntry.getKey(), transactionId));
 			BinaryEntry newEntry = (BinaryEntry) childEntry.getBackingMapContext().getBackingMapEntry(binaryKey);
-			TransactionalValue value = new TransactionalValue(autoCommit, childEntry.isRemove(), childEntry.getNewBinaryValue());
+			TransactionalValue value = new TransactionalValue(autoCommit, childEntry.isRemove(),
+					childEntry.isRemove() ? childEntry.getOriginalBinaryValue() : childEntry.getNewBinaryValue());
 			Binary binaryValue = (Binary) childEntry.getContext().getValueToInternalConverter().convert(value);
 			newEntry.updateBinaryValue(binaryValue);
 		}

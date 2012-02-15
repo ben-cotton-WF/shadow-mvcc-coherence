@@ -13,7 +13,6 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
-import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.aggregator.Count;
 import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.processor.ConditionalPut;
@@ -28,12 +27,23 @@ public class InvocableSerialisationTest {
 	}
 
 	@Test
-	public void testMVCCSurfaceFilter() {
+	public void testMVCCEntryProcessorWrapper() {
 		
 		MVCCEntryProcessorWrapper<String> wrapper = new MVCCEntryProcessorWrapper<String>(
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
 				new ConditionalPut(AlwaysFilter.INSTANCE, "a test value"),
 				IsolationLevel.serializable, false, "acachename");
+		
+		assertPofFidelity(wrapper);	
+	}
+	
+	@Test
+	public void testMVCCReadOnlyEntryProcessorWrapper() {
+		
+		MVCCReadOnlyEntryProcessorWrapper<String> wrapper = new MVCCReadOnlyEntryProcessorWrapper<String>(
+				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
+				new ConditionalPut(AlwaysFilter.INSTANCE, "a test value"),
+				IsolationLevel.serializable, "acachename");
 		
 		assertPofFidelity(wrapper);	
 	}

@@ -17,7 +17,7 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
 public interface MVCCTransactionalCache<K,V> {
 
 	public abstract V get(TransactionId tid,
-			IsolationLevel isolationLevel, boolean autoCommit, K key);
+			IsolationLevel isolationLevel, K key);
 
 	public abstract V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
 
@@ -63,7 +63,7 @@ public interface MVCCTransactionalCache<K,V> {
 	public abstract boolean containsValue(TransactionId tid,
 			IsolationLevel isolationLevel, Object value);
 
-	public abstract Object remove(TransactionId tid, Object key);
+	public abstract V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key);
 
 	public abstract void putAll(TransactionId tid, Map m);
 
