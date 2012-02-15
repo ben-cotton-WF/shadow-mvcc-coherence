@@ -1,9 +1,10 @@
-package com.sixwhits.cohmvcc.processor;
+package com.sixwhits.cohmvcc.invocable;
 
 import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
@@ -26,10 +27,16 @@ public class BinaryEntryTest {
 	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
 	private NamedCache testCache;
 	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
+	
+	@BeforeClass
+	public static void setSystemProperties() {
+		System.setProperty("tangosol.pof.enabled", "true");
+		System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
+	}
+	
 
 	@Before
 	public void setUp() throws Exception {
-		System.setProperty("tangosol.pof.enabled", "true");
 		DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
 		cmg = builder.setStorageEnabledCount(1).build();
 

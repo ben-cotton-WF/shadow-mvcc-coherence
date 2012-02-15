@@ -10,17 +10,15 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.tangosol.io.pof.reflect.SimplePofPath;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.Converter;
 import com.tangosol.util.MapIndex;
 import com.tangosol.util.ValueExtractor;
-import com.tangosol.util.extractor.AbstractExtractor;
-import com.tangosol.util.extractor.PofExtractor;
 
 /**
  * @author David Whitmarsh, based on an idea by Alexey Ragozin (alexey.ragozin@gmail.com)
@@ -30,8 +28,6 @@ public class MVCCIndex<K> implements MapIndex {
 	private ConcurrentMap<K, NavigableMap<TransactionId,Binary>> index = new ConcurrentHashMap<K, NavigableMap<TransactionId,Binary>>();
 	
 	private BackingMapContext bmc;
-	private PofExtractor keyExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY);
-	private PofExtractor tsExtractor = new PofExtractor(null, new SimplePofPath(VersionedKey.POF_TX), AbstractExtractor.KEY);
 	
 	public MVCCIndex(BackingMapContext bmc) {
 		this.bmc = bmc;
@@ -92,8 +88,8 @@ public class MVCCIndex<K> implements MapIndex {
 		if (!(entry instanceof BinaryEntry)) {
 			throw new UnsupportedOperationException("only binary entry supported");
 		}
-		sKey = (K) keyExtractor.extractFromEntry(entry);
-		ts = (TransactionId) tsExtractor.extractFromEntry(entry);
+		sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
+		ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
 		Binary binaryKey = ((BinaryEntry)entry).getBinaryKey();
 		addToIndex(sKey, ts, binaryKey);
 	}
@@ -104,8 +100,8 @@ public class MVCCIndex<K> implements MapIndex {
 		K sKey;		
 		TransactionId ts;
 		if (entry instanceof BinaryEntry) {
-			sKey = (K) keyExtractor.extractFromEntry(entry);
-			ts = (TransactionId) tsExtractor.extractFromEntry(entry);
+			sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
+			ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
 		} else {
 	        VersionedKey<K> key = (VersionedKey<K>) entry.getKey();		
 			sKey = key.getNativeKey();		

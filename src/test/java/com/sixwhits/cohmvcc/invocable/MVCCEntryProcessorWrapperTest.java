@@ -1,4 +1,4 @@
-package com.sixwhits.cohmvcc.processor;
+package com.sixwhits.cohmvcc.invocable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -10,6 +10,7 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
@@ -24,6 +25,7 @@ import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.FutureReadException;
 import com.sixwhits.cohmvcc.exception.UncommittedReadException;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
+import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.io.pof.PofContext;
 import com.tangosol.io.pof.PortableException;
@@ -49,6 +51,12 @@ public class MVCCEntryProcessorWrapperTest {
 	private NamedCache keyCache;
 	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
 
+	@BeforeClass
+	public static void setSystemProperties() {
+		System.setProperty("tangosol.pof.enabled", "true");
+		System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
+	}
+	
 	@Before
 	public void setUp() throws Exception {
 		System.setProperty("tangosol.pof.enabled", "true");

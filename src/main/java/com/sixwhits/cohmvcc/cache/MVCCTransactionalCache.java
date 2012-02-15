@@ -14,10 +14,26 @@ import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
-public interface MVCCTransactionalCache {
+public interface MVCCTransactionalCache<K,V> {
 
-	public abstract Object get(TransactionId tid,
-			IsolationLevel isolationLevel, Object key);
+	public abstract V get(TransactionId tid,
+			IsolationLevel isolationLevel, boolean autoCommit, K key);
+
+	public abstract V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
+
+	/**
+	 * Like insert, but doesn't return old value so no read registered.
+	 * @param tid
+	 * @param isolationLevel
+	 * @param autoCommit
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public void insert(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
+
+	public abstract Object invoke(TransactionId tid,
+			IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
 
 	public abstract void addMapListener(MapListener listener, TransactionId tid);
 
@@ -46,8 +62,6 @@ public interface MVCCTransactionalCache {
 
 	public abstract boolean containsValue(TransactionId tid,
 			IsolationLevel isolationLevel, Object value);
-
-	public abstract Object put(TransactionId tid, Object key, Object value);
 
 	public abstract Object remove(TransactionId tid, Object key);
 
@@ -87,9 +101,6 @@ public interface MVCCTransactionalCache {
 	public abstract Object aggregate(TransactionId tid,
 			IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
 
-	public abstract Object invoke(TransactionId tid,
-			IsolationLevel isolationLevel, Object oKey, EntryProcessor agent);
-
 	public abstract Map invokeAll(TransactionId tid,
 			IsolationLevel isolationLevel, Collection collKeys,
 			EntryProcessor agent);
@@ -104,9 +115,6 @@ public interface MVCCTransactionalCache {
 	public abstract CacheService getCacheService();
 
 	public abstract boolean isActive();
-
-	public abstract Object put(TransactionId tid, Object oKey, Object oValue,
-			long cMillis);
 
 	public abstract void release();
 

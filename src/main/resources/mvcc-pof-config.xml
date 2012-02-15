@@ -40,7 +40,7 @@
     </user-type>
     <user-type>
       <type-id>1008</type-id>
-      <class-name>com.sixwhits.cohmvcc.processor.MVCCEntryProcessorWrapper</class-name>
+      <class-name>com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1009</type-id>
@@ -53,6 +53,30 @@
     <user-type>
       <type-id>1011</type-id>
       <class-name>com.sixwhits.cohmvcc.domain.TransactionSetWrapper</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1012</type-id>
+      <class-name>com.sixwhits.cohmvcc.cache.internal.UnconditionalPutProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1013</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1014</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1015</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1016</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.AggregatorWrapper</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1017</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper</class-name>
     </user-type>
 
   </user-type-list>

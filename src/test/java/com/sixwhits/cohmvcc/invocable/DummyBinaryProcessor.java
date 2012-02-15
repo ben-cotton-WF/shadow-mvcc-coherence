@@ -1,4 +1,4 @@
-package com.sixwhits.cohmvcc.processor;
+package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.tangosol.io.ReadBuffer;
