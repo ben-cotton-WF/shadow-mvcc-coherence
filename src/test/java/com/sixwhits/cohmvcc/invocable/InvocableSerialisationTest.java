@@ -29,7 +29,7 @@ public class InvocableSerialisationTest {
 	@Test
 	public void testMVCCEntryProcessorWrapper() {
 		
-		MVCCEntryProcessorWrapper<String> wrapper = new MVCCEntryProcessorWrapper<String>(
+		MVCCEntryProcessorWrapper<String,Object> wrapper = new MVCCEntryProcessorWrapper<String,Object>(
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
 				new ConditionalPut(AlwaysFilter.INSTANCE, "a test value"),
 				IsolationLevel.serializable, false, "acachename");
@@ -40,7 +40,7 @@ public class InvocableSerialisationTest {
 	@Test
 	public void testMVCCReadOnlyEntryProcessorWrapper() {
 		
-		MVCCReadOnlyEntryProcessorWrapper<String> wrapper = new MVCCReadOnlyEntryProcessorWrapper<String>(
+		MVCCReadOnlyEntryProcessorWrapper<String,Object> wrapper = new MVCCReadOnlyEntryProcessorWrapper<String,Object>(
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
 				new ConditionalPut(AlwaysFilter.INSTANCE, "a test value"),
 				IsolationLevel.serializable, "acachename");

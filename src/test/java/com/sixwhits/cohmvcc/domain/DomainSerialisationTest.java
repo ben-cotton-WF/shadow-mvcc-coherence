@@ -59,6 +59,16 @@ public class DomainSerialisationTest {
 		assertPofFidelityByReflection(tsw);
 	}
 	
+	public void testProcessorResult1() {
+		TransactionId ts = new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457);
+		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(new VersionedKey<String>("ABC", ts));
+		assertPofFidelityByReflection(pr);
+	}
+	public void testProcessorResult2() {
+		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99);
+		assertPofFidelityByReflection(pr);
+	}
+	
 	
 	private void assertPofFidelity(Object expected) {
 		Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
@@ -74,5 +84,6 @@ public class DomainSerialisationTest {
 		assertTrue(EqualsBuilder.reflectionEquals(expected, result));
 		
 	}
+	
 
 }

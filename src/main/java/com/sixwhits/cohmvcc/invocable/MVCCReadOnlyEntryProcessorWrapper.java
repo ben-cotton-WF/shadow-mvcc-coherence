@@ -1,15 +1,20 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
+import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
+// TODO is this redundant?
 @Portable
-public class MVCCReadOnlyEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
+public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 
 	private static final long serialVersionUID = -7158130705920331999L;
 
@@ -27,20 +32,45 @@ public class MVCCReadOnlyEntryProcessorWrapper<K> extends AbstractMVCCProcessor<
 		this.delegate = delegate;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public Object process(Entry entryarg) {
+	public ProcessorResult<K,R> process(Entry entryarg) {
 		
 		BinaryEntry entry = (BinaryEntry) entryarg;
+		Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
+		if (priorVersionBinaryKey == null) {
+			return null;
+		}
+
+		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
+
+		if (isolationLevel != IsolationLevel.readUncommitted) {
+			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			if (!committed) {
+				return new ProcessorResult<K,R>((VersionedKey<K>)priorEntry.getKey());
+			}
+		}
+
+		boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
+		if (deleted) {
+			return null;
+		}
+
+		Object result = null;
 		
-		ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+		if (delegate != null) {
+
+			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+
+			result = delegate.process(childEntry);
 		
-		Object result = delegate.process(childEntry);
+		}
 		
-		if ((isolationLevel == IsolationLevel.repeatableRead || isolationLevel == IsolationLevel.serializable) && childEntry.isPriorRead()) {
+		if ((isolationLevel == IsolationLevel.repeatableRead || isolationLevel == IsolationLevel.serializable)) {
 			setReadTimestamp(entry);
 		}
 		
-		return result;
+		return result == null ? null : new ProcessorResult<K, R>((R)result);
 	}
 
 }

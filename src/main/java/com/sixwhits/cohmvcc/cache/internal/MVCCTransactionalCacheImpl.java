@@ -9,11 +9,10 @@ import java.util.Set;
 
 import com.sixwhits.cohmvcc.cache.MVCCTransactionalCache;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.sixwhits.cohmvcc.exception.FutureReadException;
-import com.sixwhits.cohmvcc.exception.UncommittedReadException;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
 import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
@@ -59,50 +58,47 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	@SuppressWarnings("unchecked")
 	@Override
 	public V get(TransactionId tid, IsolationLevel isolationLevel, K key) {
-		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
 		return (V) invokeUntilCommitted(key, tid, ep);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value) {
-		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, new UnconditionalPutProcessor(value, true), isolationLevel, autoCommit, vcacheName);
-		return (V) invokeUntilCommitted(key, tid, ep);
+		EntryProcessor ep = new MVCCEntryProcessorWrapper<K,V>(tid, new UnconditionalPutProcessor(value, true), isolationLevel, autoCommit, vcacheName);
+		return invokeUntilCommitted(key, tid, ep);
 	}
 
 	@Override
 	public void insert(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value) {
-		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, new UnconditionalPutProcessor(value, false), isolationLevel, autoCommit, vcacheName);
+		EntryProcessor ep = new MVCCEntryProcessorWrapper<K,Object>(tid, new UnconditionalPutProcessor(value, false), isolationLevel, autoCommit, vcacheName);
 		invokeUntilCommitted(key, tid, ep);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key) {
-		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, new UnconditionalRemoveProcessor(), isolationLevel, autoCommit, vcacheName);
-		return (V) invokeUntilCommitted(key, tid, ep);
-	}
-
-	@Override
-	public Object invoke(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, EntryProcessor agent) {
-		EntryProcessor ep = new MVCCEntryProcessorWrapper<K>(tid, agent, isolationLevel, autoCommit, vcacheName);
+		EntryProcessor ep = new MVCCEntryProcessorWrapper<K,V>(tid, new UnconditionalRemoveProcessor(), isolationLevel, autoCommit, vcacheName);
 		return invokeUntilCommitted(key, tid, ep);
 	}
 
-	private Object invokeUntilCommitted(K key, TransactionId tid, EntryProcessor ep) {
+	@Override
+	public <R> R invoke(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, EntryProcessor agent) {
+		EntryProcessor ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, vcacheName);
+		return invokeUntilCommitted(key, tid, ep);
+	}
+
+	private <R> R invokeUntilCommitted(K key, TransactionId tid, EntryProcessor ep) {
 		while (true) {
-			try {
-				return keyCache.invoke(key, ep);
-			} catch (RuntimeException ex) {
-				if (ex.getCause() instanceof UncommittedReadException) {
-					@SuppressWarnings("unchecked")
-					VersionedKey<K> awaitedKey = (VersionedKey<K>) ((UncommittedReadException)ex.getCause()).getKey();
-					waitForCommit(awaitedKey);
-				} else if (ex.getCause() instanceof FutureReadException) {
-					throw (FutureReadException) ex.getCause();
-				} else {
-					throw ex;
-				}
+			@SuppressWarnings("unchecked")
+			ProcessorResult<K,R> epr = (ProcessorResult<K,R>) keyCache.invoke(key, ep);
+			if (epr == null) {
+				return null;
+			}
+			if (epr.isUncommitted()) {
+				waitForCommit(epr.getWaitKey());
+			} else {
+				return epr.getResult();
 			}
 		}
 	}
@@ -223,10 +219,12 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public Set entrySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
-		// TODO Auto-generated method stub
-		return null;
+	public Set<Map.Entry<K,V>> entrySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
+		Filter surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
+		return ((Map<K,V>)invokeAllUntilCommitted(surfaceFilter, tid, ep)).entrySet();
 	}
 
 	@Override
@@ -273,14 +271,15 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	}
 
 	@SuppressWarnings("unchecked")
-	private void invokeAllUntilCommitted(Filter filter, TransactionId tid,
-			ReadMarkingProcessor<K> readMarkingProcessor) {
+	private <R> Map<K, R> invokeAllUntilCommitted(Filter filter, TransactionId tid,
+			EntryProcessor entryProcessor) {
 		
 		DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
 		int partcount = service.getPartitionCount();
 		PartitionSet partsProcessed = new PartitionSet(partcount);
 		
-		Map<K, VersionedKey<K>> commitMap = new HashMap<K, VersionedKey<K>>();
+		Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+		Map<K, R> resultMap = new HashMap<K, R>();
 		
 		// TODO run in parallel
 		for (Member member : (Set<Member>) service.getOwnershipEnabledMembers()) {
@@ -292,12 +291,32 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 			for (VersionedKey<K> vk: vkeys) {
 				keys.add(vk.getNativeKey());
 			}
-			commitMap.putAll(keyCache.invokeAll(keys, readMarkingProcessor));
+			
+			for (Map.Entry<K, ProcessorResult<K,R>> entry : ((Map<K, ProcessorResult<K,R>>)keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
+				if (entry.getValue().isUncommitted()) {
+					retryMap.put(entry.getKey(), entry.getValue().getWaitKey());
+				} else {
+					resultMap.put(entry.getKey(), entry.getValue().getResult());
+				}
+			}
 		}
 
-		for (VersionedKey<K> awaitedKey : commitMap.values()) {
-			waitForCommit(awaitedKey);
+		for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+			waitForCommit(entry.getValue());
+			while (true) {
+				ProcessorResult<K,R> epr = (ProcessorResult<K,R>) keyCache.invoke(entry.getKey(), entryProcessor);
+				if (epr == null) {
+					break;
+				}
+				if (!epr.isUncommitted()) {
+					resultMap.put(entry.getKey(), epr.getResult());
+					break;
+				}
+				waitForCommit(epr.getWaitKey());
+			}
 		}
+		
+		return resultMap;
 	}
 
 	@Override

@@ -1,11 +1,8 @@
 package com.sixwhits.cohmvcc.transaction.internal;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.invocable.AbstractMVCCProcessor;
@@ -15,7 +12,7 @@ import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap.Entry;
 
 @Portable
-public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K> {
+public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K,Object> {
 
 	private static final long serialVersionUID = -6559372127281694088L;
 
@@ -28,8 +25,9 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K> {
 		super(transactionId, isolationLevel, vcacheName);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public Object process(Entry arg) {
+	public ProcessorResult<K,Object> process(Entry arg) {
 		BinaryEntry entry = (BinaryEntry) arg;
 		Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
 		if (priorVersionBinaryKey == null) {
@@ -40,7 +38,7 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K> {
 
 		boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
 		if (!committed) {
-			return priorEntry.getKey();
+			return new ProcessorResult<K,Object>((VersionedKey<K>)priorEntry.getKey());
 		}
 
 		boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
@@ -51,21 +49,6 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K> {
 		setReadTimestamp(entry);
 		
 		return null;
-	}
-
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public Map processAll(Set set) {
-		Map<K,VersionedKey<K>> result = new HashMap<K, VersionedKey<K>>();
-		
-		for (Entry entry : (Set<Entry>) set) {
-			VersionedKey<K> uncommittedVersion = (VersionedKey<K>) process(entry);
-			if (uncommittedVersion != null) {
-				result.put((K) entry.getKey(), uncommittedVersion);
-			}
-		}
-		
-		return result;
 	}
 
 }

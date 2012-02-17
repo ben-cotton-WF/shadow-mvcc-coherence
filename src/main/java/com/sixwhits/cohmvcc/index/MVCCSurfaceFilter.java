@@ -96,7 +96,7 @@ public class MVCCSurfaceFilter<K> implements IndexAwareFilter, Serializable {
 		}
 		
 		// no further filtering required
-		return result;
+		return result == null ? null : new FilterWrapper(result);
 	}
 
 	@SuppressWarnings("rawtypes")

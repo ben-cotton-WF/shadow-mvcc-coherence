@@ -27,6 +27,7 @@ import com.tangosol.util.Filter;
 import com.tangosol.util.aggregator.QueryRecorder;
 import com.tangosol.util.aggregator.QueryRecorder.RecordType;
 import com.tangosol.util.extractor.AbstractExtractor;
+import com.tangosol.util.extractor.IdentityExtractor;
 import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.filter.AndFilter;
 import com.tangosol.util.filter.EqualsFilter;
@@ -139,7 +140,7 @@ public class MVCCSurfaceFilterGridTest {
 		
 		Filter filter = new MVCCSurfaceFilter<Integer>(tid,
 				new EqualsFilter(
-						new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), 100));
+						IdentityExtractor.INSTANCE, "oldest version"));
 		
 		Object resultsExplain = testCache.aggregate(filter, new QueryRecorder(RecordType.EXPLAIN));
 		System.out.println(resultsExplain);

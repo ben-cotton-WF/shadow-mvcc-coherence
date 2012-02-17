@@ -1,9 +1,13 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.TreeSet;
 
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionSetWrapper;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
@@ -17,7 +21,7 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.processor.AbstractProcessor;
 
 @Portable
-public abstract class AbstractMVCCProcessor<K> extends AbstractProcessor {
+public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 
 	private static final long serialVersionUID = -8977457529050193716L;
 	public static final int POF_TID = 1;
@@ -43,7 +47,7 @@ public abstract class AbstractMVCCProcessor<K> extends AbstractProcessor {
 		super();
 	}
 
-	public abstract Object process(Entry entryarg);
+	public abstract ProcessorResult<K,R> process(Entry entryarg);
 
 	protected NavigableSet<TransactionId> getReadTransactions(Entry entry) {
 		TransactionSetWrapper tsw = (TransactionSetWrapper)entry.getValue();
@@ -91,4 +95,18 @@ public abstract class AbstractMVCCProcessor<K> extends AbstractProcessor {
 		setReadTransactions(entry, readTimestamps);
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public Map processAll(Set set) {
+		Map<K,ProcessorResult<K,R>> result = new HashMap<K, ProcessorResult<K,R>>();
+		
+		for (Entry entry : (Set<Entry>) set) {
+			ProcessorResult<K,R> epr = process(entry);
+			if (epr != null) {
+				result.put((K) entry.getKey(), epr);
+			}
+		}
+		
+		return result;
+	}
 }

@@ -1,6 +1,8 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
@@ -13,7 +15,7 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
 @Portable
-public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
+public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 
 	private static final long serialVersionUID = -7158130705920331999L;
 
@@ -23,7 +25,7 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 	private EntryProcessor delegate;
 	public static final int POF_AUTOCOMMIT = 11;
 	@PortableProperty(POF_AUTOCOMMIT)
-	protected boolean autoCommit = false;
+	private boolean autoCommit = false;
 
 	public MVCCEntryProcessorWrapper() {
 	}
@@ -38,13 +40,32 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Object process(Entry entryarg) {
+	public ProcessorResult<K,R> process(Entry entryarg) {
 		
 		BinaryEntry entry = (BinaryEntry) entryarg;
 		
+		if (isolationLevel != IsolationLevel.readUncommitted && isolationLevel != IsolationLevel.readProhibited) {
+			Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
+			if (priorVersionBinaryKey != null) {
+
+				BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
+
+				if (isolationLevel != IsolationLevel.readUncommitted) {
+					boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+					if (!committed) {
+						return new ProcessorResult<K,R>((VersionedKey<K>)priorEntry.getKey());
+					}
+				}
+			}
+		}
+		
 		ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
 		
-		Object result = delegate.process(childEntry);
+		R result = (R) delegate.process(childEntry);
+		
+		if (childEntry.isPriorRead() && isolationLevel == IsolationLevel.readProhibited) {
+			throw new IllegalStateException("Read of prior version with isolation level readProhibited: " + entry.getKey());
+		}
 		
 		if (childEntry.isRemove() || childEntry.getNewBinaryValue() != null) {
 			
@@ -56,7 +77,8 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 				}
 			}
 			
-			Binary binaryKey = (Binary) childEntry.getContext().getKeyToInternalConverter().convert(new VersionedKey<K>((K) childEntry.getKey(), transactionId));
+			Binary binaryKey = (Binary) childEntry.getContext().getKeyToInternalConverter().convert(
+					new VersionedKey<K>((K) childEntry.getKey(), transactionId));
 			BinaryEntry newEntry = (BinaryEntry) childEntry.getBackingMapContext().getBackingMapEntry(binaryKey);
 			TransactionalValue value = new TransactionalValue(autoCommit, childEntry.isRemove(),
 					childEntry.isRemove() ? childEntry.getOriginalBinaryValue() : childEntry.getNewBinaryValue());
@@ -68,7 +90,7 @@ public class MVCCEntryProcessorWrapper<K> extends AbstractMVCCProcessor<K> {
 			setReadTimestamp(entry);
 		}
 		
-		return result;
+		return new ProcessorResult<K,R>(result);
 	}
 
 }

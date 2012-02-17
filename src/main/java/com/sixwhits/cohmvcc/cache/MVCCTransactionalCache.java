@@ -32,7 +32,7 @@ public interface MVCCTransactionalCache<K,V> {
 	 */
 	public void insert(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
 
-	public abstract Object invoke(TransactionId tid,
+	public abstract <R> R invoke(TransactionId tid,
 			IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
 
 	public abstract void addMapListener(MapListener listener, TransactionId tid);
@@ -74,7 +74,7 @@ public interface MVCCTransactionalCache<K,V> {
 	public abstract Collection values(TransactionId tid,
 			IsolationLevel isolationLevel);
 
-	public abstract Set entrySet(TransactionId tid,
+	public abstract Set<Map.Entry<K,V>> entrySet(TransactionId tid,
 			IsolationLevel isolationLevel);
 
 	public abstract Map getAll(TransactionId tid,

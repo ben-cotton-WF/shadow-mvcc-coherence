@@ -38,12 +38,12 @@ public class VersionWrapperSet implements Set<BinaryEntry> {
 
 			@Override
 			public BinaryEntry next() {
-				return new AggregatorWrapperEntry(underlying.next());
+				return new VersionCacheEntryWrapper(underlying.next());
 			}
 
 			@Override
 			public void remove() {
-				throw new UnsupportedOperationException("set is read only");
+				underlying.remove();
 			}
 		};
 	}
@@ -81,7 +81,7 @@ public class VersionWrapperSet implements Set<BinaryEntry> {
 	}
 
 	public void clear() {
-		throw new UnsupportedOperationException("set is read only");
+		versionedSet.clear();
 	}
 
 	public boolean equals(Object o) {

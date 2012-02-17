@@ -11,18 +11,18 @@ import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.ValueUpdater;
 import com.tangosol.util.extractor.PofExtractor;
 
-public class AggregatorWrapperEntry implements BinaryEntry {
+public class VersionCacheEntryWrapper implements BinaryEntry {
 
 	private final BinaryEntry underlying;
 	
-	public AggregatorWrapperEntry(BinaryEntry underlying) {
+	public VersionCacheEntryWrapper(BinaryEntry underlying) {
 		super();
 		this.underlying = underlying;
 	}
 
 	@Override
 	public Object getKey() {
-		return getBackingMapContext().getManagerContext().getKeyFromInternalConverter().convert(getBinaryKey());
+		return Constants.KEYEXTRACTOR.extractFromEntry(underlying);
 	}
 
 	@Override
@@ -66,7 +66,8 @@ public class AggregatorWrapperEntry implements BinaryEntry {
 
 	@Override
 	public Binary getBinaryKey() {
-		return (Binary) Constants.KEYEXTRACTOR.extractFromEntry(underlying);
+		// TODO get rid of convert from/to binary
+		return (Binary) getBackingMapContext().getManagerContext().getKeyToInternalConverter().convert(getKey());
 	}
 
 	@Override
