@@ -9,10 +9,11 @@ import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
+import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.filter.EntryFilter;
 
-// TODO is this redundant?
 @Portable
 public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 
@@ -21,6 +22,9 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 	public static final int POF_EP = 10;
 	@PortableProperty(POF_EP)
 	private EntryProcessor delegate;
+	public static final int POF_FILTER = 11;
+	@PortableProperty(POF_FILTER)
+	private Filter validationFilter = null;
 
 	public MVCCReadOnlyEntryProcessorWrapper() {
 		super();
@@ -30,6 +34,13 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 			EntryProcessor delegate, IsolationLevel isolationLevel, String vcacheName) {
 		super(transactionId, isolationLevel, vcacheName);
 		this.delegate = delegate;
+	}
+
+	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
+			EntryProcessor delegate, IsolationLevel isolationLevel, String vcacheName, Filter filter) {
+		super(transactionId, isolationLevel, vcacheName);
+		this.delegate = delegate;
+		this.validationFilter = filter;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -61,6 +72,16 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 		if (delegate != null) {
 
 			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+			
+			if (validationFilter != null) {
+				if (validationFilter instanceof EntryFilter) {
+					if (!((EntryFilter)validationFilter).evaluateEntry(childEntry)) {
+						return null;
+					}
+				} else if (!validationFilter.evaluate(childEntry.getValue())) {
+					return null;
+				}
+			}
 
 			result = delegate.process(childEntry);
 		

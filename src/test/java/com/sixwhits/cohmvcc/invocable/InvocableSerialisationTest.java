@@ -53,7 +53,7 @@ public class InvocableSerialisationTest {
 		Object obj = new UnconditionalPutProcessor("Test value", true);
 		assertPofFidelity(obj);
 	}
-	
+
 	@Ignore
 	@Test
 	public void testParallelAwareAggregatorWrapper() {

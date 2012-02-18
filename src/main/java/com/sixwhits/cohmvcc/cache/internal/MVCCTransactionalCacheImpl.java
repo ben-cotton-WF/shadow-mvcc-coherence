@@ -62,7 +62,6 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		return (V) invokeUntilCommitted(key, tid, ep);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value) {
 		EntryProcessor ep = new MVCCEntryProcessorWrapper<K,V>(tid, new UnconditionalPutProcessor(value, true), isolationLevel, autoCommit, vcacheName);
@@ -75,7 +74,6 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		invokeUntilCommitted(key, tid, ep);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key) {
 		EntryProcessor ep = new MVCCEntryProcessorWrapper<K,V>(tid, new UnconditionalRemoveProcessor(), isolationLevel, autoCommit, vcacheName);
@@ -108,7 +106,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		try {
 			versionCache.addMapListener(vcl, awaitedKey, false);
 			TransactionalValue v = (TransactionalValue) versionCache.get(awaitedKey);
-			if (!v.isCommitted()) {
+			if (v != null && !v.isCommitted()) {
 				vcl.waitForCommit();
 			}
 			return;
@@ -222,9 +220,8 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	@SuppressWarnings("unchecked")
 	@Override
 	public Set<Map.Entry<K,V>> entrySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
-		Filter surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
-		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
-		return ((Map<K,V>)invokeAllUntilCommitted(surfaceFilter, tid, ep)).entrySet();
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName, filter);
+		return ((Map<K,V>)invokeAllUntilCommitted(filter, tid, ep)).entrySet();
 	}
 
 	@Override
@@ -257,9 +254,8 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	
 	@Override
 	public Object aggregate(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) {
-		Filter surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		if (isolationLevel != IsolationLevel.readUncommitted) {
-			invokeAllUntilCommitted(surfaceFilter, tid, new ReadMarkingProcessor<K>(tid, isolationLevel, vcacheName));
+			invokeAllUntilCommitted(filter, tid, new ReadMarkingProcessor<K>(tid, isolationLevel, vcacheName));
 		}
 		EntryAggregator wrapper;
 		if (agent instanceof ParallelAwareAggregator) {
@@ -267,6 +263,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		} else {
 			wrapper = new AggregatorWrapper(agent);
 		}
+		MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		return (Integer) versionCache.aggregate(surfaceFilter, wrapper);
 	}
 
@@ -274,6 +271,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	private <R> Map<K, R> invokeAllUntilCommitted(Filter filter, TransactionId tid,
 			EntryProcessor entryProcessor) {
 		
+		MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
 		int partcount = service.getPartitionCount();
 		PartitionSet partsProcessed = new PartitionSet(partcount);
@@ -285,7 +283,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		for (Member member : (Set<Member>) service.getOwnershipEnabledMembers()) {
 			PartitionSet memberParts = service.getOwnedPartitions(member);
 			memberParts.remove(partsProcessed);
-			Filter filterPart = new PartitionedFilter(filter, memberParts);
+			Filter filterPart = new PartitionedFilter(surfaceFilter, memberParts);
 			Set<VersionedKey<K>> vkeys = versionCache.keySet(filterPart);
 			Set<K> keys = new HashSet<K>();
 			for (VersionedKey<K> vk: vkeys) {
@@ -300,7 +298,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 				}
 			}
 		}
-
+		
 		for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
 			waitForCommit(entry.getValue());
 			while (true) {

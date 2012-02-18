@@ -12,7 +12,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.tangosol.io.pof.PofContext;
+import com.tangosol.io.pof.reflect.PofValue;
+import com.tangosol.io.pof.reflect.PofValueParser;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
@@ -39,30 +43,71 @@ public class MVCCIndex<K> implements MapIndex {
 			Converter converter = bmc.getManagerContext().getKeyFromInternalConverter();
 			@SuppressWarnings("unchecked")
 			VersionedKey<K> vk = (VersionedKey<K>) converter.convert(candidate);
-			Binary floorKey = floor(vk.getNativeKey(), ts);
-			if (floorKey != null) {
+			TransactionId floorTs = floorTs(vk.getNativeKey(), ts);
+			if (floorTs != null) {
+				Binary floorKey = getBinaryKey(vk.getNativeKey(), floorTs);
 				result.add(floorKey);
+				while (floorTs != null && isUncommitted(floorKey)) {
+					floorTs = nextFloor(vk.getNativeKey(), floorTs);
+					if (floorTs != null) {
+						floorKey = getBinaryKey(vk.getNativeKey(), floorTs);
+						result.add(floorKey);
+					}
+				}
 			}
 		}
 		return result;
 	}
 	
+	private boolean isUncommitted(Binary floorKey) {
+		Binary tvb = (Binary) bmc.getBackingMap().get(floorKey);
+		PofContext context = (PofContext) bmc.getManagerContext().getCacheService().getSerializer();
+		PofValue pv = PofValueParser.parse(tvb, context);
+		PofValue commitpv = pv.getChild(TransactionalValue.POF_COMMITTED);
+		Boolean committed = (Boolean) commitpv.getValue();
+		return !committed;
+		
+	}
+	
 	public Binary floor(K sKey, TransactionId ts) {
+		TransactionId floorTs = floorTs(sKey, ts);
+		return floorTs == null ? null : getBinaryKey(sKey, floorTs);
+	}
+	
+	public TransactionId floorTs(K sKey, TransactionId ts) {
 	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
 		if (line != null) {
 			synchronized(line) {
 				if (ts == null) {
                     Entry<TransactionId,Binary> tsl = line.firstEntry();
-                    return tsl == null ? null : tsl.getValue();
+                    return tsl == null ? null : tsl.getKey();
 				} else {
 					Entry<TransactionId,Binary> tsl = line.floorEntry(ts);
-                    return tsl == null ? null : tsl.getValue();
+                    return tsl == null ? null : tsl.getKey();
 				}
 			}
 		} else {
 			return null;
 		}
 	}
+	
+	private TransactionId nextFloor(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+		if (line != null && ts != null) {
+			synchronized(line) {
+				return line.lowerKey(ts);
+			}
+		} else {
+			return null;
+		}
+	}
+	
+	private Binary getBinaryKey(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+	    return line == null ? null : line.get(ts);
+		
+	}
+	
 	public TransactionId ceilingTid(K sKey, TransactionId ts) {
 	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
 		if (line != null) {

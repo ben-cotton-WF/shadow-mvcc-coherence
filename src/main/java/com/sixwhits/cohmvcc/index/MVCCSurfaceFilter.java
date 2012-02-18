@@ -140,4 +140,8 @@ public class MVCCSurfaceFilter<K> implements IndexAwareFilter, Serializable {
 		}
 		return true;
 	}
+
+	public Filter getFilter() {
+		return filter;
+	}
 }
