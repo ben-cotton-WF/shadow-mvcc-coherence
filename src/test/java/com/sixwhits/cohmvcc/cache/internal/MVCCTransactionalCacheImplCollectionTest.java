@@ -54,6 +54,48 @@ public class MVCCTransactionalCacheImplCollectionTest {
 	}
 
 	
+	@Test
+	public void testSize() {
+		
+		System.out.println("******Size");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+		final TransactionId ts4 = new TransactionId(BASETIME+3, 0, 0);
+		final TransactionId ts5 = new TransactionId(BASETIME+4, 0, 0);
+
+		SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val4 = new SampleDomainObject(88, "eighty-eight");
+
+		for (int key = 0; key < 3; key++) {
+			cache.insert(ts2, IsolationLevel.repeatableRead, true, key, val2);
+		}
+		
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts4, IsolationLevel.repeatableRead, true, key, val4);
+		}
+		
+		Assert.assertEquals(0, cache.size(ts1, IsolationLevel.repeatableRead));
+		Assert.assertEquals(3, cache.size(ts3, IsolationLevel.repeatableRead));
+		Assert.assertEquals(5, cache.size(ts5, IsolationLevel.repeatableRead));
+
+		cache.insert(ts4, IsolationLevel.repeatableRead, false, 6, val4);
+		
+		Assert.assertEquals(6, cache.size(ts5, IsolationLevel.readUncommitted));
+		
+		asynchCommit(ts4, 6);
+
+		Assert.assertEquals(6, cache.size(ts5, IsolationLevel.repeatableRead));
+
+		cache.insert(ts4, IsolationLevel.repeatableRead, false, 7, val4);
+		
+		Assert.assertEquals(7, cache.size(ts5, IsolationLevel.readUncommitted));
+		
+		asynchRollback(ts4, 7);
+
+		Assert.assertEquals(6, cache.size(ts5, IsolationLevel.repeatableRead));
+	}
 	private void asynchCommit(final TransactionId ts, final Integer key) {
 		new Thread(new Runnable() {
 			

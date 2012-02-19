@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.index;
 
+import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
@@ -12,11 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.tangosol.io.pof.PofContext;
-import com.tangosol.io.pof.reflect.PofValue;
-import com.tangosol.io.pof.reflect.PofValueParser;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
@@ -28,8 +25,28 @@ import com.tangosol.util.ValueExtractor;
  * @author David Whitmarsh, based on an idea by Alexey Ragozin (alexey.ragozin@gmail.com)
  */
 public class MVCCIndex<K> implements MapIndex {
+	
+	private static class IndexEntry {
+		private boolean isCommitted;
+		private Binary binaryKey;
+		public IndexEntry(boolean isCommitted, Binary binaryKey) {
+			super();
+			this.isCommitted = isCommitted;
+			this.binaryKey = binaryKey;
+		}
+		public boolean isCommitted() {
+			return isCommitted;
+		}
+		public void commit() {
+			this.isCommitted = true;
+		}
+		public Binary getBinaryKey() {
+			return binaryKey;
+		}
+		
+	}
 
-	private ConcurrentMap<K, NavigableMap<TransactionId,Binary>> index = new ConcurrentHashMap<K, NavigableMap<TransactionId,Binary>>();
+	private ConcurrentMap<K, NavigableMap<TransactionId,IndexEntry>> index = new ConcurrentHashMap<K, NavigableMap<TransactionId,IndexEntry>>();
 	
 	private BackingMapContext bmc;
 	
@@ -43,15 +60,13 @@ public class MVCCIndex<K> implements MapIndex {
 			Converter converter = bmc.getManagerContext().getKeyFromInternalConverter();
 			@SuppressWarnings("unchecked")
 			VersionedKey<K> vk = (VersionedKey<K>) converter.convert(candidate);
-			TransactionId floorTs = floorTs(vk.getNativeKey(), ts);
-			if (floorTs != null) {
-				Binary floorKey = getBinaryKey(vk.getNativeKey(), floorTs);
-				result.add(floorKey);
-				while (floorTs != null && isUncommitted(floorKey)) {
-					floorTs = nextFloor(vk.getNativeKey(), floorTs);
-					if (floorTs != null) {
-						floorKey = getBinaryKey(vk.getNativeKey(), floorTs);
-						result.add(floorKey);
+			Entry<TransactionId,IndexEntry> floorEntry = floorEntry(vk.getNativeKey(), ts);
+			if (floorEntry != null) {
+				result.add(floorEntry.getValue().getBinaryKey());
+				while (floorEntry != null && !floorEntry.getValue().isCommitted()) {
+					floorEntry = nextFloor(vk.getNativeKey(), floorEntry.getKey());
+					if (floorEntry != null) {
+						result.add(floorEntry.getValue().getBinaryKey());
 					}
 				}
 			}
@@ -59,31 +74,19 @@ public class MVCCIndex<K> implements MapIndex {
 		return result;
 	}
 	
-	private boolean isUncommitted(Binary floorKey) {
-		Binary tvb = (Binary) bmc.getBackingMap().get(floorKey);
-		PofContext context = (PofContext) bmc.getManagerContext().getCacheService().getSerializer();
-		PofValue pv = PofValueParser.parse(tvb, context);
-		PofValue commitpv = pv.getChild(TransactionalValue.POF_COMMITTED);
-		Boolean committed = (Boolean) commitpv.getValue();
-		return !committed;
-		
-	}
-	
 	public Binary floor(K sKey, TransactionId ts) {
-		TransactionId floorTs = floorTs(sKey, ts);
-		return floorTs == null ? null : getBinaryKey(sKey, floorTs);
+		 Entry<TransactionId,IndexEntry> floorEntry = floorEntry(sKey, ts);
+		return floorEntry == null ? null : floorEntry.getValue().getBinaryKey();
 	}
-	
-	public TransactionId floorTs(K sKey, TransactionId ts) {
-	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+
+	public Entry<TransactionId,IndexEntry> floorEntry(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 		if (line != null) {
 			synchronized(line) {
 				if (ts == null) {
-                    Entry<TransactionId,Binary> tsl = line.firstEntry();
-                    return tsl == null ? null : tsl.getKey();
+                    return line.firstEntry();
 				} else {
-					Entry<TransactionId,Binary> tsl = line.floorEntry(ts);
-                    return tsl == null ? null : tsl.getKey();
+					return line.floorEntry(ts);
 				}
 			}
 		} else {
@@ -91,32 +94,37 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 	}
 	
-	private TransactionId nextFloor(K sKey, TransactionId ts) {
-	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+	private Entry<TransactionId,IndexEntry> nextFloor(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 		if (line != null && ts != null) {
 			synchronized(line) {
-				return line.lowerKey(ts);
+				TransactionId lowerts = line.lowerKey(ts);
+				if (lowerts == null) {
+					return null;
+				} else {
+					return new AbstractMap.SimpleEntry<TransactionId,IndexEntry>(lowerts, line.get(lowerts));
+				}
 			}
 		} else {
 			return null;
 		}
 	}
 	
-	private Binary getBinaryKey(K sKey, TransactionId ts) {
-	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
-	    return line == null ? null : line.get(ts);
-		
-	}
+//	private Binary getBinaryKey(K sKey, TransactionId ts) {
+//	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+//	    return line == null ? null : line.get(ts);
+//		
+//	}
 	
 	public TransactionId ceilingTid(K sKey, TransactionId ts) {
-	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 		if (line != null) {
 			synchronized(line) {
 				if (ts == null) {
-                    Entry<TransactionId,Binary> tsl = line.lastEntry();
+                    Entry<TransactionId,IndexEntry> tsl = line.lastEntry();
                     return tsl == null ? null : tsl.getKey();
 				} else {
-					Entry<TransactionId,Binary> tsl = line.ceilingEntry(ts);
+					Entry<TransactionId,IndexEntry> tsl = line.ceilingEntry(ts);
                     return tsl == null ? null : tsl.getKey();
 				}
 			}
@@ -135,8 +143,9 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 		sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
 		ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
+		Boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(entry);
 		Binary binaryKey = ((BinaryEntry)entry).getBinaryKey();
-		addToIndex(sKey, ts, binaryKey);
+		addToIndex(sKey, ts, binaryKey, committed);
 	}
 
 	@Override
@@ -155,21 +164,29 @@ public class MVCCIndex<K> implements MapIndex {
 		removeFromIndex(sKey, ts);
 	}
 	
-	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey) {
+	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey, Boolean committed) {
 		while(true) {
-			NavigableMap<TransactionId,Binary> line = getLine(sKey);
+			NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 			synchronized(line) {
-				line.put(ts, binaryKey);
+				line.put(ts, new IndexEntry(committed, binaryKey));
 				if (line == getLine(sKey)) {
 					return;
 				}
 			}					
 		}
 	}
+	private void updateIndex(K sKey, TransactionId ts, Boolean committed) {
+		NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
+		synchronized(line) {
+			if (committed) {
+				line.get(ts).commit();
+			}
+		}					
+	}
 	
 	private void removeFromIndex(K sKey, TransactionId ts) {
 		while(true) {
-		    NavigableMap<TransactionId,Binary> line = getLine(sKey);
+		    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 			synchronized(line) {
 				line.remove(ts);
 				if (line.isEmpty()) {
@@ -183,11 +200,11 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 	}
 
-	private NavigableMap<TransactionId,Binary> getLine(K sKey) {
+	private NavigableMap<TransactionId,IndexEntry> getLine(K sKey) {
 		while(true) {
-		    NavigableMap<TransactionId,Binary> line = index.get(sKey);
+		    NavigableMap<TransactionId,IndexEntry> line = index.get(sKey);
 			if (line == null) {
-				line = new TreeMap<TransactionId,Binary>();
+				line = new TreeMap<TransactionId,IndexEntry>();
 				index.putIfAbsent(sKey, line);
 			} else {
 				return line;
@@ -227,9 +244,15 @@ public class MVCCIndex<K> implements MapIndex {
         return false;
     }
 
+	@SuppressWarnings("unchecked")
 	@Override
     public void update(@SuppressWarnings("rawtypes") Entry entry) {
-		// it is not permitted for the index value (timestamp) for an existing entry to change
-        return;
+		if (!(entry instanceof BinaryEntry)) {
+			throw new UnsupportedOperationException("only binary entry supported");
+		}
+		K sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
+		TransactionId ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
+		Boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(entry);
+		updateIndex(sKey, ts, committed);
     }
 }
