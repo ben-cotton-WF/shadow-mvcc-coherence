@@ -1,5 +1,9 @@
 package com.sixwhits.cohmvcc.transaction.internal;
 
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.serializable;
+
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
@@ -36,9 +40,11 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K,Object> {
 
 		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
 
-		boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
-		if (!committed) {
-			return new ProcessorResult<K,Object>((VersionedKey<K>)priorEntry.getKey());
+		if (isolationLevel != readCommitted) {
+			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			if (!committed) {
+				return new ProcessorResult<K,Object>((VersionedKey<K>)priorEntry.getKey());
+			}
 		}
 
 		boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
@@ -46,9 +52,15 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K,Object> {
 			return null;
 		}
 
-		setReadTimestamp(entry);
+		if (isolationLevel == repeatableRead || isolationLevel == serializable) {
+			setReadTimestamp(entry);
+		}
 		
 		return null;
+	}
+
+	public IsolationLevel getIsolationLevel() {
+		return isolationLevel;
 	}
 
 }

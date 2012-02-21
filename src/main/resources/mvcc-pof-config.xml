@@ -90,6 +90,10 @@
       <type-id>1020</type-id>
       <class-name>com.sixwhits.cohmvcc.domain.ProcessorResult</class-name>
     </user-type>
+    <user-type>
+      <type-id>1021</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.ExistenceCheckProcessor</class-name>
+    </user-type>
 
   </user-type-list>
 

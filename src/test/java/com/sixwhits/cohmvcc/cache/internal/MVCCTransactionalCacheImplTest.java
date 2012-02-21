@@ -1,6 +1,11 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -27,8 +32,10 @@ import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
+import com.tangosol.util.extractor.PofUpdater;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
+import com.tangosol.util.processor.UpdaterProcessor;
 
 public class MVCCTransactionalCacheImplTest {
 	
@@ -73,6 +80,50 @@ public class MVCCTransactionalCacheImplTest {
 	}
 
 	@Test
+	public void testContainsKey() {
+		
+		System.out.println("******ContainsKey");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		Integer otherKey = 98;
+		
+		assertNull(cache.put(ts1, IsolationLevel.repeatableRead, true, theKey, theValue));
+		assertNull(cache.put(ts3, IsolationLevel.repeatableRead, true, otherKey, theValue));
+		
+		
+		assertTrue(cache.containsKey(ts2, IsolationLevel.repeatableRead, theKey));
+		assertFalse(cache.containsKey(ts2, IsolationLevel.repeatableRead, otherKey));
+		assertFalse(cache.containsKey(ts2, IsolationLevel.repeatableRead, 97));
+	}
+	
+	@Test
+	public void testContainsValue() {
+		
+		System.out.println("******ContainsValue");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject otherValue = new SampleDomainObject(99, "ninety-nine");
+		SampleDomainObject noValue = new SampleDomainObject(77, "seventy-seven");
+		Integer otherKey = 98;
+		
+		assertNull(cache.put(ts1, IsolationLevel.repeatableRead, true, theKey, theValue));
+		assertNull(cache.put(ts3, IsolationLevel.repeatableRead, true, otherKey, otherValue));
+		
+		
+		assertTrue(cache.containsValue(ts2, IsolationLevel.repeatableRead, theValue));
+		assertFalse(cache.containsValue(ts2, IsolationLevel.repeatableRead, otherValue));
+		assertFalse(cache.containsValue(ts2, IsolationLevel.repeatableRead, noValue));
+	}
+	
+	@Test
 	public void testPutRemoveRead() {
 		
 		System.out.println("******PutRemoveRead");
@@ -92,7 +143,7 @@ public class MVCCTransactionalCacheImplTest {
 	@Test
 	public void testPutRemoveReadCommit() {
 		
-		System.out.println("******PutRemoveRead");
+		System.out.println("******PutRemoveReadCommit");
 		
 		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 		final TransactionId ts2 = new TransactionId(BASETIME+60000, 0, 0);
@@ -277,6 +328,36 @@ public class MVCCTransactionalCacheImplTest {
 	}
 	
 	@Test
+	public void testEntrySetAll() {
+		System.out.println("******EntrySetAll");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts3, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		
+		Set<Map.Entry<Integer,SampleDomainObject>> entrySet = cache.entrySet(ts2, IsolationLevel.repeatableRead);
+		
+		Map<Integer,SampleDomainObject> expected = new HashMap<Integer,SampleDomainObject>(5);
+		expected.put(1,val2);
+		expected.put(3,val2);
+		expected.put(5,val2);
+		expected.put(7,val2);
+		expected.put(9,val2);
+		
+		Assert.assertEquals(5, entrySet.size());
+		Assert.assertTrue(entrySet.containsAll(expected.entrySet()));
+		
+	}
+
+	@Test
 	public void testEntrySetWithUncommitted() {
 		System.out.println("******EntrySet");
 		
@@ -324,6 +405,182 @@ public class MVCCTransactionalCacheImplTest {
 		
 	}
 
+	@Test
+	public void testKeySet() {
+		System.out.println("******KeySet");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		
+		Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
+		
+		Set<Integer> keySet = cache.keySet(ts2, IsolationLevel.repeatableRead, filter);
+		
+		Set<Integer> expected = new HashSet<Integer>(5);
+		expected.add(1);
+		expected.add(3);
+		expected.add(5);
+		expected.add(7);
+		expected.add(9);
+		
+		Assert.assertEquals(5, keySet.size());
+		Assert.assertTrue(keySet.containsAll(expected));
+		
+	}
+
+	@Test
+	public void testKeySetAll() {
+		System.out.println("******KeySetAll");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts3, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		
+		Set<Integer> keySet = cache.keySet(ts2, IsolationLevel.repeatableRead);
+		
+		Set<Integer> expected = new HashSet<Integer>(5);
+		expected.add(1);
+		expected.add(3);
+		expected.add(5);
+		expected.add(7);
+		expected.add(9);
+		
+		Assert.assertEquals(5, keySet.size());
+		Assert.assertTrue(keySet.containsAll(expected));
+		
+	}
+	
+	@Test
+	public void testInvokeAllFilter() {
+		System.out.println("******InvokeAll(Filter)");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		
+		Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
+		EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_STRV), "seventy-eight"); 
+		
+		Set<Integer> keySet = cache.invokeAll(ts2, IsolationLevel.repeatableRead, true, filter, ep).keySet();
+		
+		Set<Integer> expected = new HashSet<Integer>(5);
+		expected.add(1);
+		expected.add(3);
+		expected.add(5);
+		expected.add(7);
+		expected.add(9);
+		
+		Assert.assertEquals(5, keySet.size());
+		Assert.assertTrue(keySet.containsAll(expected));
+		
+		SampleDomainObject expectedObject = new SampleDomainObject(77, "seventy-eight");
+		
+		for (Integer key : expected) {
+			Assert.assertEquals(expectedObject, cache.get(ts2, IsolationLevel.repeatableRead, key));
+		}
+		
+	}
+	@Test
+	public void testInvokeAllKeys() {
+		System.out.println("******InvokeAll(Keys)");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 4; key++) {
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		cache.insert(ts1, IsolationLevel.repeatableRead, false, 8, val1);
+		cache.insert(ts1, IsolationLevel.repeatableRead, false, 9, val2);
+		
+		asynchCommit(ts1, 8);
+		asynchCommit(ts1, 9);
+		
+		EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_STRV), "seventy-eight"); 
+		
+		Set<Integer> expected = new HashSet<Integer>(5);
+		expected.add(1);
+		expected.add(3);
+		expected.add(5);
+		expected.add(7);
+		expected.add(9);
+		
+		Set<Integer> keySet = cache.invokeAll(ts2, IsolationLevel.repeatableRead, true, expected, ep).keySet();
+		
+		
+		Assert.assertEquals(5, keySet.size());
+		Assert.assertTrue(keySet.containsAll(expected));
+		
+		SampleDomainObject expectedObject = new SampleDomainObject(77, "seventy-eight");
+		
+		for (Integer key : expected) {
+			Assert.assertEquals(expectedObject, cache.get(ts2, IsolationLevel.repeatableRead, key));
+		}
+		
+	}
+
+	@Test
+	public void testGetAll() {
+		System.out.println("******GetAll");
+		
+		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+
+		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2, val1);
+			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
+		}
+		
+		Set<Integer> keys = new HashSet<Integer>(5);
+		keys.add(1);
+		keys.add(3);
+		keys.add(5);
+		keys.add(7);
+		keys.add(11);
+		
+		Map<Integer,SampleDomainObject> results = cache.getAll(ts2, IsolationLevel.repeatableRead, keys);
+		
+		Map<Integer,SampleDomainObject> expected = new HashMap<Integer,SampleDomainObject>(4);
+		expected.put(1,val2);
+		expected.put(3,val2);
+		expected.put(5,val2);
+		expected.put(7,val2);
+		
+		Assert.assertEquals(4, results.size());
+		Assert.assertTrue(results.entrySet().containsAll(expected.entrySet()));
+		
+	}
+	
 	private void asynchCommit(final TransactionId ts, final Integer key) {
 		new Thread(new Runnable() {
 			

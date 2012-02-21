@@ -67,7 +67,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 			return null;
 		}
 
-		Object result = null;
+		R result = null;
 		
 		if (delegate != null) {
 
@@ -83,7 +83,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 				}
 			}
 
-			result = delegate.process(childEntry);
+			result = (R) delegate.process(childEntry);
 		
 		}
 		
@@ -91,7 +91,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 			setReadTimestamp(entry);
 		}
 		
-		return result == null ? null : new ProcessorResult<K, R>((R)result);
+		return new ProcessorResult<K, R>(result);
 	}
 
 }

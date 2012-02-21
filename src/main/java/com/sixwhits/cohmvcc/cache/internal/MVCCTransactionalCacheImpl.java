@@ -19,6 +19,7 @@ import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
 import com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper;
 import com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper;
+import com.sixwhits.cohmvcc.transaction.internal.ExistenceCheckProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.CacheService;
@@ -34,6 +35,7 @@ import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.aggregator.Count;
 import com.tangosol.util.extractor.IdentityExtractor;
+import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.PartitionedFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
 
@@ -55,11 +57,10 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		versionCache.addIndex(new MVCCExtractor(), false, null);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public V get(TransactionId tid, IsolationLevel isolationLevel, K key) {
 		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
-		return (V) invokeUntilCommitted(key, tid, ep);
+		return invokeUntilCommitted(key, tid, ep);
 	}
 	
 	@Override
@@ -163,19 +164,28 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	}
 
 	@Override
-	public boolean containsKey(TransactionId tid, IsolationLevel isolationLevel, Object key) {
-		// TODO Auto-generated method stub
+	public boolean containsKey(TransactionId tid, IsolationLevel isolationLevel, K key) {
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,Boolean>(tid, new ExistenceCheckProcessor(), isolationLevel, vcacheName);
+		Boolean result = invokeUntilCommitted(key, tid, ep);
+		return result == null ? false : result;
+	}
+
+	@Override
+	public boolean containsValue(TransactionId tid, IsolationLevel isolationLevel, V value) {
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,Boolean>(tid, new ExistenceCheckProcessor(), isolationLevel, vcacheName);
+		Filter filter = new EqualsFilter(IdentityExtractor.INSTANCE, value);
+		// TODO optimise - we only need to find a single committed matching entry, even if others are uncommitted
+		Map<K,Boolean> result = invokeAllUntilCommitted(filter, tid, ep);
+		for (Boolean exists : result.values()) {
+			if (exists != null && exists) {
+				return true;
+			}
+		}
 		return false;
 	}
 
 	@Override
-	public boolean containsValue(TransactionId tid, IsolationLevel isolationLevel, Object value) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void putAll(TransactionId tid, Map m) {
+	public void putAll(TransactionId tid, Map<K, V> m) {
 		// TODO Auto-generated method stub
 
 	}
@@ -187,32 +197,30 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	}
 
 	@Override
-	public Set keySet(TransactionId tid, IsolationLevel isolationLevel) {
+	public Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel) {
+		return keySet(tid, isolationLevel, null);
+	}
+
+	@Override
+	public Collection<V> values(TransactionId tid, IsolationLevel isolationLevel) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Collection values(TransactionId tid, IsolationLevel isolationLevel) {
-		// TODO Auto-generated method stub
-		return null;
+	public Set<Map.Entry<K, V>> entrySet(TransactionId tid, IsolationLevel isolationLevel) {
+		return entrySet(tid, isolationLevel, null);
 	}
 
 	@Override
-	public Set entrySet(TransactionId tid, IsolationLevel isolationLevel) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Map getAll(TransactionId tid, IsolationLevel isolationLevel, Collection colKeys) {
-		// TODO Auto-generated method stub
-		return null;
+	public Map<K,V> getAll(TransactionId tid, IsolationLevel isolationLevel, Collection<K> colKeys) {
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,V>(tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, vcacheName);
+		return invokeAllUntilCommitted(colKeys, tid, ep);
 	}
 
 	@Override
 	public void addIndex(ValueExtractor extractor, boolean fOrdered,
-			Comparator comparator) {
+			Comparator<V> comparator) {
 		// TODO Auto-generated method stub
 
 	}
@@ -225,15 +233,16 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	}
 
 	@Override
-	public Set entrySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter, Comparator comparator) {
+	public Set<Map.Entry<K,V>> entrySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter, Comparator<V> comparator) {
 		// TODO Auto-generated method stub
+		// TODO is the comparator on the value or the entry?
 		return null;
 	}
 
 	@Override
-	public Set keySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
-		// TODO Auto-generated method stub
-		return null;
+	public Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
+		EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K,Object>(tid, null, isolationLevel, vcacheName, filter);
+		return ((Map<K,Object>)invokeAllUntilCommitted(filter, tid, ep)).keySet();
 	}
 
 	@Override
@@ -243,7 +252,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	}
 
 	@Override
-	public Object aggregate(TransactionId tid, IsolationLevel isolationLevel, Collection collKeys, EntryAggregator agent) {
+	public Object aggregate(TransactionId tid, IsolationLevel isolationLevel, Collection<K> collKeys, EntryAggregator agent) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -316,17 +325,49 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		
 		return resultMap;
 	}
-
-	@Override
-	public Map invokeAll(TransactionId tid, IsolationLevel isolationLevel, Collection collKeys, EntryProcessor agent) {
-		// TODO Auto-generated method stub
-		return null;
+	@SuppressWarnings("unchecked")
+	private <R> Map<K, R> invokeAllUntilCommitted(Collection<K> keys, TransactionId tid,
+			EntryProcessor entryProcessor) {
+		
+		Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+		Map<K, R> resultMap = new HashMap<K, R>();
+		
+		for (Map.Entry<K, ProcessorResult<K,R>> entry : ((Map<K, ProcessorResult<K,R>>)keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
+			if (entry.getValue().isUncommitted()) {
+				retryMap.put(entry.getKey(), entry.getValue().getWaitKey());
+			} else {
+				resultMap.put(entry.getKey(), entry.getValue().getResult());
+			}
+		}
+		
+		for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+			waitForCommit(entry.getValue());
+			while (true) {
+				ProcessorResult<K,R> epr = (ProcessorResult<K,R>) keyCache.invoke(entry.getKey(), entryProcessor);
+				if (epr == null) {
+					break;
+				}
+				if (!epr.isUncommitted()) {
+					resultMap.put(entry.getKey(), epr.getResult());
+					break;
+				}
+				waitForCommit(epr.getWaitKey());
+			}
+		}
+		
+		return resultMap;
 	}
 
 	@Override
-	public Map invokeAll(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryProcessor agent) {
-		// TODO Auto-generated method stub
-		return null;
+	public <R> Map<K, R> invokeAll(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, Collection<K> collKeys, EntryProcessor agent) {
+		EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, vcacheName);
+		return invokeAllUntilCommitted(collKeys, tid, wrappedProcessor);
+	}
+
+	@Override
+	public <R> Map<K, R> invokeAll(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent) {
+		EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, vcacheName);
+		return invokeAllUntilCommitted(filter, tid, wrappedProcessor);
 	}
 
 	@Override

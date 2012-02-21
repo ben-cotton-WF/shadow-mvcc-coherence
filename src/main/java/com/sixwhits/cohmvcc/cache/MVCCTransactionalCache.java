@@ -58,55 +58,55 @@ public interface MVCCTransactionalCache<K,V> {
 			IsolationLevel isolationLevel);
 
 	public abstract boolean containsKey(TransactionId tid,
-			IsolationLevel isolationLevel, Object key);
+			IsolationLevel isolationLevel, K key);
 
 	public abstract boolean containsValue(TransactionId tid,
-			IsolationLevel isolationLevel, Object value);
+			IsolationLevel isolationLevel, V value);
 
 	public abstract V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key);
 
-	public abstract void putAll(TransactionId tid, Map m);
+	public abstract void putAll(TransactionId tid, Map<K, V> m);
 
 	public abstract void clear(TransactionId tid);
 
-	public abstract Set keySet(TransactionId tid, IsolationLevel isolationLevel);
+	public abstract Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel);
 
-	public abstract Collection values(TransactionId tid,
+	public abstract Collection<V> values(TransactionId tid,
 			IsolationLevel isolationLevel);
 
 	public abstract Set<Map.Entry<K,V>> entrySet(TransactionId tid,
 			IsolationLevel isolationLevel);
 
-	public abstract Map getAll(TransactionId tid,
-			IsolationLevel isolationLevel, Collection colKeys);
+	public abstract Map<K, V> getAll(TransactionId tid,
+			IsolationLevel isolationLevel, Collection<K> colKeys);
 
 	public abstract void addIndex(ValueExtractor extractor, boolean fOrdered,
-			Comparator comparator);
+			Comparator<V> comparator);
 
-	public abstract Set entrySet(TransactionId tid,
+	public abstract Set<Map.Entry<K, V>> entrySet(TransactionId tid,
 			IsolationLevel isolationLevel, Filter filter);
 
-	public abstract Set entrySet(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter, Comparator comparator);
+	public abstract Set<Map.Entry<K, V>> entrySet(TransactionId tid,
+			IsolationLevel isolationLevel, Filter filter, Comparator<V> comparator);
 
-	public abstract Set keySet(TransactionId tid,
+	public abstract Set<K> keySet(TransactionId tid,
 			IsolationLevel isolationLevel, Filter filter);
 
 	public abstract void removeIndex(ValueExtractor extractor);
 
 	public abstract Object aggregate(TransactionId tid,
-			IsolationLevel isolationLevel, Collection collKeys,
+			IsolationLevel isolationLevel, Collection<K> collKeys,
 			EntryAggregator agent);
 
 	public abstract Object aggregate(TransactionId tid,
 			IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
 
-	public abstract Map invokeAll(TransactionId tid,
-			IsolationLevel isolationLevel, Collection collKeys,
+	public abstract <R> Map<K, R> invokeAll(TransactionId tid,
+			IsolationLevel isolationLevel, boolean autoCommit, Collection<K> collKeys,
 			EntryProcessor agent);
 
-	public abstract Map invokeAll(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter, EntryProcessor agent);
+	public abstract <R> Map<K, R> invokeAll(TransactionId tid,
+			IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent);
 
 	public abstract void destroy();
 

@@ -110,12 +110,6 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 	}
 	
-//	private Binary getBinaryKey(K sKey, TransactionId ts) {
-//	    NavigableMap<TransactionId,Binary> line = getLine(sKey);
-//	    return line == null ? null : line.get(ts);
-//		
-//	}
-	
 	public TransactionId ceilingTid(K sKey, TransactionId ts) {
 	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 		if (line != null) {

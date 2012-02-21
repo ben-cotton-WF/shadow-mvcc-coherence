@@ -6,16 +6,11 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sixwhits.cohmvcc.cache.internal.UnconditionalPutProcessor;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
-import com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
-import com.tangosol.util.filter.AlwaysFilter;
-import com.tangosol.util.processor.ConditionalPut;
 
 public class SerialisationTest {
 
@@ -44,6 +39,11 @@ public class SerialisationTest {
 	@Test
 	public void testEntryRollbackProcessor() {
 		Object obj = new EntryRollbackProcessor();
+		assertPofFidelity(obj);
+	}
+	@Test
+	public void testExistenceCheckProcessor() {
+		Object obj = new ExistenceCheckProcessor();
 		assertPofFidelity(obj);
 	}
 	
