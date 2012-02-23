@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
@@ -31,14 +32,14 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 	}
 
 	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
-			EntryProcessor delegate, IsolationLevel isolationLevel, String vcacheName) {
-		super(transactionId, isolationLevel, vcacheName);
+			EntryProcessor delegate, IsolationLevel isolationLevel, CacheName cacheName) {
+		super(transactionId, isolationLevel, cacheName);
 		this.delegate = delegate;
 	}
 
 	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
-			EntryProcessor delegate, IsolationLevel isolationLevel, String vcacheName, Filter filter) {
-		super(transactionId, isolationLevel, vcacheName);
+			EntryProcessor delegate, IsolationLevel isolationLevel, CacheName cacheName, Filter filter) {
+		super(transactionId, isolationLevel, cacheName);
 		this.delegate = delegate;
 		this.validationFilter = filter;
 	}
@@ -71,7 +72,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 		
 		if (delegate != null) {
 
-			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
 			
 			if (validationFilter != null) {
 				if (validationFilter instanceof EntryFilter) {

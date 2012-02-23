@@ -6,6 +6,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.io.pof.ConfigurablePofContext;
@@ -25,7 +26,7 @@ public class SerialisationTest {
 	public void testReadMarkingProcessor() {
 		ReadMarkingProcessor<Integer> obj = new ReadMarkingProcessor<Integer>(
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
-				IsolationLevel.serializable, "acachename");
+				IsolationLevel.serializable, new CacheName("acachename"));
 		
 		assertPofFidelity(obj);
 	}

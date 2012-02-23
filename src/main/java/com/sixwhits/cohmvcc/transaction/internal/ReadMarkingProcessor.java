@@ -4,6 +4,7 @@ import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.serializable;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
@@ -25,8 +26,8 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K,Object> {
 	}
 
 	public ReadMarkingProcessor(TransactionId transactionId,
-			IsolationLevel isolationLevel, String vcacheName) {
-		super(transactionId, isolationLevel, vcacheName);
+			IsolationLevel isolationLevel, CacheName cacheName) {
+		super(transactionId, isolationLevel, cacheName);
 	}
 
 	@SuppressWarnings("unchecked")

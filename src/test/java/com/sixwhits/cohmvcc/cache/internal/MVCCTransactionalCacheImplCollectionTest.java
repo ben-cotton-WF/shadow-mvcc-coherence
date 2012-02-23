@@ -1,23 +1,28 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
 
-import junit.framework.Assert;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
 import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
 
-import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
@@ -25,12 +30,6 @@ import com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.Filter;
-import com.tangosol.util.InvocableMap.EntryProcessor;
-import com.tangosol.util.extractor.PofExtractor;
-import com.tangosol.util.extractor.PofUpdater;
-import com.tangosol.util.filter.EqualsFilter;
-import com.tangosol.util.processor.UpdaterProcessor;
 
 public class MVCCTransactionalCacheImplCollectionTest {
 	
@@ -66,7 +65,7 @@ public class MVCCTransactionalCacheImplCollectionTest {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
 				}
-				NamedCache vcache = CacheFactory.getCache(cache.vcacheName);
+				NamedCache vcache = CacheFactory.getCache(cache.cacheName.getVersionCacheName());
 				vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
 			}
 		}).start();
@@ -81,7 +80,7 @@ public class MVCCTransactionalCacheImplCollectionTest {
 					flag.acquire();
 				} catch (InterruptedException e) {
 				}
-				NamedCache vcache = CacheFactory.getCache(cache.vcacheName);
+				NamedCache vcache = CacheFactory.getCache(cache.cacheName.getVersionCacheName());
 				vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
 			}
 		}).start();
@@ -96,7 +95,7 @@ public class MVCCTransactionalCacheImplCollectionTest {
 					Thread.sleep(100);
 				} catch (InterruptedException e) {
 				}
-				NamedCache vcache = CacheFactory.getCache(cache.vcacheName);
+				NamedCache vcache = CacheFactory.getCache(cache.cacheName.getVersionCacheName());
 				vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryRollbackProcessor());
 			}
 		});
@@ -110,39 +109,28 @@ public class MVCCTransactionalCacheImplCollectionTest {
 		CacheFactory.shutdown();
 		cmg.shutdownAll();
 	}
-
+	
 	@Test
-	public void testGetAll() {
-		System.out.println("******GetAll");
+	public void testContainsValue() {
+		
+		System.out.println("******ContainsValue");
 		
 		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
-
-		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
-		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
-
-		for (int key = 0; key < 5; key++) {
-			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2, val1);
-			cache.insert(ts1, IsolationLevel.repeatableRead, true, key * 2 + 1, val2);
-		}
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+		Integer theKey = 99;
+		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject otherValue = new SampleDomainObject(99, "ninety-nine");
+		SampleDomainObject noValue = new SampleDomainObject(77, "seventy-seven");
+		Integer otherKey = 98;
 		
-		Set<Integer> keys = new HashSet<Integer>(5);
-		keys.add(1);
-		keys.add(3);
-		keys.add(5);
-		keys.add(7);
-		keys.add(11);
+		assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
+		assertNull(cache.put(ts3, repeatableRead, true, otherKey, otherValue));
 		
-		Map<Integer,SampleDomainObject> results = cache.getAll(ts2, IsolationLevel.repeatableRead, keys);
 		
-		Map<Integer,SampleDomainObject> expected = new HashMap<Integer,SampleDomainObject>(4);
-		expected.put(1,val2);
-		expected.put(3,val2);
-		expected.put(5,val2);
-		expected.put(7,val2);
-		
-		Assert.assertEquals(4, results.size());
-		Assert.assertTrue(results.entrySet().containsAll(expected.entrySet()));
-		
+		assertTrue(cache.containsValue(ts2, repeatableRead, theValue));
+		assertFalse(cache.containsValue(ts2, repeatableRead, otherValue));
+		assertFalse(cache.containsValue(ts2, repeatableRead, noValue));
 	}
+	
 }

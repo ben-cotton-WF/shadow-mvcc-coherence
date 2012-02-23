@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
@@ -32,8 +33,8 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 
 	
 	public MVCCEntryProcessorWrapper(TransactionId transactionId,
-			EntryProcessor delegate, IsolationLevel isolationLevel, boolean autoCommit, String vcacheName) {
-		super(transactionId, isolationLevel, vcacheName);
+			EntryProcessor delegate, IsolationLevel isolationLevel, boolean autoCommit, CacheName cacheName) {
+		super(transactionId, isolationLevel, cacheName);
 		this.delegate = delegate;
 		this.autoCommit = autoCommit;
 	}
@@ -59,7 +60,7 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 			}
 		}
 		
-		ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, vcacheName);
+		ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, cacheName);
 		
 		R result = (R) delegate.process(childEntry);
 		

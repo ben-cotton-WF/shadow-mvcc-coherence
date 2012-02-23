@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.util.Binary;
@@ -12,8 +13,8 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
 	private boolean delete = false;
 	private Binary newValue;
 	
-	public ReadWriteEntryWrapper(BinaryEntry parentEntry, TransactionId transactionId, IsolationLevel isolationLevel, String vcacheName) {
-		super(parentEntry, transactionId, isolationLevel, vcacheName);
+	public ReadWriteEntryWrapper(BinaryEntry parentEntry, TransactionId transactionId, IsolationLevel isolationLevel, CacheName cacheName) {
+		super(parentEntry, transactionId, isolationLevel, cacheName);
 	}
 
 	@Override

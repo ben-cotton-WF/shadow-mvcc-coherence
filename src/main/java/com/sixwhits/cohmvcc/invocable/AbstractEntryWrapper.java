@@ -1,5 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
@@ -21,15 +22,15 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 
 	private boolean priorRead = false;
 	protected TransactionId transactionId;
-	protected String vcacheName;
+	protected CacheName cacheName;
 	protected IsolationLevel isolationLevel;
 
-	public AbstractEntryWrapper(BinaryEntry parentEntry, TransactionId transactionId, IsolationLevel isolationLevel, String vcacheName) {
+	public AbstractEntryWrapper(BinaryEntry parentEntry, TransactionId transactionId, IsolationLevel isolationLevel, CacheName cacheName) {
 		super();
 		this.parentEntry = parentEntry;
 		this.transactionId = transactionId;
 		this.isolationLevel = isolationLevel;
-		this.vcacheName = vcacheName;
+		this.cacheName = cacheName;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -40,7 +41,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 	}
 
 	private BackingMapContext getVersionCacheBackingMapContext() {
-		return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(vcacheName);
+		return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(cacheName.getVersionCacheName());
 	}
 
 	@Override

@@ -6,6 +6,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
@@ -32,15 +33,15 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 	protected IsolationLevel isolationLevel;
 	public static final int POF_VCACHENAME = 3;
 	@PortableProperty(POF_VCACHENAME)
-	protected String vcacheName;
+	protected CacheName cacheName;
 	protected static final MVCCExtractor indexId = new MVCCExtractor();
 	
 	public AbstractMVCCProcessor(TransactionId transactionId,
-			IsolationLevel isolationLevel, String vcacheName) {
+			IsolationLevel isolationLevel, CacheName cacheName) {
 		super();
 		this.transactionId = transactionId;
 		this.isolationLevel = isolationLevel;
-		this.vcacheName = vcacheName;
+		this.cacheName = cacheName;
 	}
 
 	public AbstractMVCCProcessor() {
@@ -75,7 +76,7 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 	}
 	
 	protected BackingMapContext getVersionCacheBackingMapContext(BinaryEntry parentEntry) {
-		return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(vcacheName);
+		return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(cacheName.getVersionCacheName());
 	}
 	
 	@SuppressWarnings("unchecked")

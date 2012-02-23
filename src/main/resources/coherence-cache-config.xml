@@ -59,6 +59,12 @@ Elements" page on the Coherence Wiki (http://wiki.tangosol.com).
     <local-scheme>
       <scheme-name>example-binary-backing-map</scheme-name>
     </local-scheme>
+    
+    <invocation-scheme>
+        <scheme-name>invocation-service</scheme-name>
+        <service-name>InvocationService</service-name>
+        <autostart>true</autostart>
+    </invocation-scheme>
 
   </caching-schemes>
 </cache-config>

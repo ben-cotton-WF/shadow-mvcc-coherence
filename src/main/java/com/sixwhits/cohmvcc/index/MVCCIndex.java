@@ -28,14 +28,19 @@ public class MVCCIndex<K> implements MapIndex {
 	
 	private static class IndexEntry {
 		private boolean isCommitted;
+		private boolean isDeleted;
 		private Binary binaryKey;
-		public IndexEntry(boolean isCommitted, Binary binaryKey) {
+		public IndexEntry(boolean isCommitted, boolean isDeleted, Binary binaryKey) {
 			super();
 			this.isCommitted = isCommitted;
+			this.isDeleted = isDeleted;
 			this.binaryKey = binaryKey;
 		}
 		public boolean isCommitted() {
 			return isCommitted;
+		}
+		public boolean isDeleted() {
+			return isDeleted;
 		}
 		public void commit() {
 			this.isCommitted = true;
@@ -62,10 +67,12 @@ public class MVCCIndex<K> implements MapIndex {
 			VersionedKey<K> vk = (VersionedKey<K>) converter.convert(candidate);
 			Entry<TransactionId,IndexEntry> floorEntry = floorEntry(vk.getNativeKey(), ts);
 			if (floorEntry != null) {
-				result.add(floorEntry.getValue().getBinaryKey());
+				if (!floorEntry.getValue().isDeleted()) {
+					result.add(floorEntry.getValue().getBinaryKey());
+				}
 				while (floorEntry != null && !floorEntry.getValue().isCommitted()) {
 					floorEntry = nextFloor(vk.getNativeKey(), floorEntry.getKey());
-					if (floorEntry != null) {
+					if (floorEntry != null && !floorEntry.getValue().isDeleted()) {
 						result.add(floorEntry.getValue().getBinaryKey());
 					}
 				}
@@ -138,8 +145,9 @@ public class MVCCIndex<K> implements MapIndex {
 		sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
 		ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
 		Boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(entry);
+		Boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(entry);
 		Binary binaryKey = ((BinaryEntry)entry).getBinaryKey();
-		addToIndex(sKey, ts, binaryKey, committed);
+		addToIndex(sKey, ts, binaryKey, committed, deleted);
 	}
 
 	@Override
@@ -158,11 +166,11 @@ public class MVCCIndex<K> implements MapIndex {
 		removeFromIndex(sKey, ts);
 	}
 	
-	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey, Boolean committed) {
+	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey, Boolean committed, Boolean deleted) {
 		while(true) {
 			NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 			synchronized(line) {
-				line.put(ts, new IndexEntry(committed, binaryKey));
+				line.put(ts, new IndexEntry(committed, deleted, binaryKey));
 				if (line == getLine(sKey)) {
 					return;
 				}

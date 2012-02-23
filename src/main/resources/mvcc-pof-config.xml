@@ -94,6 +94,22 @@
       <type-id>1021</type-id>
       <class-name>com.sixwhits.cohmvcc.transaction.internal.ExistenceCheckProcessor</class-name>
     </user-type>
+    <user-type>
+      <type-id>1022</type-id>
+      <class-name>com.sixwhits.cohmvcc.cache.internal.PutAllProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1023</type-id>
+      <class-name>com.sixwhits.cohmvcc.cache.CacheName</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1024</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.EntryProcessorInvoker</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1025</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.EntryProcessorInvokerResult</class-name>
+    </user-type>
 
   </user-type-list>
 

@@ -22,7 +22,7 @@ public interface MVCCTransactionalCache<K,V> {
 	public abstract V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
 
 	/**
-	 * Like insert, but doesn't return old value so no read registered.
+	 * Like put, but doesn't return old value so no read registered.
 	 * @param tid
 	 * @param isolationLevel
 	 * @param autoCommit
@@ -30,7 +30,7 @@ public interface MVCCTransactionalCache<K,V> {
 	 * @param value
 	 * @return
 	 */
-	public void insert(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
+	public void insert(TransactionId tid, boolean autoCommit, K key, V value);
 
 	public abstract <R> R invoke(TransactionId tid,
 			IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
@@ -65,9 +65,9 @@ public interface MVCCTransactionalCache<K,V> {
 
 	public abstract V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key);
 
-	public abstract void putAll(TransactionId tid, Map<K, V> m);
+	public abstract void putAll(TransactionId tid, boolean autoCommit, Map<K, V> m);
 
-	public abstract void clear(TransactionId tid);
+	public abstract void clear(TransactionId tid, boolean autoCommit);
 
 	public abstract Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel);
 
@@ -94,11 +94,11 @@ public interface MVCCTransactionalCache<K,V> {
 
 	public abstract void removeIndex(ValueExtractor extractor);
 
-	public abstract Object aggregate(TransactionId tid,
+	public abstract <R> R aggregate(TransactionId tid,
 			IsolationLevel isolationLevel, Collection<K> collKeys,
 			EntryAggregator agent);
 
-	public abstract Object aggregate(TransactionId tid,
+	public abstract <R> R aggregate(TransactionId tid,
 			IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
 
 	public abstract <R> Map<K, R> invokeAll(TransactionId tid,
