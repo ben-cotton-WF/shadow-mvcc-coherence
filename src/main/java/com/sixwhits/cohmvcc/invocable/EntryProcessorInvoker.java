@@ -40,6 +40,9 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 	public static final int POF_EP = 3;
 	@PortableProperty(POF_EP)
 	private EntryProcessor entryProcessor;
+	public static final int POF_PARTITIONS = 4;
+	@PortableProperty(POF_PARTITIONS)
+	private PartitionSet partitions = null;
 	
 	transient private PartitionSet memberParts;
 	transient private Map<K, R> resultMap;
@@ -58,6 +61,17 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 		this.entryProcessor = entryProcessor;
 	}
 
+	public EntryProcessorInvoker(CacheName cacheName, Filter filter,
+			TransactionId tid, EntryProcessor entryProcessor,
+			PartitionSet partitions) {
+		super();
+		this.cacheName = cacheName;
+		this.filter = filter;
+		this.tid = tid;
+		this.entryProcessor = entryProcessor;
+		this.partitions = partitions;
+	}
+
 	@Override
 	public void init(InvocationService invocationservice) {
 	}
@@ -72,6 +86,9 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 		Member thisMember = CacheFactory.getCluster().getLocalMember();
 		
 		memberParts = cacheService.getOwnedPartitions(thisMember);
+		if (partitions != null) {
+			memberParts.retain(partitions);
+		}
 		
 		MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		Filter filterPart = new PartitionedFilter(surfaceFilter, memberParts);

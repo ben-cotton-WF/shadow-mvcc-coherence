@@ -56,7 +56,7 @@ public class MVCCTransactionalCacheImplTest {
 	public void setUp() throws Exception {
 		System.out.println("******setUp");
 		DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-		cmg = builder.setStorageEnabledCount(1).build();
+		cmg = builder.setStorageEnabledCount(2).build();
 
 		System.out.println("******initialise cache");
 		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");

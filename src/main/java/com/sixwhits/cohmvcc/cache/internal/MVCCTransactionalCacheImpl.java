@@ -34,6 +34,7 @@ import com.tangosol.net.InvocationService;
 import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.partition.KeyPartitioningStrategy;
+import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.InvocableMap.EntryProcessor;
@@ -306,21 +307,25 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 			EntryProcessor entryProcessor) {
 		
 		DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
-		
-		EntryProcessorInvoker<K, R> invoker = new EntryProcessorInvoker<K, R>(cacheName, filter, tid, entryProcessor);
-		
-		Collection<EntryProcessorInvokerResult<K, R>> invocationResults =
-				invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
+		PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
+		remainingPartitions.fill();
 		
 		Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
 		Map<K, R> resultMap = new HashMap<K, R>();
 
-		for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
-			resultMap.putAll(result.getResultMap());
-			retryMap.putAll(result.getRetryMap());
-		}
+		do {
+			EntryProcessorInvoker<K, R> invoker = new EntryProcessorInvoker<K, R>(cacheName, filter, tid, entryProcessor, remainingPartitions);
+
+			Collection<EntryProcessorInvokerResult<K, R>> invocationResults =
+					invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
+
+			for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
+				resultMap.putAll(result.getResultMap());
+				retryMap.putAll(result.getRetryMap());
+				remainingPartitions.remove(result.getPartitions());
+			}
 		
-		//TODO retry remaining partitions
+		} while (!remainingPartitions.isEmpty());
 		
 		for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
 			waitForCommit(entry.getValue());
@@ -339,6 +344,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		
 		return resultMap;
 	}
+	
 	@SuppressWarnings("unchecked")
 	private <R> Map<K, R> invokeAllUntilCommitted(Collection<K> keys, TransactionId tid,
 			EntryProcessor entryProcessor) {
