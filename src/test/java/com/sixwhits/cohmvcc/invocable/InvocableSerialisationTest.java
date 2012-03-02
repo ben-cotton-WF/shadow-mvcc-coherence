@@ -45,7 +45,7 @@ public class InvocableSerialisationTest {
 	@Test
 	public void testMVCCReadOnlyEntryProcessorWrapper() {
 		
-		MVCCReadOnlyEntryProcessorWrapper<String,Object> wrapper = new MVCCReadOnlyEntryProcessorWrapper<String,Object>(
+		Object wrapper = new MVCCReadOnlyEntryProcessorWrapper<String,Object>(
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457),
 				new ConditionalPut(AlwaysFilter.INSTANCE, "a test value"),
 				IsolationLevel.serializable, new CacheName("acachename"));
@@ -81,14 +81,14 @@ public class InvocableSerialisationTest {
 	@Ignore
 	@Test
 	public void testParallelAwareAggregatorWrapper() {
-		Object obj = new ParallelAwareAggregatorWrapper(new Count());
+		Object obj = new ParallelAwareAggregatorWrapper(new Count(), new CacheName("cachename"));
 		assertPofFidelity(obj);
 	}
 
 	@Ignore
 	@Test
 	public void testAggregatorWrapper() {
-		Object obj = new AggregatorWrapper(new Count());
+		Object obj = new AggregatorWrapper(new Count(), new CacheName("cachename"));
 		assertPofFidelity(obj);
 	}
 

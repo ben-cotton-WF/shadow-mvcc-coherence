@@ -17,18 +17,12 @@ public class ProcessorResult<K,R> {
 		super();
 	}
 
-	public ProcessorResult(R result) {
+	public ProcessorResult(R result, VersionedKey<K> waitKey) {
 		super();
 		this.result = result;
-		this.waitKey = null;
-	}
-	
-	public ProcessorResult(VersionedKey<K> waitKey) {
-		super();
-		this.result = null;
 		this.waitKey = waitKey;
 	}
-
+	
 	public R getResult() {
 		return result;
 	}

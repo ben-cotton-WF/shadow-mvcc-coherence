@@ -61,11 +61,11 @@ public class DomainSerialisationTest {
 	
 	public void testProcessorResult1() {
 		TransactionId ts = new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457);
-		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(new VersionedKey<String>("ABC", ts));
+		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(null, new VersionedKey<String>("ABC", ts));
 		assertPofFidelityByReflection(pr);
 	}
 	public void testProcessorResult2() {
-		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99);
+		ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, null);
 		assertPofFidelityByReflection(pr);
 	}
 	

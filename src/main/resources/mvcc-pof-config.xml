@@ -110,6 +110,22 @@
       <type-id>1025</type-id>
       <class-name>com.sixwhits.cohmvcc.invocable.EntryProcessorInvokerResult</class-name>
     </user-type>
+    <user-type>
+      <type-id>1026</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAggregationInvoker</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1027</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAggregationInvokerResult</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1028</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.FilterValidateEntryProcessor</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1029</type-id>
+      <class-name>com.sixwhits.cohmvcc.invocable.ParallelKeyAggregationInvoker</class-name>
+    </user-type>
 
   </user-type-list>
 

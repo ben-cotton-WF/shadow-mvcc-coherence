@@ -13,7 +13,6 @@ import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
-import com.tangosol.util.filter.EntryFilter;
 
 @Portable
 public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
@@ -23,10 +22,6 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 	public static final int POF_EP = 10;
 	@PortableProperty(POF_EP)
 	private EntryProcessor delegate;
-	public static final int POF_FILTER = 11;
-	@PortableProperty(POF_FILTER)
-	private Filter validationFilter = null;
-
 	public MVCCReadOnlyEntryProcessorWrapper() {
 		super();
 	}
@@ -39,9 +34,8 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 
 	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
 			EntryProcessor delegate, IsolationLevel isolationLevel, CacheName cacheName, Filter filter) {
-		super(transactionId, isolationLevel, cacheName);
+		super(transactionId, isolationLevel, cacheName, filter);
 		this.delegate = delegate;
-		this.validationFilter = filter;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -59,7 +53,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 		if (isolationLevel != IsolationLevel.readUncommitted) {
 			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
 			if (!committed) {
-				return new ProcessorResult<K,R>((VersionedKey<K>)priorEntry.getKey());
+				return new ProcessorResult<K,R>(null, (VersionedKey<K>)priorEntry.getKey());
 			}
 		}
 
@@ -74,14 +68,8 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 
 			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
 			
-			if (validationFilter != null) {
-				if (validationFilter instanceof EntryFilter) {
-					if (!((EntryFilter)validationFilter).evaluateEntry(childEntry)) {
-						return null;
-					}
-				} else if (!validationFilter.evaluate(childEntry.getValue())) {
-					return null;
-				}
+			if (!confirmFilterMatch(childEntry)) {
+				return null;
 			}
 
 			result = (R) delegate.process(childEntry);
@@ -92,7 +80,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 			setReadTimestamp(entry);
 		}
 		
-		return new ProcessorResult<K, R>(result);
+		return new ProcessorResult<K, R>(result, null);
 	}
 
 }

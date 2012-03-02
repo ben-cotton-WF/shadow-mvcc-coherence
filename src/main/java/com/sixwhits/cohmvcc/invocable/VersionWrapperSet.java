@@ -4,13 +4,17 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
+import com.tangosol.io.Serializer;
 import com.tangosol.util.BinaryEntry;
+import com.tangosol.util.InvocableMap.Entry;
 
-public class VersionWrapperSet implements Set<BinaryEntry> {
-	private final Set<BinaryEntry> versionedSet;
+public class VersionWrapperSet implements Set<Entry> {
+	private final Set<Entry> versionedSet;
+	private final Serializer serializer;
 
-	public VersionWrapperSet(Set<BinaryEntry> versionedSet) {
+	public VersionWrapperSet(Serializer serializer, Set<Entry> versionedSet) {
 		super();
+		this.serializer = serializer;
 		this.versionedSet = versionedSet;
 	}
 
@@ -26,19 +30,25 @@ public class VersionWrapperSet implements Set<BinaryEntry> {
 		throw new UnsupportedOperationException("thought this wouldn't be called");
 	}
 
-	public Iterator<BinaryEntry> iterator() {
-		return new Iterator<BinaryEntry>() {
+	public Iterator<Entry> iterator() {
+		return new Iterator<Entry>() {
 			
-			private Iterator<BinaryEntry> underlying = versionedSet.iterator();
+			private Iterator<Entry> underlying = versionedSet.iterator();
 
 			@Override
 			public boolean hasNext() {
 				return underlying.hasNext();
 			}
 
+			@SuppressWarnings({ "rawtypes" })
 			@Override
-			public BinaryEntry next() {
-				return new VersionCacheEntryWrapper(underlying.next());
+			public Entry next() {
+				Entry underlyingEntry = underlying.next();
+				if (underlyingEntry instanceof BinaryEntry) {
+					return new VersionCacheBinaryEntryWrapper((BinaryEntry)underlyingEntry);
+				} else {
+					return new VersionCacheEntryWrapper(serializer, underlyingEntry);
+				}
 			}
 
 			@Override
@@ -56,7 +66,7 @@ public class VersionWrapperSet implements Set<BinaryEntry> {
 		throw new UnsupportedOperationException("thought this wouldn't be called");
 	}
 
-	public boolean add(BinaryEntry e) {
+	public boolean add(Entry e) {
 		throw new UnsupportedOperationException("set is read only");
 	}
 
@@ -68,7 +78,7 @@ public class VersionWrapperSet implements Set<BinaryEntry> {
 		throw new UnsupportedOperationException("thought this wouldn't be called");
 	}
 
-	public boolean addAll(Collection<? extends BinaryEntry> c) {
+	public boolean addAll(Collection<? extends Entry> c) {
 		throw new UnsupportedOperationException("set is read only");
 	}
 

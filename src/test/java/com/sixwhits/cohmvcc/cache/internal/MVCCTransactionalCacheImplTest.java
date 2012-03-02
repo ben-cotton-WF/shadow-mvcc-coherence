@@ -33,6 +33,8 @@ import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.aggregator.Count;
+import com.tangosol.util.aggregator.LongSum;
 import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.extractor.PofUpdater;
 import com.tangosol.util.filter.EqualsFilter;
@@ -671,6 +673,56 @@ public class MVCCTransactionalCacheImplTest {
 		
 	}
 
+	@Test
+	public void testAggregateFilter() {
+		
+		System.out.println("******AggregateFilter");
+		
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+
+		SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val4 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 3; key++) {
+			cache.insert(ts2, true, key, val2);
+		}
+		
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts2, true, key + 10, val4);
+		}
+		
+		assertEquals(3,
+				cache.aggregate(ts3, repeatableRead, new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 88), new Count()));
+	}
+	
+	@Test
+	public void testAggregateKeys() {
+		
+		System.out.println("******AggregateKeys");
+		
+		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+
+		SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
+		SampleDomainObject val4 = new SampleDomainObject(77, "seventy-seven");
+
+		for (int key = 0; key < 3; key++) {
+			cache.insert(ts2, true, key, val2);
+		}
+		
+		for (int key = 0; key < 5; key++) {
+			cache.insert(ts2, true, key + 10, val4);
+		}
+		
+		Set<Integer> keys = new HashSet<Integer>();
+		keys.add(2);
+		keys.add(10);
+		keys.add(11);
+		assertEquals(Long.valueOf(88 + 77 + 77),
+				cache.aggregate(ts3, repeatableRead, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+	}
+	
 	private void asynchCommit(final TransactionId ts, final Integer key) {
 		new Thread(new Runnable() {
 			

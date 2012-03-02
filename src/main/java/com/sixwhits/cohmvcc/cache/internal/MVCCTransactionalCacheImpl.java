@@ -1,12 +1,15 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readProhibited;
+import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.serializable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,9 +25,13 @@ import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
 import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
 import com.sixwhits.cohmvcc.invocable.EntryProcessorInvoker;
 import com.sixwhits.cohmvcc.invocable.EntryProcessorInvokerResult;
+import com.sixwhits.cohmvcc.invocable.FilterValidateEntryProcessor;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
 import com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper;
+import com.sixwhits.cohmvcc.invocable.ParallelAggregationInvoker;
+import com.sixwhits.cohmvcc.invocable.ParallelAggregationInvokerResult;
 import com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper;
+import com.sixwhits.cohmvcc.invocable.ParallelKeyAggregationInvoker;
 import com.sixwhits.cohmvcc.transaction.internal.ExistenceCheckProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor;
 import com.tangosol.net.CacheFactory;
@@ -282,24 +289,171 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 
 	@Override
 	public <R> R aggregate(TransactionId tid, IsolationLevel isolationLevel, Collection<K> collKeys, EntryAggregator agent) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		if (agent instanceof ParallelAwareAggregator) {
+			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent, cacheName);
+			return aggregateParallel(tid, isolationLevel, collKeys, wrapper);
+		} else {
+			AggregatorWrapper wrapper = new AggregatorWrapper(agent, cacheName);
+			return aggregateSerial(tid, isolationLevel, collKeys, wrapper);
+		}
+	}
+
+	@Override
+	public <R> R aggregate(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) {
+		if (agent instanceof ParallelAwareAggregator) {
+			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent, cacheName);
+			return aggregateParallel(tid, isolationLevel, filter, wrapper);
+		} else {
+			AggregatorWrapper wrapper = new AggregatorWrapper(agent, cacheName);
+			return aggregateSerial(tid, isolationLevel, filter, wrapper);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
-	@Override
-	public <R> R aggregate(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) {
+	private <R> R aggregateSerial(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) {
 		if (isolationLevel == repeatableRead || isolationLevel == serializable) {
 			invokeAllUntilCommitted(filter, tid, new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName));
 		}
 		EntryAggregator wrapper;
-		if (agent instanceof ParallelAwareAggregator) {
-			wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator) agent);
-		} else {
-			wrapper = new AggregatorWrapper(agent);
-		}
+		wrapper = new AggregatorWrapper(agent, cacheName);
+		// TODO restrict filter to include only items already marked read with this tid for repeatableRead
 		MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		return (R) versionCache.aggregate(surfaceFilter, wrapper);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <R> R aggregateSerial(TransactionId tid, IsolationLevel isolationLevel, Collection<K> keys, EntryAggregator agent) {
+		ReadMarkingProcessor<K> readMarker = new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName, true);
+		Map<K, ProcessorResult<K,VersionedKey<K>>> markMap = (Map<K, ProcessorResult<K,VersionedKey<K>>>)keyCache.invokeAll(
+					keys, readMarker);
+		EntryAggregator wrapper;
+		Set<VersionedKey<K>> vkeys = new HashSet<VersionedKey<K>>(markMap.size());
+		for (Map.Entry<K, ProcessorResult<K,VersionedKey<K>>> entry : markMap.entrySet()) {
+			ProcessorResult<K, VersionedKey<K>> pr = entry.getValue();
+			while (isolationLevel != readUncommitted && pr != null && pr.isUncommitted()) {
+				waitForCommit(pr.getWaitKey());
+				pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
+			}
+			if (pr != null) {
+				vkeys.add(pr.getResult());
+			}
+			
+		}
+		wrapper = new AggregatorWrapper(agent, cacheName);
+		return (R) versionCache.aggregate(vkeys, wrapper);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <R> R aggregateParallel(TransactionId tid, IsolationLevel isolationLevel, Filter filter, ParallelAwareAggregator agent) {
+		DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
+		PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
+		remainingPartitions.fill();
+		
+		Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+		Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
+		
+		do {
+			ParallelAggregationInvoker<K, R> invoker = new ParallelAggregationInvoker<K, R>(
+					cacheName, filter, tid, agent, isolationLevel, remainingPartitions);
+
+			Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
+					invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
+
+			for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
+				partialResults.add(result.getResult());
+				retryMap.putAll(result.getRetryMap());
+				remainingPartitions.remove(result.getPartitions());
+			}
+		
+		} while (!remainingPartitions.isEmpty());
+
+		if (retryMap.size() > 0) {
+			Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
+
+			while (retryMap.size() > 0) {
+				for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+					waitForCommit(entry.getValue());
+				}
+				Set<K> retryKeys = new HashSet<K>(retryMap.keySet());
+				retryMap.clear();
+
+				for (Map.Entry<K, ProcessorResult<K,VersionedKey<K>>> entry :
+					((Map<K, ProcessorResult<K,VersionedKey<K>>>)keyCache.invokeAll(retryKeys, new FilterValidateEntryProcessor<K>(tid, isolationLevel, cacheName, filter))).entrySet()) {
+					if (entry.getValue().isUncommitted()) {
+						retryMap.put(entry.getKey(), entry.getValue().getWaitKey());
+					} else {
+						remnantKeys.add(entry.getValue().getResult());
+					}
+				}
+			}
+			
+			R retriedPartial = (R) versionCache.aggregate(remnantKeys, agent.getParallelAggregator());
+			
+			partialResults.add(retriedPartial);
+		}
+		
+		R result = (R) agent.aggregateResults(partialResults);
+		
+		return result;
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <R> R aggregateParallel(TransactionId tid, IsolationLevel isolationLevel, Collection<K> keys, ParallelAwareAggregator agent) {
+		DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
+		PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
+		remainingPartitions.fill();
+		
+		Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+		Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
+		
+		do {
+			ParallelKeyAggregationInvoker<K, R> invoker = new ParallelKeyAggregationInvoker<K, R>(
+					cacheName, keys, tid, agent, isolationLevel, remainingPartitions);
+
+			Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
+					invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
+
+			for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
+				if (result != null) {
+					partialResults.add(result.getResult());
+					retryMap.putAll(result.getRetryMap());
+					remainingPartitions.remove(result.getPartitions());
+				}
+			}
+		
+		} while (!remainingPartitions.isEmpty());
+
+		if (retryMap.size() > 0) {
+			Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
+
+			for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+
+				if (isolationLevel == readUncommitted) {
+					remnantKeys.add(entry.getValue());
+				} else {
+					ProcessorResult<K, VersionedKey<K>> pr = null;
+					ReadMarkingProcessor<K> readMarker = new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName, true);
+					do {
+						waitForCommit(pr.getWaitKey());
+						pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
+					} while (pr != null && pr.isUncommitted());
+					if (pr != null) {
+						remnantKeys.add(pr.getResult());
+					}
+				}
+			}
+			
+			R retriedPartial = (R) versionCache.aggregate(remnantKeys, agent.getParallelAggregator());
+			
+			partialResults.add(retriedPartial);
+		}
+		
+		R result = (R) agent.aggregateResults(partialResults);
+		
+		return result;
+		
 	}
 
 	@SuppressWarnings("unchecked")
@@ -324,7 +478,6 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 				retryMap.putAll(result.getRetryMap());
 				remainingPartitions.remove(result.getPartitions());
 			}
-		
 		} while (!remainingPartitions.isEmpty());
 		
 		for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
@@ -386,7 +539,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 
 	@Override
 	public <R> Map<K, R> invokeAll(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent) {
-		EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
+		EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName, filter);
 		return invokeAllUntilCommitted(filter, tid, wrappedProcessor);
 	}
 

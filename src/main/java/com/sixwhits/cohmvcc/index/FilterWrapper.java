@@ -2,7 +2,7 @@ package com.sixwhits.cohmvcc.index;
 
 import java.util.Map.Entry;
 
-import com.sixwhits.cohmvcc.invocable.VersionCacheEntryWrapper;
+import com.sixwhits.cohmvcc.invocable.VersionCacheBinaryEntryWrapper;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.Filter;
 import com.tangosol.util.filter.EntryFilter;
@@ -25,7 +25,7 @@ public class FilterWrapper implements EntryFilter {
 	@Override
 	public boolean evaluateEntry(@SuppressWarnings("rawtypes") Entry arg) {
 		BinaryEntry entry = (BinaryEntry) arg;
-		BinaryEntry wrappedEntry = new VersionCacheEntryWrapper(entry);
+		BinaryEntry wrappedEntry = new VersionCacheBinaryEntryWrapper(entry);
 		if (delegate instanceof EntryFilter) {
 			return ((EntryFilter)delegate).evaluateEntry(wrappedEntry);
 		} else {

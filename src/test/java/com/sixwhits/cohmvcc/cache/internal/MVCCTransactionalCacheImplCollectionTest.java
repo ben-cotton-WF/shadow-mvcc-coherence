@@ -10,6 +10,7 @@ import static junit.framework.Assert.assertTrue;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -28,8 +29,13 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
+import com.tangosol.coherence.reporter.locator.SumLocator;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.aggregator.Count;
+import com.tangosol.util.aggregator.LongSum;
+import com.tangosol.util.extractor.PofExtractor;
+import com.tangosol.util.filter.EqualsFilter;
 
 public class MVCCTransactionalCacheImplCollectionTest {
 	
@@ -108,29 +114,6 @@ public class MVCCTransactionalCacheImplCollectionTest {
 		System.out.println("******tearDown");
 		CacheFactory.shutdown();
 		cmg.shutdownAll();
-	}
-	
-	@Test
-	public void testContainsValue() {
-		
-		System.out.println("******ContainsValue");
-		
-		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
-		final TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
-		Integer theKey = 99;
-		SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-		SampleDomainObject otherValue = new SampleDomainObject(99, "ninety-nine");
-		SampleDomainObject noValue = new SampleDomainObject(77, "seventy-seven");
-		Integer otherKey = 98;
-		
-		assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-		assertNull(cache.put(ts3, repeatableRead, true, otherKey, otherValue));
-		
-		
-		assertTrue(cache.containsValue(ts2, repeatableRead, theValue));
-		assertFalse(cache.containsValue(ts2, repeatableRead, otherValue));
-		assertFalse(cache.containsValue(ts2, repeatableRead, noValue));
 	}
 	
 }

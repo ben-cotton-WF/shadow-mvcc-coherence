@@ -18,22 +18,31 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
+import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
+import com.tangosol.util.filter.EntryFilter;
 import com.tangosol.util.processor.AbstractProcessor;
 
 @Portable
 public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 
 	private static final long serialVersionUID = -8977457529050193716L;
+	
 	public static final int POF_TID = 1;
 	@PortableProperty(POF_TID)
 	protected TransactionId transactionId;
+	
 	public static final int POF_ISOLATION = 2;
 	@PortableProperty(POF_ISOLATION)
 	protected IsolationLevel isolationLevel;
+	
 	public static final int POF_VCACHENAME = 3;
 	@PortableProperty(POF_VCACHENAME)
 	protected CacheName cacheName;
+
+	public static final int POF_FILTER = 4;
+	@PortableProperty(POF_FILTER)
+	protected Filter validationFilter = null;
 	protected static final MVCCExtractor indexId = new MVCCExtractor();
 	
 	public AbstractMVCCProcessor(TransactionId transactionId,
@@ -43,6 +52,18 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 		this.isolationLevel = isolationLevel;
 		this.cacheName = cacheName;
 	}
+	
+	public AbstractMVCCProcessor(TransactionId transactionId,
+			IsolationLevel isolationLevel, CacheName cacheName,
+			Filter validationFilter) {
+		super();
+		this.transactionId = transactionId;
+		this.isolationLevel = isolationLevel;
+		this.cacheName = cacheName;
+		this.validationFilter = validationFilter;
+	}
+
+
 
 	public AbstractMVCCProcessor() {
 		super();
@@ -109,5 +130,18 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 		}
 		
 		return result;
+	}
+	
+	protected final boolean confirmFilterMatch(Entry childEntry) {
+		if (validationFilter != null) {
+			if (validationFilter instanceof EntryFilter) {
+				if (!((EntryFilter)validationFilter).evaluateEntry(childEntry)) {
+					return false;
+				}
+			} else if (!validationFilter.evaluate(childEntry.getValue())) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

@@ -12,6 +12,7 @@ import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
+import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
@@ -27,6 +28,7 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 	public static final int POF_AUTOCOMMIT = 11;
 	@PortableProperty(POF_AUTOCOMMIT)
 	private boolean autoCommit = false;
+	//TODO add validation filter as for MVCCReadOnlyEntryProcessorWrapper
 
 	public MVCCEntryProcessorWrapper() {
 	}
@@ -35,6 +37,13 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 	public MVCCEntryProcessorWrapper(TransactionId transactionId,
 			EntryProcessor delegate, IsolationLevel isolationLevel, boolean autoCommit, CacheName cacheName) {
 		super(transactionId, isolationLevel, cacheName);
+		this.delegate = delegate;
+		this.autoCommit = autoCommit;
+	}
+
+	public MVCCEntryProcessorWrapper(TransactionId transactionId,
+			EntryProcessor delegate, IsolationLevel isolationLevel, boolean autoCommit, CacheName cacheName, Filter filter) {
+		super(transactionId, isolationLevel, cacheName, filter);
 		this.delegate = delegate;
 		this.autoCommit = autoCommit;
 	}
@@ -54,13 +63,17 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 				if (isolationLevel != IsolationLevel.readUncommitted) {
 					boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
 					if (!committed) {
-						return new ProcessorResult<K,R>((VersionedKey<K>)priorEntry.getKey());
+						return new ProcessorResult<K,R>(null, (VersionedKey<K>)priorEntry.getKey());
 					}
 				}
 			}
 		}
 		
 		ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+		
+		if (!confirmFilterMatch(childEntry)) {
+			return null;
+		}
 		
 		R result = (R) delegate.process(childEntry);
 		
@@ -91,7 +104,7 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 			setReadTimestamp(entry);
 		}
 		
-		return new ProcessorResult<K,R>(result);
+		return new ProcessorResult<K,R>(result, null);
 	}
 
 }
