@@ -18,6 +18,8 @@ import com.tangosol.util.extractor.IndexAwareExtractor;
 public class MVCCExtractor implements IndexAwareExtractor, PortableObject, Serializable {
 	
 	private static final long serialVersionUID = 4263977259382277921L;
+	
+	public static final MVCCExtractor INSTANCE = new MVCCExtractor();
 
 	public MVCCExtractor() {
 	}

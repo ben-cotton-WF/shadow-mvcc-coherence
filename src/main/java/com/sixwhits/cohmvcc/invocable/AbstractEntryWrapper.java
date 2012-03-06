@@ -6,6 +6,7 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.UncommittedReadException;
+import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCIndex;
 import com.tangosol.io.Serializer;
 import com.tangosol.net.BackingMapContext;
@@ -36,7 +37,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private Binary getPriorBinaryKey() {
 		priorRead = true;
-		MVCCIndex index = (MVCCIndex) getVersionCacheBackingMapContext().getIndexMap().get(AbstractMVCCProcessor.indexId);
+		MVCCIndex index = (MVCCIndex) getVersionCacheBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
 		return index.floor(parentEntry.getKey(), transactionId);
 	}
 

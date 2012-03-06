@@ -126,6 +126,10 @@
       <type-id>1029</type-id>
       <class-name>com.sixwhits.cohmvcc.invocable.ParallelKeyAggregationInvoker</class-name>
     </user-type>
+    <user-type>
+      <type-id>1030</type-id>
+      <class-name>com.sixwhits.cohmvcc.event.MVCCEventTransformer</class-name>
+    </user-type>
 
   </user-type-list>
 

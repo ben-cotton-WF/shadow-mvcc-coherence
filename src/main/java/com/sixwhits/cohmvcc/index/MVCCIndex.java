@@ -26,7 +26,7 @@ import com.tangosol.util.ValueExtractor;
  */
 public class MVCCIndex<K> implements MapIndex {
 	
-	private static class IndexEntry {
+	public static class IndexEntry {
 		private boolean isCommitted;
 		private boolean isDeleted;
 		private Binary binaryKey;
@@ -85,6 +85,11 @@ public class MVCCIndex<K> implements MapIndex {
 		 Entry<TransactionId,IndexEntry> floorEntry = floorEntry(sKey, ts);
 		return floorEntry == null ? null : floorEntry.getValue().getBinaryKey();
 	}
+	
+	public Binary lower(K sKey, TransactionId ts) {
+		 Entry<TransactionId,IndexEntry> lowerEntry = lowerEntry(sKey, ts);
+		return lowerEntry == null ? null : lowerEntry.getValue().getBinaryKey();
+	}
 
 	public Entry<TransactionId,IndexEntry> floorEntry(K sKey, TransactionId ts) {
 	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
@@ -94,6 +99,21 @@ public class MVCCIndex<K> implements MapIndex {
                     return line.firstEntry();
 				} else {
 					return line.floorEntry(ts);
+				}
+			}
+		} else {
+			return null;
+		}
+	}
+	
+	public Entry<TransactionId,IndexEntry> lowerEntry(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
+		if (line != null) {
+			synchronized(line) {
+				if (ts == null) {
+                    return line.firstEntry();
+				} else {
+					return line.lowerEntry(ts);
 				}
 			}
 		} else {

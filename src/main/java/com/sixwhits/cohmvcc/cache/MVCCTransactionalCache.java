@@ -35,22 +35,22 @@ public interface MVCCTransactionalCache<K,V> {
 	public abstract <R> R invoke(TransactionId tid,
 			IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
 
-	public abstract void addMapListener(MapListener listener, TransactionId tid);
+	public abstract void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel);
 
 	public abstract void addMapListener(MapListener listener,
-			TransactionId tid, Object oKey, boolean fLite);
+			TransactionId tid, IsolationLevel isolationLevel, Object oKey, boolean fLite);
 
 	public abstract void addMapListener(MapListener listener,
-			TransactionId tid, Filter filter, boolean fLite);
+			TransactionId tid, IsolationLevel isolationLevel, Filter filter, boolean fLite);
 
 	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid);
+			TransactionId tid, IsolationLevel isolationLevel);
 
 	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid, Object oKey);
+			TransactionId tid, IsolationLevel isolationLevel, Object oKey);
 
 	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid, Filter filter);
+			TransactionId tid, IsolationLevel isolationLevel, Filter filter);
 
 	public abstract int size(TransactionId tid, IsolationLevel isolationLevel);
 

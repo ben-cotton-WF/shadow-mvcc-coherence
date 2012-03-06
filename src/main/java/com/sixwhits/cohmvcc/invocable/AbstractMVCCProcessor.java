@@ -43,7 +43,6 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 	public static final int POF_FILTER = 4;
 	@PortableProperty(POF_FILTER)
 	protected Filter validationFilter = null;
-	protected static final MVCCExtractor indexId = new MVCCExtractor();
 	
 	public AbstractMVCCProcessor(TransactionId transactionId,
 			IsolationLevel isolationLevel, CacheName cacheName) {
@@ -84,7 +83,7 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 
 	@SuppressWarnings("unchecked")
 	protected TransactionId getNextWrite(BinaryEntry entry) {
-		MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(indexId);
+		MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
 		return index.ceilingTid((K)entry.getKey(), transactionId);
 	}
 
@@ -103,7 +102,7 @@ public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
 	@SuppressWarnings("unchecked")
 	protected Binary getPriorVersionBinaryKey(BinaryEntry parentEntry) {
 		
-		MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext(parentEntry).getIndexMap().get(indexId);
+		MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext(parentEntry).getIndexMap().get(MVCCExtractor.INSTANCE);
 		return index.floor((K) parentEntry.getKey(), transactionId);
 		
 	}

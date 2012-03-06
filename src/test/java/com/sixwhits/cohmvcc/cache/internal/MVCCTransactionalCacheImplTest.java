@@ -719,7 +719,21 @@ public class MVCCTransactionalCacheImplTest {
 		keys.add(2);
 		keys.add(10);
 		keys.add(11);
+		keys.add(20);
 		assertEquals(Long.valueOf(88 + 77 + 77),
+				cache.aggregate(ts3, repeatableRead, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+		
+		cache.insert(ts2, false, 20, val4);
+
+		assertEquals(Long.valueOf(88 + 77 + 77 + 77),
+				cache.aggregate(ts3, readUncommitted, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+		
+		asynchCommit(ts2, 20);
+
+		assertEquals(Long.valueOf(88 + 77 + 77 + 77),
+				cache.aggregate(ts3, readCommitted, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+
+		assertEquals(Long.valueOf(88 + 77 + 77 + 77),
 				cache.aggregate(ts3, repeatableRead, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
 	}
 	

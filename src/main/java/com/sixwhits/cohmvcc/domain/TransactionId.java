@@ -13,6 +13,8 @@ public class TransactionId implements Comparable<TransactionId>, Serializable {
     
 	private static final long serialVersionUID = 1887978179867482252L;
 	
+	public static final TransactionId END_OF_TIME = new TransactionId(Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+	
 	public static final int POF_TS = 0;
 	@PortableProperty(POF_TS)
     private long timeStampMillis;
