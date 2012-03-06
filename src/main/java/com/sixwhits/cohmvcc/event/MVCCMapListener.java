@@ -17,13 +17,13 @@ import com.tangosol.util.MapListener;
 
 /**
  * Wrapper for a user provided {@link MapListener}. Translates version cache events into logical cache
- * events according to the users data model. Events must have been previously transformed by {@link MVCCEvebtTransformer}
+ * events according to the users data model. Events must have been previously transformed by {@link MVCCEventTransformer}
  * to populate the correct earlier version and optionally suppress uncommitted events.
  *
  * The distinction between insert and update is somewhat mutable in MVCC. An event reported as an insert may
  * be retrospectively changed to an update if an earlier (ts-time) version is later (real-time) added.
  * 
- * Events propagated to the client will be instances of {@link MVCCMapEvent} or {@link MVCCCacheEvent} so that commit 
+ * Events propagated to the client will be instances of {@link MVCCCacheEvent} so that commit 
  * status and invoking transaction id can be made available to the client. 
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
@@ -92,8 +92,7 @@ public class MVCCMapListener<K,V> implements MapListener {
 	/**
 	 * {@inheritDoc}
 	 * 
-	 * "Deleted" in the versioned cache represents a rollback, or version reaping event, which we can identify as the old
-	 * version will have been committed. This will be reported as an update, with null new version
+	 * "Deleted" in the versioned cache represents a rollback. This will be reported as an update, with null new version
 	 */
 	@Override
 	public void entryDeleted(MapEvent mapevent) {
@@ -105,8 +104,9 @@ public class MVCCMapListener<K,V> implements MapListener {
 		
 		MVCCCacheEvent newEvent = new MVCCCacheEvent(
 				mapevent.getMap(), ENTRY_UPDATED, extractKey(mapevent),
-				extractValue((TransactionalValue) mapevent.getOldValue()), null, synthetic,
-				extractTransactionId(mapevent),
+				extractValue((TransactionalValue) mapevent.getOldValue()),
+				extractValue((TransactionalValue) mapevent.getNewValue()),
+				synthetic, extractTransactionId(mapevent),
 				CommitStatus.rollback);
 		delegate.entryUpdated(newEvent);
 	}
@@ -129,7 +129,13 @@ public class MVCCMapListener<K,V> implements MapListener {
 	}
 	
 	private V extractValue(TransactionalValue tv) {
+		if (tv == null) {
+			return null;
+		}
 		Binary binaryValue = tv.getValue();
+		if (binaryValue == null) {
+			return null;
+		}
 		@SuppressWarnings("unchecked")
 		V value = (V) ExternalizableHelper.fromBinary(binaryValue, serializer);
 		return value;

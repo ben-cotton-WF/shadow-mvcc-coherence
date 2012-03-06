@@ -56,42 +56,47 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 		if (isolationLevel != readUncommitted && !isCommitted(mapevent)) {
 			return null;
 		}
-		
+
 		TransactionId eventTransactionId = extractTransactionId(mapevent);
 		if (initialTransactionId != null && eventTransactionId.compareTo(initialTransactionId) < 0) {
 			return null;
 		}
-		
-		if (mapevent.getId() == MapEvent.ENTRY_DELETED && wasCommitted(mapevent)) {
-			return null;
-		}
-		
-		BinaryEntry currentEntry = (BinaryEntry) mapevent.getNewEntry();
-
-		BackingMapManagerContext mctx = currentEntry.getContext();
-		BackingMapContext ctx = mctx.getBackingMapContext(cacheName.getVersionCacheName());
-		Map indexMap = ctx.getIndexMap();
-		@SuppressWarnings("unchecked")
-		MVCCIndex<K> index = (MVCCIndex<K>) indexMap.get(MVCCExtractor.INSTANCE);
-//		MVCCIndex<K> index = (MVCCIndex<K>) currentEntry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
-		@SuppressWarnings("unchecked")
-		VersionedKey<K> currentVersion = (VersionedKey<K>) mapevent.getKey();
-		
-		Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
-		while (ixe != null 
-				&& !ixe.getValue().isCommitted()
-				&& isolationLevel != readUncommitted) {
-			ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
-		}
 
 		TransactionalValue oldValue = null;
-		if (ixe != null) {
-			Binary priorBinaryKey = ixe.getValue().getBinaryKey();
-			Map backingMap = ctx.getBackingMap();
-			Binary priorBinaryValue = (Binary) backingMap.get(priorBinaryKey);
-			oldValue = (TransactionalValue) ExternalizableHelper.fromBinary(priorBinaryValue, currentEntry.getSerializer());
+
+		if (mapevent.getId() == MapEvent.ENTRY_DELETED) {
+			if (wasCommitted(mapevent)) {
+				return null;
+			}
+			
+			oldValue = (TransactionalValue) mapevent.getOldValue();
+		} else {
+
+			BinaryEntry currentEntry = (BinaryEntry) mapevent.getNewEntry();
+
+			BackingMapManagerContext mctx = currentEntry.getContext();
+			BackingMapContext ctx = mctx.getBackingMapContext(cacheName.getVersionCacheName());
+			Map indexMap = ctx.getIndexMap();
+			@SuppressWarnings("unchecked")
+			MVCCIndex<K> index = (MVCCIndex<K>) indexMap.get(MVCCExtractor.INSTANCE);
+			//		MVCCIndex<K> index = (MVCCIndex<K>) currentEntry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
+			@SuppressWarnings("unchecked")
+			VersionedKey<K> currentVersion = (VersionedKey<K>) mapevent.getKey();
+
+			Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
+			while (ixe != null 
+					&& !ixe.getValue().isCommitted()
+					&& isolationLevel != readUncommitted) {
+				ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
+			}
+
+			if (ixe != null) {
+				Binary priorBinaryKey = ixe.getValue().getBinaryKey();
+				Map backingMap = ctx.getBackingMap();
+				Binary priorBinaryValue = (Binary) backingMap.get(priorBinaryKey);
+				oldValue = (TransactionalValue) ExternalizableHelper.fromBinary(priorBinaryValue, currentEntry.getSerializer());
+			}
 		}
-		
 		if (mapevent instanceof CacheEvent) {
 			return new CacheEvent(
 					mapevent.getMap(), mapevent.getId(), mapevent.getKey(),
