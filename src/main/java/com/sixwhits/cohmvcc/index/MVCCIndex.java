@@ -111,9 +111,24 @@ public class MVCCIndex<K> implements MapIndex {
 		if (line != null) {
 			synchronized(line) {
 				if (ts == null) {
-                    return line.firstEntry();
+                    return line.lastEntry();
 				} else {
 					return line.lowerEntry(ts);
+				}
+			}
+		} else {
+			return null;
+		}
+	}
+
+	public Entry<TransactionId,IndexEntry> higherEntry(K sKey, TransactionId ts) {
+	    NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
+		if (line != null) {
+			synchronized(line) {
+				if (ts == null) {
+                    return line.firstEntry();
+				} else {
+					return line.higherEntry(ts);
 				}
 			}
 		} else {

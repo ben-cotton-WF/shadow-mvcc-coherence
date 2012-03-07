@@ -192,6 +192,53 @@ public class EventTransformerTest {
 		checkEvent(event, ENTRY_INSERTED, ts2, testValue, testValue2, true, false);
 		
 	}
+	
+	@Test
+	public void testTransformUpdateBackdated() throws InterruptedException {
+		
+		addListener(readCommitted);
+
+		TransactionId ts = new TransactionId(BASETIME, 0, 0);
+		TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		
+		String testValue = "a test value";
+		String testValue2 = "updated test value";
+		
+		put(99, ts2, testValue2);
+		put(99, ts, testValue);
+		
+		MapEvent event = events.poll(1, TimeUnit.SECONDS);
+		checkEvent(event, ENTRY_INSERTED, ts2, null, testValue2, true, false);
+
+		event = events.poll(1, TimeUnit.SECONDS);
+		assertNull(event);
+		
+	}
+
+	@Test
+	public void testTransformUpdateBackdatedUncommitted() throws InterruptedException {
+		
+		addListener(readCommitted);
+
+		TransactionId ts = new TransactionId(BASETIME, 0, 0);
+		TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+		TransactionId ts3 = new TransactionId(BASETIME+2, 0, 0);
+		
+		String testValue = "a test value";
+		String testValue3 = "updated test value";
+		String testValue2 = "second test value";
+		
+		put(99, ts3, testValue3);
+		put(99, ts2, testValue2, false);
+		put(99, ts, testValue);
+		
+		MapEvent event = events.poll(1, TimeUnit.SECONDS);
+		checkEvent(event, ENTRY_INSERTED, ts3, null, testValue3, true, false);
+
+		event = events.poll(1, TimeUnit.SECONDS);
+		assertNull(event);
+		
+	}
 	@Test
 	public void testUpdateUncommittedReadUncomitted() throws InterruptedException {
 		

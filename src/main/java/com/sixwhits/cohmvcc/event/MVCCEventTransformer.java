@@ -24,6 +24,19 @@ import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.MapEvent;
 import com.tangosol.util.MapEventTransformer;
 
+/**
+ * Transform MapListener events on the version cache so that oldValue
+ * reflects the previous version value in timestamp order. Optionally suppresses
+ * uncommitted events, out of sequence (timestamp ordering) events, and events
+ * backdated beyond a starting threshold.
+ * 
+ * Old and new values represent the physical model of the version cache, {@link MVCCMapListener}
+ * takes care of mapping to the logical data model and convert event type (event id in Coherence parlance).
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ * @param <K> key type for the logical cache
+ */
 @Portable
 public class MVCCEventTransformer<K> implements MapEventTransformer {
 
@@ -39,6 +52,10 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 	@PortableProperty(POF_NAME)
 	private CacheName cacheName;
 	
+	public static final int POF_LATEST = 3;
+	@PortableProperty(POF_LATEST)
+	private boolean latestOnly = true;
+	
 	public MVCCEventTransformer() {
 		super();
 	}
@@ -49,6 +66,16 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 		this.isolationLevel = isolationLevel;
 		this.initialTransactionId = initialTransactionId;
 		this.cacheName = cacheName;
+	}
+	
+	public MVCCEventTransformer(IsolationLevel isolationLevel,
+			TransactionId initialTransactionId, CacheName cacheName,
+			boolean latestOnly) {
+		super();
+		this.isolationLevel = isolationLevel;
+		this.initialTransactionId = initialTransactionId;
+		this.cacheName = cacheName;
+		this.latestOnly = latestOnly;
 	}
 
 	@Override
@@ -62,6 +89,27 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 			return null;
 		}
 
+		BinaryEntry currentEntry = (BinaryEntry) mapevent.getNewEntry();
+
+		BackingMapManagerContext mctx = currentEntry.getContext();
+		BackingMapContext ctx = mctx.getBackingMapContext(cacheName.getVersionCacheName());
+		@SuppressWarnings("rawtypes")
+		Map indexMap = ctx.getIndexMap();
+		@SuppressWarnings("unchecked")
+		MVCCIndex<K> index = (MVCCIndex<K>) indexMap.get(MVCCExtractor.INSTANCE);
+		@SuppressWarnings("unchecked")
+		VersionedKey<K> currentVersion = (VersionedKey<K>) mapevent.getKey();
+		
+		if (latestOnly) {
+			Entry<TransactionId, IndexEntry> ixe = index.higherEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
+			while (ixe != null) { 
+				if (ixe.getValue().isCommitted() || isolationLevel == readUncommitted) {
+					return null;
+				}
+				ixe = index.higherEntry(currentVersion.getNativeKey(), ixe.getKey());
+			}
+		}
+		
 		TransactionalValue oldValue = null;
 
 		if (mapevent.getId() == MapEvent.ENTRY_DELETED) {
@@ -72,17 +120,6 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 			oldValue = (TransactionalValue) mapevent.getOldValue();
 		} else {
 
-			BinaryEntry currentEntry = (BinaryEntry) mapevent.getNewEntry();
-
-			BackingMapManagerContext mctx = currentEntry.getContext();
-			BackingMapContext ctx = mctx.getBackingMapContext(cacheName.getVersionCacheName());
-			Map indexMap = ctx.getIndexMap();
-			@SuppressWarnings("unchecked")
-			MVCCIndex<K> index = (MVCCIndex<K>) indexMap.get(MVCCExtractor.INSTANCE);
-			//		MVCCIndex<K> index = (MVCCIndex<K>) currentEntry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
-			@SuppressWarnings("unchecked")
-			VersionedKey<K> currentVersion = (VersionedKey<K>) mapevent.getKey();
-
 			Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
 			while (ixe != null 
 					&& !ixe.getValue().isCommitted()
@@ -92,6 +129,7 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 
 			if (ixe != null) {
 				Binary priorBinaryKey = ixe.getValue().getBinaryKey();
+				@SuppressWarnings("rawtypes")
 				Map backingMap = ctx.getBackingMap();
 				Binary priorBinaryValue = (Binary) backingMap.get(priorBinaryKey);
 				oldValue = (TransactionalValue) ExternalizableHelper.fromBinary(priorBinaryValue, currentEntry.getSerializer());
