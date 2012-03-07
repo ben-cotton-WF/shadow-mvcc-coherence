@@ -278,6 +278,7 @@ public class MVCCEntryProcessorWrapperTest {
 
 	@After
 	public void tearDown() throws Exception {
+		CacheFactory.shutdown();
 		cmg.shutdownAll();
 	}
 

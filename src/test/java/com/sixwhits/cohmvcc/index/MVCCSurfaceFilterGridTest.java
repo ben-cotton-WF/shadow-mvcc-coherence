@@ -45,7 +45,7 @@ public class MVCCSurfaceFilterGridTest {
 	public void setUp() throws Exception {
 		System.setProperty("tangosol.pof.enabled", "true");
 		DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-		cmg = builder.setStorageEnabledCount(4).build();
+		cmg = builder.setStorageEnabledCount(2).build();
 
 		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
 		testCache = CacheFactory.getCache(TESTCACHENAME);
@@ -64,6 +64,7 @@ public class MVCCSurfaceFilterGridTest {
 
 	@After
 	public void tearDown() throws Exception {
+		CacheFactory.shutdown();
 		cmg.shutdownAll();
 	}
 

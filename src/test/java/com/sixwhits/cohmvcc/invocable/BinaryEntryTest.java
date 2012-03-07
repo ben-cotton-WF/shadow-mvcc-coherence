@@ -57,6 +57,7 @@ public class BinaryEntryTest {
 
 	@After
 	public void tearDown() throws Exception {
+		CacheFactory.shutdown();
 		cmg.shutdownAll();
 	}
 

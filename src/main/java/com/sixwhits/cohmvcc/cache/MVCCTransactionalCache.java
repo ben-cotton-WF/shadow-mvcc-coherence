@@ -43,14 +43,11 @@ public interface MVCCTransactionalCache<K,V> {
 	public abstract void addMapListener(MapListener listener,
 			TransactionId tid, IsolationLevel isolationLevel, Filter filter, boolean fLite);
 
-	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid, IsolationLevel isolationLevel);
+	public abstract void removeMapListener(MapListener listener);
 
-	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid, IsolationLevel isolationLevel, Object oKey);
+	public abstract void removeMapListener(MapListener listener, Object oKey);
 
-	public abstract void removeMapListener(MapListener listener,
-			TransactionId tid, IsolationLevel isolationLevel, Filter filter);
+	public abstract void removeMapListener(MapListener listener, Filter filter);
 
 	public abstract int size(TransactionId tid, IsolationLevel isolationLevel);
 

@@ -9,7 +9,7 @@ import com.tangosol.util.filter.EntryFilter;
 
 public class FilterWrapper implements EntryFilter {
 	
-	private final Filter delegate;
+	protected final Filter delegate;
 
 	public FilterWrapper(Filter delegate) {
 		super();
@@ -18,7 +18,6 @@ public class FilterWrapper implements EntryFilter {
 
 	@Override
 	public boolean evaluate(Object obj) {
-		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("not yet implemented");
 	}
 

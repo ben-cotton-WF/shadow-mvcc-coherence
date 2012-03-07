@@ -1,7 +1,6 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
 import static com.sixwhits.cohmvcc.domain.Constants.KEYEXTRACTOR;
-import static com.sixwhits.cohmvcc.domain.Constants.TXEXTRACTOR;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readProhibited;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
@@ -19,12 +18,12 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.cache.MVCCTransactionalCache;
-import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.event.MVCCEventTransformer;
 import com.sixwhits.cohmvcc.event.MVCCMapListener;
 import com.sixwhits.cohmvcc.index.FilterWrapper;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
@@ -57,9 +56,9 @@ import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.aggregator.Count;
 import com.tangosol.util.extractor.IdentityExtractor;
-import com.tangosol.util.filter.AndFilter;
+import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.EqualsFilter;
-import com.tangosol.util.filter.GreaterEqualsFilter;
+import com.tangosol.util.filter.MapEventTransformerFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
 
 public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K,V> {
@@ -141,42 +140,46 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel) {
-//		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, isolationLevel, versionCache, tid, true);
-//		listenerMap.putIfAbsent(listener, mvccml);
-//		versionCache.addMapListener(mvccml);
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		listenerMap.putIfAbsent(listener, mvccml);
+		versionCache.addMapListener(mvccml,
+				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+		versionCache.addMapListener(mvccml);
 	}
 
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Object oKey, boolean fLite) {
-//		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, isolationLevel, versionCache, tid, fLite);
-//		listenerMap.putIfAbsent(listener, mvccml);
-//		Filter keyFilter = new EqualsFilter(KEYEXTRACTOR, oKey);
-//		Filter tidFilter = new GreaterEqualsFilter(TXEXTRACTOR, tid);
-//		versionCache.addMapListener(mvccml, new AndFilter(keyFilter, tidFilter), false);
+		Filter keyFilter = new EqualsFilter(KEYEXTRACTOR, oKey);
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		listenerMap.putIfAbsent(listener, mvccml);
+		versionCache.addMapListener(mvccml,
+				new MapEventTransformerFilter(keyFilter, new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+		versionCache.addMapListener(mvccml);
 	}
 
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Filter filter,
 			boolean fLite) {
-		// TODO this is hard - need to detect amends that fall out of the result set.
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		listenerMap.putIfAbsent(listener, mvccml);
+		versionCache.addMapListener(mvccml,
+				new MapEventTransformerFilter(new FilterWrapper(filter), new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+		versionCache.addMapListener(mvccml);
 	}
 
 	@Override
-	public void removeMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel) {
-		// TODO Auto-generated method stub
-
+	public void removeMapListener(MapListener listener) {
+		versionCache.removeMapListener(listenerMap.get(listener));
 	}
 
 	@Override
-	public void removeMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Object oKey) {
-		// TODO Auto-generated method stub
-
+	public void removeMapListener(MapListener listener, Object oKey) {
+		versionCache.removeMapListener(listenerMap.get(listener), oKey);
 	}
 
 	@Override
-	public void removeMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Filter filter) {
-		// TODO Auto-generated method stub
-
+	public void removeMapListener(MapListener listener, Filter filter) {
+		versionCache.removeMapListener(listenerMap.get(listener), filter);
 	}
 
 	@Override

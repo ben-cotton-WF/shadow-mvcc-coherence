@@ -1,24 +1,15 @@
 package com.sixwhits.cohmvcc.cache.internal;
 
-import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
-import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
@@ -26,17 +17,11 @@ import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilde
 
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor;
-import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
 import com.tangosol.net.CacheFactory;
-import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
-import com.tangosol.util.extractor.PofUpdater;
 import com.tangosol.util.filter.EqualsFilter;
-import com.tangosol.util.processor.UpdaterProcessor;
 
 public class MVCCTransactionalCacheKillMemberTest {
 	
@@ -63,7 +48,7 @@ public class MVCCTransactionalCacheKillMemberTest {
 		cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME);
 	}
 
-	@Test
+	@Test(timeout=10000)
 	public void testInvokeAllFilter() {
 		System.out.println("******InvokeAll(Filter)");
 		
@@ -121,6 +106,7 @@ public class MVCCTransactionalCacheKillMemberTest {
 		System.out.println("******tearDown");
 		CacheFactory.shutdown();
 		cmg.shutdownAll();
+		Thread.sleep(500);
 	}
 	
 	
