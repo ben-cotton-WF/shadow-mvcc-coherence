@@ -25,7 +25,7 @@ public class SerialisationTest {
 	@Test
 	public void testMVCCEventTransformer() {
 		
-		Object vo = new MVCCEventTransformer<Object>(readCommitted,
+		Object vo = new MVCCEventTransformer<Object,Object>(readCommitted,
 				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457), new CacheName("test"));
 		assertPofFidelity(vo);
 	}

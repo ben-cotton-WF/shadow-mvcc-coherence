@@ -1,9 +1,9 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.UncommittedReadException;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
@@ -68,14 +68,14 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 		if (priorBinaryKey != null) {
 			priorEntry = (BinaryEntry) getBackingMapContext().getBackingMapEntry(priorBinaryKey);
 	
-			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			boolean committed = Utils.isCommitted(priorEntry);
 			if (isolationLevel != IsolationLevel.readUncommitted) {
 				if (!committed) {
 					throw new UncommittedReadException((VersionedKey)getContext().getKeyFromInternalConverter().convert(priorBinaryKey));
 				}
 			}
 			
-			boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			boolean deleted = Utils.isDeleted(priorEntry);
 			if (deleted && committed) {
 				priorEntry = null;
 			}
@@ -92,7 +92,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 		Binary result = null;
 		
 		if (priorEntry != null) {
-			result = extractBinaryLogicalValue(priorEntry);
+			result = priorEntry.getOriginalBinaryValue();
 		}
 		
 		return result;
@@ -122,10 +122,6 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 	@Override
 	public Object getOriginalValue() {
 		return getContext().getValueFromInternalConverter().convert(getOriginalBinaryValue());
-	}
-
-	private Binary extractBinaryLogicalValue(BinaryEntry priorEntry) {
-		return (Binary) Constants.VALUEEXTRACTOR.extractFromEntry(priorEntry);
 	}
 
 	@Override

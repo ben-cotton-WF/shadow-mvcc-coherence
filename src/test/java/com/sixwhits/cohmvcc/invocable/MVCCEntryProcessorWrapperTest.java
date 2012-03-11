@@ -1,5 +1,7 @@
 package com.sixwhits.cohmvcc.invocable;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
 import java.util.Collection;
@@ -19,21 +21,18 @@ import org.littlegrid.coherence.testsupport.SystemPropertyConst;
 import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
+import com.sixwhits.cohmvcc.domain.DeletedObject;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.TransactionSetWrapper;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.FutureReadException;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
-import com.tangosol.io.pof.ConfigurablePofContext;
-import com.tangosol.io.pof.PofContext;
 import com.tangosol.io.pof.PortableException;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.IdentityExtractor;
 import com.tangosol.util.extractor.PofExtractor;
@@ -50,7 +49,6 @@ public class MVCCEntryProcessorWrapperTest {
 	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
 	private NamedCache versionCache;
 	private NamedCache keyCache;
-	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
 
 	@BeforeClass
 	public static void setSystemProperties() {
@@ -80,11 +78,13 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		keyCache.invoke(99, wrapper);
 		
-		Assert.assertEquals(versionCache.size(), 1);
+		assertEquals(versionCache.size(), 1);
 		@SuppressWarnings("unchecked")
-		Map.Entry<VersionedKey<Integer>, TransactionalValue> versionCachEntry = (Entry<VersionedKey<Integer>, TransactionalValue>) versionCache.entrySet().iterator().next();
-		Assert.assertEquals(new VersionedKey<Integer>(99, ts), versionCachEntry.getKey());
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("a test value", pofContext)), versionCachEntry.getValue());
+		Map.Entry<VersionedKey<Integer>, String> versionCachEntry = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
+		assertEquals(new VersionedKey<Integer>(99, ts), versionCachEntry.getKey());
+		assertTrue((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
+		assertEquals("a test value", versionCachEntry.getValue());
 
 	}
 	@Test
@@ -101,9 +101,11 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		Assert.assertEquals(versionCache.size(), 1);
 		@SuppressWarnings("unchecked")
-		Map.Entry<VersionedKey<Integer>, TransactionalValue> versionCachEntry = (Entry<VersionedKey<Integer>, TransactionalValue>) versionCache.entrySet().iterator().next();
+		Map.Entry<VersionedKey<Integer>, String> versionCachEntry = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
 		Assert.assertEquals(new VersionedKey<Integer>(99, ts), versionCachEntry.getKey());
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary(sdo, pofContext)), versionCachEntry.getValue());
+		assertTrue((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
+		assertEquals(sdo, versionCachEntry.getValue());
 		
 		TransactionId ts2 = new TransactionId(BASETIME + 125, 0, 0);
 		EntryProcessor extractProcessor = new ExtractorProcessor(new PofExtractor(null, SampleDomainObject.POF_INTV));
@@ -133,8 +135,15 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		Assert.assertEquals(2, versionCache.size());
 		
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 2", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts2)));
+		VersionedKey<Integer> key1 = new VersionedKey<Integer>(99, ts1);
+		assertEquals("version 1",versionCache.get(key1));
+		assertTrue((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.DELETED_INSTANCE));
+
+		VersionedKey<Integer> key2 = new VersionedKey<Integer>(99, ts2);
+		assertEquals("version 2", versionCache.get(key2));
+		assertTrue((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.DELETED_INSTANCE));
 
 		Assert.assertEquals(keyCache.size(), 1);
 		
@@ -165,8 +174,15 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		Assert.assertEquals(2, versionCache.size());
 		
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
-		Assert.assertEquals(new TransactionalValue(true, true, null), versionCache.get(new VersionedKey<Integer>(99, ts2)));
+		VersionedKey<Integer> key1 = new VersionedKey<Integer>(99, ts1);
+		assertEquals("version 1",versionCache.get(key1));
+		assertTrue((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.DELETED_INSTANCE));
+
+		VersionedKey<Integer> key2 = new VersionedKey<Integer>(99, ts2);
+		assertEquals(DeletedObject.INSTANCE, versionCache.get(key2));
+		assertTrue((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertTrue((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.DELETED_INSTANCE));
 
 		Assert.assertEquals(keyCache.size(), 1);
 		
@@ -198,8 +214,15 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		Assert.assertEquals(2, versionCache.size());
 		
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
-		Assert.assertEquals(new TransactionalValue(true, true, null), versionCache.get(new VersionedKey<Integer>(99, ts2)));
+		VersionedKey<Integer> key1 = new VersionedKey<Integer>(99, ts1);
+		assertEquals("version 1",versionCache.get(key1));
+		assertTrue((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.DELETED_INSTANCE));
+
+		VersionedKey<Integer> key2 = new VersionedKey<Integer>(99, ts2);
+		assertEquals(DeletedObject.INSTANCE, versionCache.get(key2));
+		assertTrue((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertTrue((Boolean) versionCache.invoke(key2, DecorationExtractorProcessor.DELETED_INSTANCE));
 
 		Assert.assertEquals(keyCache.size(), 1);
 
@@ -226,7 +249,10 @@ public class MVCCEntryProcessorWrapperTest {
 		
 		Assert.assertEquals(1, versionCache.size());
 		
-		Assert.assertEquals(new TransactionalValue(true, false, ExternalizableHelper.toBinary("version 1", pofContext)), versionCache.get(new VersionedKey<Integer>(99, ts1)));
+		VersionedKey<Integer> key1 = new VersionedKey<Integer>(99, ts1);
+		assertEquals("version 1",versionCache.get(key1));
+		assertTrue((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.COMMITTED_INSTANCE));
+		assertFalse((Boolean) versionCache.invoke(key1, DecorationExtractorProcessor.DELETED_INSTANCE));
 
 		Assert.assertEquals(keyCache.size(), 1);
 

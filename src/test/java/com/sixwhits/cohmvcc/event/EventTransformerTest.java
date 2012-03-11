@@ -7,7 +7,6 @@ import static com.tangosol.util.MapEvent.ENTRY_INSERTED;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertTrue;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -25,17 +24,16 @@ import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilde
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.cache.internal.UnconditionalRemoveProcessor;
+import com.sixwhits.cohmvcc.domain.EventValue;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
-import com.tangosol.io.pof.ConfigurablePofContext;
-import com.tangosol.io.pof.PofContext;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.ExternalizableHelper;
+import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.MapEvent;
 import com.tangosol.util.MapListener;
@@ -50,7 +48,6 @@ public class EventTransformerTest {
 	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
 	private NamedCache versionCache;
 	private NamedCache keyCache;
-	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
 	private final BlockingQueue<MapEvent> events = new ArrayBlockingQueue<MapEvent>(100);
 
 	@BeforeClass
@@ -94,7 +91,7 @@ public class EventTransformerTest {
 		events.clear();
 		
 		versionCache.addMapListener(testMapListener,
-				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer>(isolationLevel, tsevent, CACHENAME)), false);
+				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer, String>(isolationLevel, tsevent, CACHENAME)), false);
 		
 	}
 
@@ -335,21 +332,6 @@ public class EventTransformerTest {
 		
 	}
 	
-	private void assertValueCorrect(Object expected, TransactionalValue tv) {
-		
-		if (expected == null) {
-			if (tv != null) {
-				assertTrue(tv.isDeleted());
-				assertNull(tv.getValue());
-			} else {
-				assertNull(tv);
-			}
-		} else {
-			Object actual = ExternalizableHelper.fromBinary(tv.getValue(), pofContext);
-			assertEquals(expected, actual);
-		}
-	}
-	
 	private void put(Integer key, TransactionId ts, String value) {
 		put(key, ts, value, true);
 	}
@@ -367,14 +349,14 @@ public class EventTransformerTest {
 	
 	private void checkEvent(MapEvent event, int expectedType, TransactionId ts,
 			String oldExpected, String newExpected, boolean isCommitted, boolean isDeleted) {
+		EventValue<String> ev = (EventValue<String>) event.getNewValue();
 		assertNotNull(event);
 		Assert.assertEquals(new VersionedKey<Integer>(99, ts), event.getKey());
-		TransactionalValue newValue = (TransactionalValue) event.getNewValue();
-		assertValueCorrect(newExpected, newValue);
-		assertValueCorrect(oldExpected, (TransactionalValue) event.getOldValue());
+		assertEquals(newExpected, ev.getValue());
+		assertEquals(oldExpected, event.getOldValue());
 		assertEquals(expectedType, event.getId());
-		assertEquals(isCommitted, newValue.isCommitted());
-		assertEquals(isDeleted, newValue.isDeleted());
+		assertEquals(isCommitted, ev.isCommitted());
+		assertEquals(isDeleted, ev.isDeleted());
 		
 	}
 

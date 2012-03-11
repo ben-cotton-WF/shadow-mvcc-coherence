@@ -1,15 +1,14 @@
 package com.sixwhits.cohmvcc.transaction.internal;
 
-import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.serializable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.invocable.AbstractMVCCProcessor;
 import com.tangosol.io.pof.annotation.Portable;
@@ -54,13 +53,13 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K,VersionedKe
 		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
 
 		if (isolationLevel != readUncommitted) {
-			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			boolean committed = Utils.isCommitted(priorEntry);
 			if (!committed) {
 				return new ProcessorResult<K,VersionedKey<K>>(null, (VersionedKey<K>)priorEntry.getKey());
 			}
 		}
 
-		boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
+		boolean deleted = Utils.isDeleted(priorEntry);
 		if (deleted) {
 			return null;
 		}

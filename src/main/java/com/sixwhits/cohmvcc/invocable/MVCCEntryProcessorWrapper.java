@@ -1,11 +1,11 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.Constants;
+import com.sixwhits.cohmvcc.domain.DeletedObject;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.FutureReadException;
 import com.tangosol.io.pof.annotation.Portable;
@@ -61,7 +61,7 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 				BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
 
 				if (isolationLevel != IsolationLevel.readUncommitted) {
-					boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+					boolean committed = Utils.isCommitted(priorEntry);
 					if (!committed) {
 						return new ProcessorResult<K,R>(null, (VersionedKey<K>)priorEntry.getKey());
 					}
@@ -94,9 +94,17 @@ public class MVCCEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
 			Binary binaryKey = (Binary) childEntry.getContext().getKeyToInternalConverter().convert(
 					new VersionedKey<K>((K) childEntry.getKey(), transactionId));
 			BinaryEntry newEntry = (BinaryEntry) childEntry.getBackingMapContext().getBackingMapEntry(binaryKey);
-			TransactionalValue value = new TransactionalValue(autoCommit, childEntry.isRemove(),
-					childEntry.isRemove() ? childEntry.getOriginalBinaryValue() : childEntry.getNewBinaryValue());
-			Binary binaryValue = (Binary) childEntry.getContext().getValueToInternalConverter().convert(value);
+			
+			Binary binaryValue;
+			
+			if (childEntry.isRemove()) {
+				binaryValue = (Binary) childEntry.getContext().getValueToInternalConverter().convert(DeletedObject.INSTANCE);
+			} else {
+				binaryValue = childEntry.getNewBinaryValue();
+			}
+			
+			binaryValue = Utils.decorateValue(binaryValue, autoCommit, childEntry.isRemove(), entry.getSerializer());
+
 			newEntry.updateBinaryValue(binaryValue);
 		}
 		

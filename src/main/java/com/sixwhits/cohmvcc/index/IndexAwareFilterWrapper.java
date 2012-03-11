@@ -15,13 +15,13 @@ public class IndexAwareFilterWrapper extends FilterWrapper implements IndexAware
 	@SuppressWarnings("rawtypes")
 	@Override
 	public int calculateEffectiveness(Map map, Set set) {
-		return ((IndexAwareFilter) delegate).calculateEffectiveness(new IndexMapWrapper(map), set);
+		return ((IndexAwareFilter) delegate).calculateEffectiveness(map, set);
 	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Filter applyIndex(Map map, Set set) {
-		return ((IndexAwareFilter) delegate).applyIndex(new IndexMapWrapper(map), set);
+		return ((IndexAwareFilter) delegate).applyIndex(map, set);
 	}
 
 

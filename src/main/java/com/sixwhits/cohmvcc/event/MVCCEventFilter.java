@@ -8,7 +8,6 @@ import java.util.Map.Entry;
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCIndex;
@@ -78,10 +77,9 @@ public class MVCCEventFilter<K> implements EntryFilter {
 			@SuppressWarnings("unchecked")
 			VersionedKey<K> priorKey = (VersionedKey<K>) ExternalizableHelper.fromBinary(priorBinaryValue, entry.getSerializer());
 			Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getNativeKey());
-			TransactionalValue tv = (TransactionalValue) ExternalizableHelper.fromBinary(priorBinaryValue, entry.getSerializer());
 			
 			@SuppressWarnings("rawtypes")
-			BinaryEntry priorEntry = new SyntheticBinaryEntry(logicalBinaryKey, tv.getValue(),
+			BinaryEntry priorEntry = new SyntheticBinaryEntry(logicalBinaryKey, priorBinaryValue,
 					entry.getSerializer(), entry.getBackingMapContext());
 			
 			return match(priorEntry);

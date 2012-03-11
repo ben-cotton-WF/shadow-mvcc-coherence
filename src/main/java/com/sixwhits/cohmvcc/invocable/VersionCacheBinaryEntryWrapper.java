@@ -72,7 +72,7 @@ public class VersionCacheBinaryEntryWrapper implements BinaryEntry {
 
 	@Override
 	public Binary getBinaryValue() {
-		return (Binary) Constants.VALUEEXTRACTOR.extractFromEntry(underlying);
+		return underlying.getBinaryValue();
 	}
 
 	@Override

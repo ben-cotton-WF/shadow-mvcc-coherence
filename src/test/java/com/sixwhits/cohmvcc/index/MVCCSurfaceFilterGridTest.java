@@ -8,21 +8,16 @@ import java.util.Set;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
 import org.littlegrid.coherence.testsupport.SystemPropertyConst;
 import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.tangosol.io.pof.ConfigurablePofContext;
-import com.tangosol.io.pof.PofContext;
 import com.tangosol.io.pof.reflect.SimplePofPath;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.Filter;
 import com.tangosol.util.aggregator.QueryRecorder;
 import com.tangosol.util.aggregator.QueryRecorder.RecordType;
@@ -39,13 +34,12 @@ public class MVCCSurfaceFilterGridTest {
 	private static final String TESTCACHENAME = "testcache";
 	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
 	private NamedCache testCache;
-	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
 
 	@Before
 	public void setUp() throws Exception {
 		System.setProperty("tangosol.pof.enabled", "true");
 		DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-		cmg = builder.setStorageEnabledCount(2).build();
+		cmg = builder.setStorageEnabledCount(1).build();
 
 		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
 		testCache = CacheFactory.getCache(TESTCACHENAME);
@@ -72,31 +66,31 @@ public class MVCCSurfaceFilterGridTest {
 	 * Trivial test to allow tracing of the workings of a normal index.
 	 * Disable for normal testing
 	 */
-	@Ignore
-	@Test
-	public void testEqualsIndex() {
-		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
-		NamedCache testCache = CacheFactory.getCache(TESTCACHENAME);
-		testCache.addIndex(new PofExtractor(null, TransactionalValue.POF_VALUE), false, null);
-		putTestValue(testCache, 100, BASETIME, "oldest version");
-		putTestValue(testCache, 100, BASETIME +1000, "medium version");
-		putTestValue(testCache, 100, BASETIME +2000, "newest version");
-		@SuppressWarnings("rawtypes")
-		Set result = testCache.entrySet(new EqualsFilter(new PofExtractor(null, TransactionalValue.POF_VALUE), "medium version"));
-		
-		Assert.assertEquals(1, result.size());
-	}
+//	@Ignore
+//	@Test
+//	public void testEqualsIndex() {
+//		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
+//		NamedCache testCache = CacheFactory.getCache(TESTCACHENAME);
+//		testCache.addIndex(new PofExtractor(null, TransactionalValue.POF_VALUE), false, null);
+//		putTestValue(testCache, 100, BASETIME, "oldest version");
+//		putTestValue(testCache, 100, BASETIME +1000, "medium version");
+//		putTestValue(testCache, 100, BASETIME +2000, "newest version");
+//		@SuppressWarnings("rawtypes")
+//		Set result = testCache.entrySet(new EqualsFilter(new PofExtractor(null, TransactionalValue.POF_VALUE), "medium version"));
+//		
+//		Assert.assertEquals(1, result.size());
+//	}
 
 	@Test
 	public void testUseIndex() {
 		
-		Map<VersionedKey<Integer>,TransactionalValue> expected = new HashMap<VersionedKey<Integer>,TransactionalValue>();
+		Map<VersionedKey<Integer>,String> expected = new HashMap<VersionedKey<Integer>,String>();
 		putTestValue(expected, 100, BASETIME, "oldest version");
 		putTestValue(expected, 102, BASETIME +200, "newest version");
 
 		TransactionId tid = new TransactionId(BASETIME+999, 0, 0);
 		@SuppressWarnings("unchecked")
-		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue>> result = testCache.entrySet(new MVCCSurfaceFilter<Integer>(tid));
+		Set<Map.Entry<VersionedKey<Integer>,String>> result = testCache.entrySet(new MVCCSurfaceFilter<Integer>(tid));
 
 		Assert.assertEquals(2, result.size());
 		Assert.assertTrue(result.containsAll(expected.entrySet()));
@@ -106,7 +100,7 @@ public class MVCCSurfaceFilterGridTest {
 	
 	@Test
 	public void testAndFilter() {
-		Map<VersionedKey<Integer>,TransactionalValue> expected = new HashMap<VersionedKey<Integer>,TransactionalValue>();
+		Map<VersionedKey<Integer>,String> expected = new HashMap<VersionedKey<Integer>,String>();
 		
 		putTestValue(expected, 100, BASETIME, "oldest version");
 		
@@ -123,7 +117,7 @@ public class MVCCSurfaceFilterGridTest {
 		Object resultsTrace = testCache.aggregate(filter, new QueryRecorder(RecordType.TRACE));
 		System.out.println(resultsTrace);
 		@SuppressWarnings("unchecked")
-		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue>> result = testCache.entrySet(filter);
+		Set<Map.Entry<VersionedKey<Integer>,String>> result = testCache.entrySet(filter);
 		
 		Assert.assertEquals(1, result.size());
 		Assert.assertTrue(result.containsAll(expected.entrySet()));
@@ -133,7 +127,7 @@ public class MVCCSurfaceFilterGridTest {
 	
 	@Test
 	public void testNestedFilter() {
-		Map<VersionedKey<Integer>,TransactionalValue> expected = new HashMap<VersionedKey<Integer>,TransactionalValue>();
+		Map<VersionedKey<Integer>,String> expected = new HashMap<VersionedKey<Integer>,String>();
 		
 		putTestValue(expected, 100, BASETIME, "oldest version");
 		
@@ -148,7 +142,7 @@ public class MVCCSurfaceFilterGridTest {
 		Object resultsTrace = testCache.aggregate(filter, new QueryRecorder(RecordType.TRACE));
 		System.out.println(resultsTrace);
 		@SuppressWarnings("unchecked")
-		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue>> result = testCache.entrySet(filter);
+		Set<Map.Entry<VersionedKey<Integer>,String>> result = testCache.entrySet(filter);
 		
 		Assert.assertEquals(1, result.size());
 		Assert.assertTrue(result.containsAll(expected.entrySet()));
@@ -158,13 +152,13 @@ public class MVCCSurfaceFilterGridTest {
 	
 	@Test
 	public void testFilterWithSpecifiedKey() {
-		Map<VersionedKey<Integer>,TransactionalValue> expected = new HashMap<VersionedKey<Integer>,TransactionalValue>();
+		Map<VersionedKey<Integer>,String> expected = new HashMap<VersionedKey<Integer>,String>();
 		
 		putTestValue(expected, 100, BASETIME, "oldest version");
 		
 		TransactionId tid = new TransactionId(BASETIME+999, 0, 0);
 		@SuppressWarnings("unchecked")
-		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue>> result = testCache.entrySet(
+		Set<Map.Entry<VersionedKey<Integer>,String>> result = testCache.entrySet(
 						new MVCCSurfaceFilter<Integer>(tid, Collections.singleton(100)));
 		
 		Assert.assertEquals(1, result.size());
@@ -175,7 +169,7 @@ public class MVCCSurfaceFilterGridTest {
 
 	@Test
 	public void testKeyAssociationFilter() {
-		Map<VersionedKey<Integer>,TransactionalValue> expected = new HashMap<VersionedKey<Integer>,TransactionalValue>();
+		Map<VersionedKey<Integer>,String> expected = new HashMap<VersionedKey<Integer>,String>();
 		
 		putTestValue(expected, 100, BASETIME, "oldest version");
 		
@@ -185,7 +179,7 @@ public class MVCCSurfaceFilterGridTest {
 		Filter filter = new MVCCSurfaceFilter<Integer>(tid, Collections.singleton(100));
 		Filter keyFilter = new KeyAssociatedFilter(filter, sampleKey.getAssociatedKey());
 		@SuppressWarnings("unchecked")
-		Set<Map.Entry<VersionedKey<Integer>,TransactionalValue>> result = testCache.entrySet(keyFilter);
+		Set<Map.Entry<VersionedKey<Integer>,String>> result = testCache.entrySet(keyFilter);
 		
 		Assert.assertEquals(1, result.size());
 		Assert.assertTrue(result.containsAll(expected.entrySet()));
@@ -197,8 +191,7 @@ public class MVCCSurfaceFilterGridTest {
 	private void putTestValue(@SuppressWarnings("rawtypes") Map cache, int key, long timestamp, String value) {
 		VersionedKey<Integer> vkey = new VersionedKey<Integer>(key, new TransactionId(timestamp, 0, 0));
 		
-		TransactionalValue tvalue = new TransactionalValue(true, false, ExternalizableHelper.toBinary(value, pofContext));
-		cache.put(vkey, tvalue);
+		cache.put(vkey, value);
 	}
 	
 }

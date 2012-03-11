@@ -28,6 +28,7 @@ public class UnconditionalPutProcessor extends AbstractProcessor {
 
 	@Override
 	public Object process(Entry entry) {
+		// Need to replace this to not deserialise value
 		Object result = returnPrior ? entry.getValue() : null;
 		entry.setValue(value, false);
 		return result;

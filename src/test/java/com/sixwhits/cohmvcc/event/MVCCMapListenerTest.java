@@ -29,8 +29,6 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
-import com.tangosol.io.pof.ConfigurablePofContext;
-import com.tangosol.io.pof.PofContext;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.InvocableMap.EntryProcessor;
@@ -47,7 +45,6 @@ public class MVCCMapListenerTest {
 	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
 	private NamedCache versionCache;
 	private NamedCache keyCache;
-	private PofContext pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
 	private final BlockingQueue<MVCCCacheEvent> events = new ArrayBlockingQueue<MVCCCacheEvent>(100);
 
 	@BeforeClass
@@ -90,8 +87,8 @@ public class MVCCMapListenerTest {
 		
 		events.clear();
 		
-		versionCache.addMapListener(new MVCCMapListener<Integer,String>(testMapListener, pofContext),
-				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer>(isolationLevel, tsevent, CACHENAME)), false);
+		versionCache.addMapListener(new MVCCMapListener<Integer,String>(testMapListener),
+				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer,String>(isolationLevel, tsevent, CACHENAME)), false);
 		
 	}
 

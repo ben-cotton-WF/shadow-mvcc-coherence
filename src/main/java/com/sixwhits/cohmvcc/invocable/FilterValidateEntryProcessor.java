@@ -3,10 +3,10 @@ package com.sixwhits.cohmvcc.invocable;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.util.Binary;
@@ -44,7 +44,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
 		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
 		
 		if (isolationLevel != readUncommitted) {
-			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			boolean committed = Utils.isCommitted(priorEntry);
 			if (!committed) {
 				return new ProcessorResult<K,VersionedKey<K>>(null, (VersionedKey<K>)priorEntry.getKey());
 			}

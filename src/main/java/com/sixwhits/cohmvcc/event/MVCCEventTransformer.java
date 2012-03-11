@@ -6,9 +6,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
+import com.sixwhits.cohmvcc.domain.EventValue;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCIndex;
@@ -38,7 +39,7 @@ import com.tangosol.util.MapEventTransformer;
  * @param <K> key type for the logical cache
  */
 @Portable
-public class MVCCEventTransformer<K> implements MapEventTransformer {
+public class MVCCEventTransformer<K, V> implements MapEventTransformer {
 
 	public static final int POF_ISOLATION = 0;
 	@PortableProperty(POF_ISOLATION)
@@ -78,9 +79,11 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 		this.latestOnly = latestOnly;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public MapEvent transform(MapEvent mapevent) {
-		if (isolationLevel != readUncommitted && !isCommitted(mapevent)) {
+		boolean committed = isCommitted(mapevent);
+		if (isolationLevel != readUncommitted && !committed) {
 			return null;
 		}
 
@@ -95,9 +98,7 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 		BackingMapContext ctx = mctx.getBackingMapContext(cacheName.getVersionCacheName());
 		@SuppressWarnings("rawtypes")
 		Map indexMap = ctx.getIndexMap();
-		@SuppressWarnings("unchecked")
 		MVCCIndex<K> index = (MVCCIndex<K>) indexMap.get(MVCCExtractor.INSTANCE);
-		@SuppressWarnings("unchecked")
 		VersionedKey<K> currentVersion = (VersionedKey<K>) mapevent.getKey();
 		
 		if (latestOnly) {
@@ -110,14 +111,16 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 			}
 		}
 		
-		TransactionalValue oldValue = null;
+		Object oldValue = null;
+
+		EventValue<V> eventValue = null;
 
 		if (mapevent.getId() == MapEvent.ENTRY_DELETED) {
 			if (wasCommitted(mapevent)) {
 				return null;
 			}
 			
-			oldValue = (TransactionalValue) mapevent.getOldValue();
+			oldValue = mapevent.getOldValue();
 		} else {
 
 			Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
@@ -132,17 +135,20 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 				@SuppressWarnings("rawtypes")
 				Map backingMap = ctx.getBackingMap();
 				Binary priorBinaryValue = (Binary) backingMap.get(priorBinaryKey);
-				oldValue = (TransactionalValue) ExternalizableHelper.fromBinary(priorBinaryValue, currentEntry.getSerializer());
+				oldValue = ExternalizableHelper.fromBinary(priorBinaryValue, currentEntry.getSerializer());
 			}
+			boolean deleted = isDeleted(mapevent);
+			eventValue = new EventValue<V>(committed, deleted, deleted ? null : (V) mapevent.getNewValue());
 		}
+		
 		if (mapevent instanceof CacheEvent) {
 			return new CacheEvent(
 					mapevent.getMap(), mapevent.getId(), mapevent.getKey(),
-					oldValue, mapevent.getNewValue(), ((CacheEvent)mapevent).isSynthetic());
+					oldValue, eventValue, ((CacheEvent)mapevent).isSynthetic());
 		} else {
 			return new MapEvent(
 					mapevent.getMap(), mapevent.getId(), mapevent.getKey(),
-					oldValue, mapevent.getNewValue());
+					oldValue, eventValue);
 		}
 	}
 
@@ -153,12 +159,14 @@ public class MVCCEventTransformer<K> implements MapEventTransformer {
 	}
 
 	private boolean isCommitted(MapEvent rawEvent) {
-		TransactionalValue tv = (TransactionalValue) rawEvent.getNewValue();
-		return tv.isCommitted();
+		return Utils.isCommitted((BinaryEntry) rawEvent.getNewEntry());
+	}
+
+	private boolean isDeleted(MapEvent rawEvent) {
+		return Utils.isDeleted((BinaryEntry) rawEvent.getNewEntry());
 	}
 
 	private boolean wasCommitted(MapEvent rawEvent) {
-		TransactionalValue tv = (TransactionalValue) rawEvent.getOldValue();
-		return tv.isCommitted();
+		return Utils.isCommitted((BinaryEntry) rawEvent.getOldEntry());
 	}
 }

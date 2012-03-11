@@ -2,7 +2,6 @@ package com.sixwhits.cohmvcc.cache.internal;
 
 import java.util.concurrent.Semaphore;
 
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.tangosol.util.AbstractMapListener;
 import com.tangosol.util.MapEvent;
 
@@ -17,10 +16,7 @@ public class VersionCommitListener extends AbstractMapListener {
 
 	@Override
 	public void entryUpdated(MapEvent mapevent) {
-		TransactionalValue tv = (TransactionalValue) mapevent.getNewValue();
-		if (tv.isCommitted()) {
-			completeFlag.release();
-		}
+		completeFlag.release();
 	}
 	
 	@Override

@@ -21,7 +21,6 @@ import com.sixwhits.cohmvcc.cache.MVCCTransactionalCache;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.event.MVCCEventTransformer;
 import com.sixwhits.cohmvcc.event.MVCCMapListener;
@@ -29,6 +28,7 @@ import com.sixwhits.cohmvcc.index.FilterWrapper;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
 import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
+import com.sixwhits.cohmvcc.invocable.DecorationExtractorProcessor;
 import com.sixwhits.cohmvcc.invocable.EntryProcessorInvoker;
 import com.sixwhits.cohmvcc.invocable.EntryProcessorInvokerResult;
 import com.sixwhits.cohmvcc.invocable.FilterValidateEntryProcessor;
@@ -128,42 +128,42 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 		VersionCommitListener vcl = new VersionCommitListener();
 		try {
 			versionCache.addMapListener(vcl, awaitedKey, false);
-			TransactionalValue v = (TransactionalValue) versionCache.get(awaitedKey);
-			if (v != null && !v.isCommitted()) {
+			Boolean committed = (Boolean) versionCache.invoke(awaitedKey, DecorationExtractorProcessor.COMMITTED_INSTANCE);
+			if (committed != null && !committed) {
 				vcl.waitForCommit();
 			}
 			return;
 		} finally {
-			versionCache.removeMapListener(vcl);
+			versionCache.removeMapListener(vcl, awaitedKey);
 		}
 	}
 		
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel) {
-		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener);
 		listenerMap.putIfAbsent(listener, mvccml);
 		versionCache.addMapListener(mvccml,
-				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+				new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<K,V>(isolationLevel, tid, cacheName)), false);
 		versionCache.addMapListener(mvccml);
 	}
 
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Object oKey, boolean fLite) {
 		Filter keyFilter = new EqualsFilter(KEYEXTRACTOR, oKey);
-		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener);
 		listenerMap.putIfAbsent(listener, mvccml);
 		versionCache.addMapListener(mvccml,
-				new MapEventTransformerFilter(keyFilter, new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+				new MapEventTransformerFilter(keyFilter, new MVCCEventTransformer<K,V>(isolationLevel, tid, cacheName)), false);
 		versionCache.addMapListener(mvccml);
 	}
 
 	@Override
 	public void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel, Filter filter,
 			boolean fLite) {
-		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener, versionCache.getCacheService().getSerializer());
+		MVCCMapListener<K,V> mvccml = new MVCCMapListener<K, V>(listener);
 		listenerMap.putIfAbsent(listener, mvccml);
 		versionCache.addMapListener(mvccml,
-				new MapEventTransformerFilter(new FilterWrapper(filter), new MVCCEventTransformer<Integer>(isolationLevel, tid, cacheName)), false);
+				new MapEventTransformerFilter(new FilterWrapper(filter), new MVCCEventTransformer<K,V>(isolationLevel, tid, cacheName)), false);
 		versionCache.addMapListener(mvccml);
 	}
 
@@ -308,10 +308,10 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	public <R> R aggregate(TransactionId tid, IsolationLevel isolationLevel, Collection<K> collKeys, EntryAggregator agent) {
 		
 		if (agent instanceof ParallelAwareAggregator) {
-			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent, cacheName);
+			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent);
 			return aggregateParallel(tid, isolationLevel, collKeys, wrapper);
 		} else {
-			AggregatorWrapper wrapper = new AggregatorWrapper(agent, cacheName);
+			AggregatorWrapper wrapper = new AggregatorWrapper(agent);
 			return aggregateSerial(tid, isolationLevel, collKeys, wrapper);
 		}
 	}
@@ -319,10 +319,10 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 	@Override
 	public <R> R aggregate(TransactionId tid, IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) {
 		if (agent instanceof ParallelAwareAggregator) {
-			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent, cacheName);
+			ParallelAwareAggregatorWrapper wrapper = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator)agent);
 			return aggregateParallel(tid, isolationLevel, filter, wrapper);
 		} else {
-			AggregatorWrapper wrapper = new AggregatorWrapper(agent, cacheName);
+			AggregatorWrapper wrapper = new AggregatorWrapper(agent);
 			return aggregateSerial(tid, isolationLevel, filter, wrapper);
 		}
 	}
@@ -333,7 +333,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 			invokeAllUntilCommitted(filter, tid, new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName));
 		}
 		EntryAggregator wrapper;
-		wrapper = new AggregatorWrapper(agent, cacheName);
+		wrapper = new AggregatorWrapper(agent);
 		// TODO restrict filter to include only items already marked read with this tid for repeatableRead
 		MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
 		return (R) versionCache.aggregate(surfaceFilter, wrapper);
@@ -357,7 +357,7 @@ public class MVCCTransactionalCacheImpl<K,V> implements MVCCTransactionalCache<K
 			}
 			
 		}
-		wrapper = new AggregatorWrapper(agent, cacheName);
+		wrapper = new AggregatorWrapper(agent);
 		return (R) versionCache.aggregate(vkeys, wrapper);
 	}
 	

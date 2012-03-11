@@ -4,17 +4,14 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.tangosol.io.Serializer;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap.Entry;
 
 public class VersionWrapperSet implements Set<Entry> {
 	private final Set<Entry> versionedSet;
-	private final Serializer serializer;
 
-	public VersionWrapperSet(Serializer serializer, Set<Entry> versionedSet) {
+	public VersionWrapperSet(Set<Entry> versionedSet) {
 		super();
-		this.serializer = serializer;
 		this.versionedSet = versionedSet;
 	}
 
@@ -47,7 +44,7 @@ public class VersionWrapperSet implements Set<Entry> {
 				if (underlyingEntry instanceof BinaryEntry) {
 					return new VersionCacheBinaryEntryWrapper((BinaryEntry)underlyingEntry);
 				} else {
-					return new VersionCacheEntryWrapper(serializer, underlyingEntry);
+					return new VersionCacheEntryWrapper(underlyingEntry);
 				}
 			}
 

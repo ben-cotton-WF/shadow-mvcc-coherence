@@ -4,14 +4,11 @@ import static com.tangosol.util.MapEvent.ENTRY_DELETED;
 import static com.tangosol.util.MapEvent.ENTRY_INSERTED;
 import static com.tangosol.util.MapEvent.ENTRY_UPDATED;
 
+import com.sixwhits.cohmvcc.domain.EventValue;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.event.MVCCCacheEvent.CommitStatus;
-import com.tangosol.io.Serializer;
 import com.tangosol.net.cache.CacheEvent;
-import com.tangosol.util.Binary;
-import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.MapEvent;
 import com.tangosol.util.MapListener;
 
@@ -32,12 +29,10 @@ import com.tangosol.util.MapListener;
 public class MVCCMapListener<K,V> implements MapListener {
 	
 	private final MapListener delegate;
-	private final Serializer serializer;
 
-	public MVCCMapListener(MapListener delegate, Serializer serializer) {
+	public MVCCMapListener(MapListener delegate) {
 		super();
 		this.delegate = delegate;
-		this.serializer = serializer;
 	}
 
 	/**
@@ -56,14 +51,16 @@ public class MVCCMapListener<K,V> implements MapListener {
 			synthetic = ((CacheEvent)mapevent).isSynthetic();
 		}
 		
-		int eventType = ((TransactionalValue)mapevent.getNewValue()).isDeleted() ? ENTRY_DELETED : mapevent.getOldValue() == null ? ENTRY_INSERTED : ENTRY_UPDATED;
+		@SuppressWarnings("unchecked")
+		EventValue<V> eventValue = (EventValue<V>) mapevent.getNewValue();
+		int eventType = eventValue.isDeleted() ? ENTRY_DELETED : mapevent.getOldValue() == null ? ENTRY_INSERTED : ENTRY_UPDATED;
 		
 		MVCCCacheEvent newEvent = new MVCCCacheEvent(
 				mapevent.getMap(), eventType, extractKey(mapevent),
-				extractValue((TransactionalValue) mapevent.getOldValue()),
-				extractValue((TransactionalValue) mapevent.getNewValue()),
+				mapevent.getOldValue(),
+				eventValue.getValue(),
 				synthetic, eventTransactionId,
-				isCommitted(mapevent) ? CommitStatus.commit : CommitStatus.open);
+				eventValue.isCommitted() ? CommitStatus.commit : CommitStatus.open);
 		
 		switch (eventType) {
 		case ENTRY_DELETED:
@@ -102,10 +99,13 @@ public class MVCCMapListener<K,V> implements MapListener {
 			synthetic = ((CacheEvent)mapevent).isSynthetic();
 		}
 		
+		@SuppressWarnings("unchecked")
+		EventValue<V> eventValue = (EventValue<V>) mapevent.getNewValue();
+
 		MVCCCacheEvent newEvent = new MVCCCacheEvent(
 				mapevent.getMap(), ENTRY_UPDATED, extractKey(mapevent),
-				extractValue((TransactionalValue) mapevent.getOldValue()),
-				extractValue((TransactionalValue) mapevent.getNewValue()),
+				mapevent.getOldValue(),
+				eventValue,
 				synthetic, extractTransactionId(mapevent),
 				CommitStatus.rollback);
 		delegate.entryUpdated(newEvent);
@@ -128,22 +128,4 @@ public class MVCCMapListener<K,V> implements MapListener {
 		return vk.getTxTimeStamp();
 	}
 	
-	private V extractValue(TransactionalValue tv) {
-		if (tv == null) {
-			return null;
-		}
-		Binary binaryValue = tv.getValue();
-		if (binaryValue == null) {
-			return null;
-		}
-		@SuppressWarnings("unchecked")
-		V value = (V) ExternalizableHelper.fromBinary(binaryValue, serializer);
-		return value;
-	}
-	
-	private boolean isCommitted(MapEvent rawEvent) {
-		TransactionalValue tv = (TransactionalValue) rawEvent.getNewValue();
-		return tv.isCommitted();
-	}
-
 }

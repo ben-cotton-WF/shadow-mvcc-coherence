@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.util.Binary;
@@ -179,8 +180,8 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 		sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
 		ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
-		Boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(entry);
-		Boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(entry);
+		boolean committed = Utils.isCommitted((BinaryEntry) entry);
+		boolean deleted = Utils.isDeleted((BinaryEntry) entry);
 		Binary binaryKey = ((BinaryEntry)entry).getBinaryKey();
 		addToIndex(sKey, ts, binaryKey, committed, deleted);
 	}
@@ -201,7 +202,7 @@ public class MVCCIndex<K> implements MapIndex {
 		removeFromIndex(sKey, ts);
 	}
 	
-	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey, Boolean committed, Boolean deleted) {
+	private void addToIndex(K sKey, TransactionId ts, Binary binaryKey, boolean committed, boolean deleted) {
 		while(true) {
 			NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 			synchronized(line) {
@@ -212,7 +213,7 @@ public class MVCCIndex<K> implements MapIndex {
 			}					
 		}
 	}
-	private void updateIndex(K sKey, TransactionId ts, Boolean committed) {
+	private void updateIndex(K sKey, TransactionId ts, boolean committed) {
 		NavigableMap<TransactionId,IndexEntry> line = getLine(sKey);
 		synchronized(line) {
 			if (committed) {
@@ -289,7 +290,7 @@ public class MVCCIndex<K> implements MapIndex {
 		}
 		K sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
 		TransactionId ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
-		Boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(entry);
+		Boolean committed = Utils.isCommitted((BinaryEntry) entry);
 		updateIndex(sKey, ts, committed);
     }
 }

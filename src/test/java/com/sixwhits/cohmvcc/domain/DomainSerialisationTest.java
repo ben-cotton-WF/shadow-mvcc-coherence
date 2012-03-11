@@ -24,13 +24,6 @@ public class DomainSerialisationTest {
 	}
 
 	@Test
-	public void testTransactionalValue() {
-		
-		TransactionalValue vo = new TransactionalValue(true, false, new Binary(new byte[] { 0x01, 0x02, 0x03, 0x04 }));
-		assertPofFidelity(vo);
-	}
-	
-	@Test
 	public void TestTransactionId() {
 		TransactionId vo = new TransactionId(40L*365L*24L*60L*60L*1000L, 123, 456);
 		assertPofFidelity(vo);

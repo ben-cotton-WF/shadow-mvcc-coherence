@@ -81,14 +81,14 @@ public class InvocableSerialisationTest {
 	@Ignore
 	@Test
 	public void testParallelAwareAggregatorWrapper() {
-		Object obj = new ParallelAwareAggregatorWrapper(new Count(), new CacheName("cachename"));
+		Object obj = new ParallelAwareAggregatorWrapper(new Count());
 		assertPofFidelity(obj);
 	}
 
 	@Ignore
 	@Test
 	public void testAggregatorWrapper() {
-		Object obj = new AggregatorWrapper(new Count(), new CacheName("cachename"));
+		Object obj = new AggregatorWrapper(new Count());
 		assertPofFidelity(obj);
 	}
 

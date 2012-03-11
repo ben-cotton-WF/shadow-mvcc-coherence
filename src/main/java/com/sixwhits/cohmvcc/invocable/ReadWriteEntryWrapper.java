@@ -11,7 +11,7 @@ import com.tangosol.util.extractor.PofUpdater;
 public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements EntryWrapper {
 	
 	private boolean delete = false;
-	private Binary newValue;
+	private Binary newBinaryValue;
 	
 	public ReadWriteEntryWrapper(BinaryEntry parentEntry, TransactionId transactionId, IsolationLevel isolationLevel, CacheName cacheName) {
 		super(parentEntry, transactionId, isolationLevel, cacheName);
@@ -26,13 +26,13 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
 	@Override
 	public Object setValue(Object obj) {
 		Object result = getValue();
-		newValue = (Binary) getBackingMapContext().getManagerContext().getValueToInternalConverter().convert(obj);
+		newBinaryValue = (Binary) getBackingMapContext().getManagerContext().getValueToInternalConverter().convert(obj);
 		return result;
 	}
 
 	@Override
 	public void setValue(Object obj, boolean flag) {
-		newValue = (Binary) getBackingMapContext().getManagerContext().getValueToInternalConverter().convert(obj);
+		newBinaryValue = (Binary) getBackingMapContext().getManagerContext().getValueToInternalConverter().convert(obj);
 	}
 
 	@Override
@@ -51,12 +51,12 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
 
 	@Override
 	public Binary getBinaryValue() {
-		return newValue == null ? getOriginalBinaryValue() : newValue;
+		return newBinaryValue == null ? getOriginalBinaryValue() : newBinaryValue;
 	}
 
 	@Override
 	public void updateBinaryValue(Binary binary) {
-		newValue = binary;
+		newBinaryValue = binary;
 	}
 
 	@Override
@@ -73,6 +73,6 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
 	}
 
 	public Binary getNewBinaryValue() {
-		return newValue;
+		return newBinaryValue;
 	}
 }

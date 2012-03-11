@@ -1,10 +1,7 @@
 package com.sixwhits.cohmvcc.invocable;
 
 
-import com.sixwhits.cohmvcc.domain.TransactionalValue;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.tangosol.io.Serializer;
-import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.ValueUpdater;
@@ -12,11 +9,9 @@ import com.tangosol.util.ValueUpdater;
 public class VersionCacheEntryWrapper<K, V> implements Entry {
 
 	private final Entry underlying;
-	private final Serializer serializer;
 	
-	public VersionCacheEntryWrapper(Serializer serializer, Entry underlying) {
+	public VersionCacheEntryWrapper(Entry underlying) {
 		super();
-		this.serializer = serializer;
 		this.underlying = underlying;
 	}
 
@@ -29,7 +24,7 @@ public class VersionCacheEntryWrapper<K, V> implements Entry {
 	@SuppressWarnings("unchecked")
 	@Override
 	public V getValue() {
-		return (V) ExternalizableHelper.fromBinary(((TransactionalValue)underlying.getValue()).getValue(), serializer);
+		return (V) underlying.getValue();
 	}
 
 	@Override

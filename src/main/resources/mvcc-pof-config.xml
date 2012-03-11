@@ -10,7 +10,7 @@
     
     <user-type>
       <type-id>1001</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionalValue</class-name>
+      <class-name>com.sixwhits.cohmvcc.invocable.DecorationExtractorProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1002</type-id>
@@ -129,6 +129,14 @@
     <user-type>
       <type-id>1030</type-id>
       <class-name>com.sixwhits.cohmvcc.event.MVCCEventTransformer</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1031</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.DeletedObject</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1032</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.EventValue</class-name>
     </user-type>
 
   </user-type-list>

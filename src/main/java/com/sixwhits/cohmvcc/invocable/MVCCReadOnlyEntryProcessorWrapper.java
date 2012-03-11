@@ -1,15 +1,16 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
+import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
@@ -51,13 +52,13 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
 
 		if (isolationLevel != IsolationLevel.readUncommitted) {
-			boolean committed = (Boolean) Constants.COMMITSTATUSEXTRACTOR.extractFromEntry(priorEntry);
+			boolean committed = Utils.isCommitted(priorEntry);
 			if (!committed) {
 				return new ProcessorResult<K,R>(null, (VersionedKey<K>)priorEntry.getKey());
 			}
 		}
 
-		boolean deleted = (Boolean) Constants.DELETESTATUSEXTRACTOR.extractFromEntry(priorEntry);
+		boolean deleted = Utils.isDeleted(priorEntry);
 		if (deleted) {
 			return null;
 		}
@@ -73,7 +74,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcesso
 			}
 
 			result = (R) delegate.process(childEntry);
-		
+			
 		}
 		
 		if ((isolationLevel == IsolationLevel.repeatableRead || isolationLevel == IsolationLevel.serializable)) {
