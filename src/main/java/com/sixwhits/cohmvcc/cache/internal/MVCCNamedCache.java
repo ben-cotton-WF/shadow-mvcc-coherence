@@ -5,220 +5,303 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-import com.sixwhits.cohmvcc.transaction.Context;
-import com.tangosol.net.CacheFactory;
+import com.sixwhits.cohmvcc.cache.MVCCTransactionalCache;
+import com.sixwhits.cohmvcc.transaction.Transaction;
+import com.sixwhits.cohmvcc.transaction.TransactionManager;
 import com.tangosol.net.CacheService;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
 import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
+import com.tangosol.util.filter.AlwaysFilter;
 
+/**
+ * MVCC implementation of {@link NamedCache}.
+ *
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCNamedCache implements NamedCache {
 
-	private final Context transactionContext;
-	private final String cacheName;
-	private final NamedCache keyCache;
-	private final NamedCache versionCache;
-	
-	
-	public MVCCNamedCache(Context transactionContext, String cacheName) {
-		super();
-		this.transactionContext = transactionContext;
-		this.cacheName = cacheName;
-		this.keyCache = CacheFactory.getCache(cacheName + "-keys");
-		this.versionCache = CacheFactory.getCache(cacheName + "-versions");
-	}
-	
-	public Object get(Object key) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    private final TransactionManager transactionManager;
+    @SuppressWarnings("rawtypes")
+    private final MVCCTransactionalCache mvccTxCache;
 
-	public void addMapListener(MapListener listener) {
-		// TODO Auto-generated method stub
+    /**
+     * @param transactionManager transaction manager used to provide transaction context
+     * @param mvccTxCache MVCC cache service layer
+     */
+    @SuppressWarnings("rawtypes")
+    public MVCCNamedCache(final TransactionManager transactionManager, final MVCCTransactionalCache mvccTxCache) {
+        super();
+        this.transactionManager = transactionManager;
+        this.mvccTxCache = mvccTxCache;
+    }
 
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object get(final Object key) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.get(context.getTransactionId(), context.getIsolationLevel(), key);
+    }
 
-	public void addMapListener(MapListener listener, Object oKey, boolean fLite) {
-		// TODO Auto-generated method stub
+    @Override
+    public void addMapListener(final MapListener listener) {
+        Transaction context = transactionManager.getTransaction();
+        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	}
+    @Override
+    public void addMapListener(final MapListener listener, final Object oKey, final boolean fLite) {
+        Transaction context = transactionManager.getTransaction();
+        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), oKey, fLite);
+    }
 
-	public void addMapListener(MapListener listener, Filter filter,
-			boolean fLite) {
-		// TODO Auto-generated method stub
+    @Override
+    public void addMapListener(final MapListener listener, final Filter filter, 
+            final boolean fLite) {
+        Transaction context = transactionManager.getTransaction();
+        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), filter, fLite);
+    }
 
-	}
+    @Override
+    public void removeMapListener(final MapListener listener) {
+        mvccTxCache.removeMapListener(listener);
+    }
 
-	public void removeMapListener(MapListener listener) {
-		// TODO Auto-generated method stub
+    @Override
+    public void removeMapListener(final MapListener listener, final Object oKey) {
+        mvccTxCache.removeMapListener(listener, oKey);
+    }
 
-	}
+    @Override
+    public void removeMapListener(final MapListener listener, final Filter filter) {
+        mvccTxCache.removeMapListener(listener, filter);
+    }
 
-	public void removeMapListener(MapListener listener, Object oKey) {
-		// TODO Auto-generated method stub
+    @Override
+    public int size() {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.size(context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	}
+    @Override
+    public boolean isEmpty() {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	public void removeMapListener(MapListener listener, Filter filter) {
-		// TODO Auto-generated method stub
+    @SuppressWarnings("unchecked")
+    @Override
+    public boolean containsKey(final Object key) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.containsKey(context.getTransactionId(), context.getIsolationLevel(), key);
+    }
 
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public boolean containsValue(final Object value) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
+    }
 
-	public int size() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object put(final Object key, final Object value) {
+        Transaction context = transactionManager.getTransaction();
+        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
+        return mvccTxCache.put(context.getTransactionId(), context.getIsolationLevel(),
+                context.isAutoCommit(), key, value);
+    }
 
-	public boolean isEmpty() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object remove(final Object key) {
+        Transaction context = transactionManager.getTransaction();
+        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
+        return mvccTxCache.remove(context.getTransactionId(), context.getIsolationLevel(), context.isAutoCommit(), key);
+    }
 
-	public boolean containsKey(Object key) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    public void putAll(final Map m) {
+        Transaction context = transactionManager.getTransaction();
+        context.addKeySetAffected(mvccTxCache.getMVCCCacheName(), m.keySet());
+        try {
+            mvccTxCache.putAll(context.getTransactionId(), context.isAutoCommit(), m);
+        } catch (RuntimeException t) {
+            context.setRollbackOnly();
+            throw t;
+        }
+    }
 
-	public boolean containsValue(Object value) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public void clear() {
+        Transaction context = transactionManager.getTransaction();
+        context.addFilterAffected(mvccTxCache.getMVCCCacheName(), AlwaysFilter.INSTANCE);
+        try {
+            mvccTxCache.clear(context.getTransactionId(), context.isAutoCommit());
+        } catch (RuntimeException t) {
+            context.setRollbackOnly();
+            throw t;
+        }
+    }
 
-	public Object put(Object key, Object value) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Set keySet() {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.keySet(context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	public Object remove(Object key) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Collection values() {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.values(context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	public void putAll(Map m) {
-		// TODO Auto-generated method stub
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Set entrySet() {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
+    }
 
-	}
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    public Map getAll(final Collection colKeys) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.getAll(context.getTransactionId(), context.getIsolationLevel(), colKeys);
+    }
 
-	public void clear() {
-		// TODO Auto-generated method stub
+    @Override
+    public boolean lock(final Object oKey) {
+        throw new UnsupportedOperationException("Locking not enabled in MVCC caches");
+    }
 
-	}
+    @Override
+    public boolean lock(final Object oKey, final long cWait) {
+        throw new UnsupportedOperationException("Locking not enabled in MVCC caches");
+    }
 
-	public Set keySet() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public boolean unlock(final Object oKey) {
+        throw new UnsupportedOperationException("Locking not enabled in MVCC caches");
+    }
 
-	public Collection values() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public void addIndex(final ValueExtractor extractor, final boolean fOrdered, 
+            final Comparator comparator) {
+        mvccTxCache.addIndex(extractor, fOrdered, comparator);
+    }
 
-	public Set entrySet() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Set entrySet(final Filter filter) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+    }
 
-	public Map getAll(Collection colKeys) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Set entrySet(final Filter filter, final Comparator comparator) {
+        throw new UnsupportedOperationException("Locking not enabled in MVCC caches");
+    }
 
-	public boolean lock(Object oKey) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Set keySet(final Filter filter) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+    }
 
-	public boolean lock(Object oKey, long cWait) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @Override
+    public void removeIndex(final ValueExtractor extractor) {
+        mvccTxCache.removeIndex(extractor);
+    }
 
-	public boolean unlock(Object oKey) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public Object aggregate(final Collection collKeys, final EntryAggregator agent) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
+    }
 
-	public void addIndex(ValueExtractor extractor, boolean fOrdered,
-			Comparator comparator) {
-		// TODO Auto-generated method stub
+    @Override
+    public Object aggregate(final Filter filter, final EntryAggregator agent) {
+        Transaction context = transactionManager.getTransaction();
+        return mvccTxCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
+    }
 
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object invoke(final Object key, final EntryProcessor agent) {
+        Transaction context = transactionManager.getTransaction();
+        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
+        return mvccTxCache.invoke(context.getTransactionId(),
+                context.getIsolationLevel(), context.isAutoCommit(), key, agent);
+    }
 
-	public Set entrySet(Filter filter) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
+        Transaction context = transactionManager.getTransaction();
+        context.addKeySetAffected(mvccTxCache.getMVCCCacheName(), collKeys);
+        try {
+            return mvccTxCache.invokeAll(context.getTransactionId(),
+                    context.getIsolationLevel(), context.isAutoCommit(), collKeys, agent);
+        } catch (RuntimeException t) {
+            context.setRollbackOnly();
+            throw t;
+        }
+    }
 
-	public Set entrySet(Filter filter, Comparator comparator) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Map invokeAll(final Filter filter, final EntryProcessor agent) {
+        Transaction context = transactionManager.getTransaction();
+        context.addFilterAffected(mvccTxCache.getMVCCCacheName(), filter);
+        try {
+            return mvccTxCache.invokeAll(context.getTransactionId(),
+                    context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
+            //TODO update context with keys/partitions actually affected
+        } catch (RuntimeException t) {
+            context.setRollbackOnly();
+            throw t;
+        }
+    }
 
-	public Set keySet(Filter filter) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public void destroy() {
+        // TODO - force a rollback first?
+        mvccTxCache.destroy();
+    }
 
-	public void removeIndex(ValueExtractor extractor) {
-		// TODO Auto-generated method stub
+    @Override
+    public String getCacheName() {
+        return mvccTxCache.getCacheName();
+    }
 
-	}
+    @Override
+    public CacheService getCacheService() {
+        return mvccTxCache.getCacheService();
+    }
 
-	public Object aggregate(Collection collKeys, EntryAggregator agent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public boolean isActive() {
+        return mvccTxCache.isActive();
+    }
 
-	public Object aggregate(Filter filter, EntryAggregator agent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public Object put(final Object oKey, final Object oValue, final long cMillis) {
+        throw new UnsupportedOperationException("Expiry not enabled in MVCC caches");
+    }
 
-	public Object invoke(Object oKey, EntryProcessor agent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public Map invokeAll(Collection collKeys, EntryProcessor agent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public Map invokeAll(Filter filter, EntryProcessor agent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public void destroy() {
-		// TODO Auto-generated method stub
-
-	}
-
-	public String getCacheName() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public CacheService getCacheService() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public boolean isActive() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	public Object put(Object oKey, Object oValue, long cMillis) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public void release() {
-		// TODO Auto-generated method stub
-
-	}
+    @Override
+    public void release() {
+        mvccTxCache.release();
+    }
 
 }

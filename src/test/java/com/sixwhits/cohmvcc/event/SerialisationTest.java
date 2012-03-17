@@ -15,26 +15,26 @@ import com.tangosol.util.ExternalizableHelper;
 
 public class SerialisationTest {
 
-	private ConfigurablePofContext pofContext;
-	
-	@Before
-	public void setUp() throws Exception {
-		pofContext = new ConfigurablePofContext("mvcc-pof-config.xml"); 
-	}
+    private ConfigurablePofContext pofContext;
 
-	@Test
-	public void testMVCCEventTransformer() {
-		
-		Object vo = new MVCCEventTransformer<Object,Object>(readCommitted,
-				new TransactionId(40L*365L*24L*60L*60L*1000L + 17, 124, 457), new CacheName("test"));
-		assertPofFidelity(vo);
-	}
+    @Before
+    public void setUp() throws Exception {
+        pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
+    }
 
-	private void assertPofFidelity(Object expected) {
-		Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
-		Object result = ExternalizableHelper.fromBinary(binary, pofContext);
-		
-		assertTrue(EqualsBuilder.reflectionEquals(expected, result));
-	}
+    @Test
+    public void testMVCCEventTransformer() {
+
+        Object vo = new MVCCEventTransformer<Object, Object>(readCommitted, 
+                new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457), new CacheName("test"));
+        assertPofFidelity(vo);
+    }
+
+    private void assertPofFidelity(Object expected) {
+        Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
+        Object result = ExternalizableHelper.fromBinary(binary, pofContext);
+
+        assertTrue(EqualsBuilder.reflectionEquals(expected, result));
+    }
 
 }

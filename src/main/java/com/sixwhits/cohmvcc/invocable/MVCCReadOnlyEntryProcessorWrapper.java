@@ -10,78 +10,112 @@ import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
-import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
+/**
+ * Wrapper for a read only EntryProcessor. Invoke on the key cache
+ * to operate on the version cache as if it were the logical cache.
+ * 
+ * Any update operation by the wrapped EntryProcessor will fail.
+ * 
+ * May optionally be provided with a filter. The {@code process}
+ * method will return null if the filter does not match.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ * @param <K> cache key type
+ * @param <R> EntryProcessor return type
+ */
 @Portable
-public class MVCCReadOnlyEntryProcessorWrapper<K,R> extends AbstractMVCCProcessor<K,R> {
+public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R> {
 
-	private static final long serialVersionUID = -7158130705920331999L;
+    private static final long serialVersionUID = -7158130705920331999L;
 
-	public static final int POF_EP = 10;
-	@PortableProperty(POF_EP)
-	private EntryProcessor delegate;
-	public MVCCReadOnlyEntryProcessorWrapper() {
-		super();
-	}
+    public static final int POF_EP = 10;
+    @PortableProperty(POF_EP)
+    private EntryProcessor delegate;
+    
+    /**
+     *  Default constructor for POF use only.
+     */
+    public MVCCReadOnlyEntryProcessorWrapper() {
+        super();
+    }
 
-	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
-			EntryProcessor delegate, IsolationLevel isolationLevel, CacheName cacheName) {
-		super(transactionId, isolationLevel, cacheName);
-		this.delegate = delegate;
-	}
+    /**
+     * Constructor.
+     * @param transactionId transaction id
+     * @param delegate EntryProcesor to execute
+     * @param isolationLevel isolation level
+     * @param cacheName cache name
+     */
+    public MVCCReadOnlyEntryProcessorWrapper(final TransactionId transactionId, 
+            final EntryProcessor delegate, final IsolationLevel isolationLevel, final CacheName cacheName) {
+        super(transactionId, isolationLevel, cacheName);
+        this.delegate = delegate;
+    }
 
-	public MVCCReadOnlyEntryProcessorWrapper(TransactionId transactionId,
-			EntryProcessor delegate, IsolationLevel isolationLevel, CacheName cacheName, Filter filter) {
-		super(transactionId, isolationLevel, cacheName, filter);
-		this.delegate = delegate;
-	}
+    /**
+     * Constructor with filter.
+     * @param transactionId transaction id
+     * @param delegate EntryProcesor to execute
+     * @param isolationLevel isolation level
+     * @param cacheName cache name
+     * @param filter validation filter
+     */
+    public MVCCReadOnlyEntryProcessorWrapper(final TransactionId transactionId, 
+            final EntryProcessor delegate, final IsolationLevel isolationLevel, final CacheName cacheName,
+            final Filter filter) {
+        super(transactionId, isolationLevel, cacheName, filter);
+        this.delegate = delegate;
+    }
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public ProcessorResult<K,R> process(Entry entryarg) {
-		
-		BinaryEntry entry = (BinaryEntry) entryarg;
-		Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
-		if (priorVersionBinaryKey == null) {
-			return null;
-		}
+    @SuppressWarnings("unchecked")
+    @Override
+    public ProcessorResult<K, R> process(final Entry entryarg) {
 
-		BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry).getBackingMapEntry(priorVersionBinaryKey);
+        BinaryEntry entry = (BinaryEntry) entryarg;
+        Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
+        if (priorVersionBinaryKey == null) {
+            return null;
+        }
 
-		if (isolationLevel != IsolationLevel.readUncommitted) {
-			boolean committed = Utils.isCommitted(priorEntry);
-			if (!committed) {
-				return new ProcessorResult<K,R>(null, (VersionedKey<K>)priorEntry.getKey());
-			}
-		}
+        BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
+                .getBackingMapEntry(priorVersionBinaryKey);
 
-		boolean deleted = Utils.isDeleted(priorEntry);
-		if (deleted) {
-			return null;
-		}
+        if (isolationLevel != IsolationLevel.readUncommitted) {
+            boolean committed = Utils.isCommitted(priorEntry);
+            if (!committed) {
+                return new ProcessorResult<K, R>(null, (VersionedKey<K>) priorEntry.getKey());
+            }
+        }
 
-		R result = null;
-		
-		if (delegate != null) {
+        boolean deleted = Utils.isDeleted(priorEntry);
+        if (deleted) {
+            return null;
+        }
 
-			ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
-			
-			if (!confirmFilterMatch(childEntry)) {
-				return null;
-			}
+        R result = null;
 
-			result = (R) delegate.process(childEntry);
-			
-		}
-		
-		if ((isolationLevel == IsolationLevel.repeatableRead || isolationLevel == IsolationLevel.serializable)) {
-			setReadTimestamp(entry);
-		}
-		
-		return new ProcessorResult<K, R>(result, null);
-	}
+        if (delegate != null) {
+
+            ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+
+            if (!confirmFilterMatch(childEntry)) {
+                return null;
+            }
+
+            result = (R) delegate.process(childEntry);
+
+        }
+
+        if ((isolationLevel == IsolationLevel.repeatableRead || isolationLevel == IsolationLevel.serializable)) {
+            setReadTimestamp(entry);
+        }
+
+        return new ProcessorResult<K, R>(result, null);
+    }
 
 }

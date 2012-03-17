@@ -138,6 +138,14 @@
       <type-id>1032</type-id>
       <class-name>com.sixwhits.cohmvcc.domain.EventValue</class-name>
     </user-type>
+    <user-type>
+      <type-id>1033</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.TransactionCacheValue</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1034</type-id>
+      <class-name>com.sixwhits.cohmvcc.pof.IdentityPofPath</class-name>
+    </user-type>
 
   </user-type-list>
 

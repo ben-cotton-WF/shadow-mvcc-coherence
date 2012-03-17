@@ -14,105 +14,336 @@ import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 
-public interface MVCCTransactionalCache<K,V> {
+/**
+ * Interface defining operations on the logical cache with transaction
+ * context information given with each request. Isolation level determines whether a read marker
+ * is recorded when a value is read, and whether uncommitted values can be read. Operations with isolation
+ * level {@code readCommitted} or higher will block on encountering an uncommitted version.
+ * 
+ * This is the potential decoupling point for extend clients. Cluster members would call
+ * an implementation directly, extend clients a facade implementation to use invocation service.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ * @param <K> cache key type
+ * @param <V> cache value type
+ */
+public interface MVCCTransactionalCache<K, V> {
 
-	public abstract V get(TransactionId tid,
-			IsolationLevel isolationLevel, K key);
+    /**
+     * key based get.
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     * @param key the cache key the key
+     * @return cache value
+     */
+    V get(TransactionId tid, 
+            IsolationLevel isolationLevel, K key);
 
-	public abstract V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
+    /**
+     * put. Subject to isolation level this will place a read marker. Use insert or putAll
+     * to update without a read marker
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     * @param autoCommit implicit commit if true implicit commit if true
+     * @param key the cache key key
+     * @param value the value new value
+     * @return old value.
+     */
+    V put(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key, V value);
 
-	/**
-	 * Like put, but doesn't return old value so no read registered.
-	 * @param tid
-	 * @param isolationLevel
-	 * @param autoCommit
-	 * @param key
-	 * @param value
-	 * @return
-	 */
-	public void insert(TransactionId tid, boolean autoCommit, K key, V value);
+    /**
+     * Like put, but doesn't return old value so no read registered.
+     * @param tid transaction id transaction id
+     * @param autoCommit implicit commit if true true to commit immediately
+     * @param key the cache key key to insert
+     * @param value the value value to insert
+     */
+    void insert(TransactionId tid, boolean autoCommit, K key, V value);
 
-	public abstract <R> R invoke(TransactionId tid,
-			IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
+    /**
+     * Invoke an EntryProcessor based on the logical cache design.
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     * @param autoCommit implicit commit if true implicit commit if true
+     * @param oKey key
+     * @param agent the processor
+     * @return the result of the EntryProcessor
+     * @param <R> return type of the EntryProcessor
+     */
+    <R> R invoke(TransactionId tid, 
+            IsolationLevel isolationLevel, boolean autoCommit, K oKey, EntryProcessor agent);
 
-	public abstract void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel);
+    /**
+     * Add a MapListener that will receive logical cache events. Events with timestamps
+     * older than the transaction id will be ignored. uncommitted events will be received if
+     * isolationLevel is {@code uncommitted}
+     * @param listener the map listener
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     */
+    void addMapListener(MapListener listener, TransactionId tid, IsolationLevel isolationLevel);
 
-	public abstract void addMapListener(MapListener listener,
-			TransactionId tid, IsolationLevel isolationLevel, Object oKey, boolean fLite);
+    /**
+     * Add a MapListener for the given key that will receive logical cache events. Events with timestamps
+     * older than the transaction id will be ignored. uncommitted events will be received if
+     * isolationLevel is {@code uncommitted}
+     * @param listener the map listener
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     * @param oKey the key
+     * @param fLite allow light events
+     */
+    void addMapListener(MapListener listener, 
+            TransactionId tid, IsolationLevel isolationLevel, Object oKey, boolean fLite);
 
-	public abstract void addMapListener(MapListener listener,
-			TransactionId tid, IsolationLevel isolationLevel, Filter filter, boolean fLite);
+    /**
+     * Add a MapListener for the given filter that will receive logical cache events. Events with timestamps
+     * older than the transaction id will be ignored. uncommitted events will be received if
+     * isolationLevel is {@code uncommitted}.
+     * @param listener the map listener
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level 
+     * @param filter the filter to receive events for
+     * @param fLite allow light events
+     */
+    void addMapListener(MapListener listener, 
+            TransactionId tid, IsolationLevel isolationLevel, Filter filter, boolean fLite);
 
-	public abstract void removeMapListener(MapListener listener);
+    /**
+     * Remove the previously registered whole-cache listener.
+     * @param listener the listener
+     */
+    void removeMapListener(MapListener listener);
 
-	public abstract void removeMapListener(MapListener listener, Object oKey);
+    /**
+     * Remove the previously registered listener on a key.
+     * @param listener the listener
+     * @param oKey the key
+     */
+    void removeMapListener(MapListener listener, Object oKey);
 
-	public abstract void removeMapListener(MapListener listener, Filter filter);
+    /**
+     * Remove the previously registered listener against a filter.
+     * @param listener the listener
+     * @param filter the filter
+     */
+    void removeMapListener(MapListener listener, Filter filter);
 
-	public abstract int size(TransactionId tid, IsolationLevel isolationLevel);
+    /**
+     * Find the size of the cache as at the specified transaction id.
+     * @param tid transaction id the transaction id
+     * @param isolationLevel isolation level the isolation level
+     * @return the cache size
+     */
+    int size(TransactionId tid, IsolationLevel isolationLevel);
 
-	public abstract boolean isEmpty(TransactionId tid,
-			IsolationLevel isolationLevel);
+    /**
+     * Determine if the cache is empty at the timestamp.
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level isolation level
+     * @return true if the cache has no current entries
+     */
+    boolean isEmpty(TransactionId tid, 
+            IsolationLevel isolationLevel);
 
-	public abstract boolean containsKey(TransactionId tid,
-			IsolationLevel isolationLevel, K key);
+    /**
+     * Determine if the cache contains a specific key.
+     * @param tid transaction id transaction id 
+     * @param isolationLevel isolation level
+     * @param key the cache key
+     * @return true if the key is present at the timestamp
+     */
+    boolean containsKey(TransactionId tid, 
+            IsolationLevel isolationLevel, K key);
 
-	public abstract boolean containsValue(TransactionId tid,
-			IsolationLevel isolationLevel, V value);
+    /**
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level
+     * @param value the value
+     * @return true if the value is present at the timestamp
+     */
+    boolean containsValue(TransactionId tid, 
+            IsolationLevel isolationLevel, V value);
 
-	public abstract V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key);
+    /**
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level
+     * @param autoCommit implicit commit if true
+     * @param key the cache key
+     * @return the previous (next most recent) value, or null
+     */
+    V remove(TransactionId tid, IsolationLevel isolationLevel, boolean autoCommit, K key);
 
-	public abstract void putAll(TransactionId tid, boolean autoCommit, Map<K, V> m);
+    /**
+     * @param tid transaction id transaction id
+     * @param autoCommit implicit commit if true
+     * @param m map of key value pairs to store
+     */
+    void putAll(TransactionId tid, boolean autoCommit, Map<K, V> m);
 
-	public abstract void clear(TransactionId tid, boolean autoCommit);
+    /**
+     * Clear the cache at the given transaction id by creating a new deleted marker for every extant entry.
+     * @param tid transaction id transaction id
+     * @param autoCommit implicit commit if true
+     */
+    void clear(TransactionId tid, boolean autoCommit);
 
-	public abstract Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel);
+    /**
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level
+     * @return all the extant keys at the timestamp
+     */
+    Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel);
 
-	public abstract Collection<V> values(TransactionId tid,
-			IsolationLevel isolationLevel);
+    /**
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level
+     * @return all the extant values at the timestamp
+     */
+    Collection<V> values(TransactionId tid, 
+            IsolationLevel isolationLevel);
 
-	public abstract Set<Map.Entry<K,V>> entrySet(TransactionId tid,
-			IsolationLevel isolationLevel);
+    /**
+     * @param tid transaction id transaction id
+     * @param isolationLevel isolation level
+     * @return all the extant entries at the timestamp
+     */
+    Set<Map.Entry<K, V>> entrySet(TransactionId tid, 
+            IsolationLevel isolationLevel);
 
-	public abstract Map<K, V> getAll(TransactionId tid,
-			IsolationLevel isolationLevel, Collection<K> colKeys);
+    /**
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param colKeys the keys to get values for
+     * @return the map of extant key value pairs
+     */
+    Map<K, V> getAll(TransactionId tid, 
+            IsolationLevel isolationLevel, Collection<K> colKeys);
 
-	public abstract void addIndex(ValueExtractor extractor, boolean fOrdered,
-			Comparator<V> comparator);
+    /**
+     * Add an index to the version cache.
+     * @param extractor value extractor
+     * @param fOrdered is the index ordered
+     * @param comparator comparator used for ordering, or null
+     */
+    void addIndex(ValueExtractor extractor, boolean fOrdered, 
+            Comparator<V> comparator);
 
-	public abstract Set<Map.Entry<K, V>> entrySet(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter);
+    /**
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param filter the filter
+     * @return the set of extant entries at timestamp matching the filter
+     */
+    Set<Map.Entry<K, V>> entrySet(TransactionId tid, 
+            IsolationLevel isolationLevel, Filter filter);
 
-	public abstract Set<Map.Entry<K, V>> entrySet(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter, Comparator<V> comparator);
+    /**
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param filter the filter
+     * @param comparator comparator for ordering results
+     * @return extant set of entries at timestamp
+     */
+    Set<Map.Entry<K, V>> entrySet(TransactionId tid, 
+            IsolationLevel isolationLevel, Filter filter, Comparator<V> comparator);
 
-	public abstract Set<K> keySet(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter);
+    /**
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param filter the filter
+     * @return extant keys matching the filter
+     */
+    Set<K> keySet(TransactionId tid, 
+            IsolationLevel isolationLevel, Filter filter);
 
-	public abstract void removeIndex(ValueExtractor extractor);
+    /**
+     * Delete the index identified by the extractor.
+     * @param extractor the extractor
+     */
+    void removeIndex(ValueExtractor extractor);
 
-	public abstract <R> R aggregate(TransactionId tid,
-			IsolationLevel isolationLevel, Collection<K> collKeys,
-			EntryAggregator agent);
+    /**
+     * Perform an aggregation over a collection of keys as at the timestamp.
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param collKeys collection of keys
+     * @param agent aggregator
+     * @return the result of the aggregation
+     * @param <R> result type of the aggregation
+     */
+    <R> R aggregate(TransactionId tid, 
+            IsolationLevel isolationLevel, Collection<K> collKeys, 
+            EntryAggregator agent);
 
-	public abstract <R> R aggregate(TransactionId tid,
-			IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
+    /**
+     * Perform an aggregation against a filter as at the timestamp.
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param filter the filter
+     * @param agent aggregator
+     * @return the result of the aggregation
+     * @param <R> result type of the aggregation
+     */
+    <R> R aggregate(TransactionId tid, 
+            IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
 
-	public abstract <R> Map<K, R> invokeAll(TransactionId tid,
-			IsolationLevel isolationLevel, boolean autoCommit, Collection<K> collKeys,
-			EntryProcessor agent);
+    /**
+     * Invoke an EntryProcessor against a collection of keys.
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param autoCommit implicit commit if true
+     * @param collKeys collection of keys
+     * @param agent the EntryProcessor
+     * @return a map of key, result pairs
+     * @param <R> result type of the entryprocessor
+     */
+    <R> Map<K, R> invokeAll(TransactionId tid, 
+            IsolationLevel isolationLevel, boolean autoCommit, Collection<K> collKeys, 
+            EntryProcessor agent);
 
-	public abstract <R> Map<K, R> invokeAll(TransactionId tid,
-			IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent);
+    /**
+     * Invoke an EntryProcessor against a filter.
+     * @param tid transaction id
+     * @param isolationLevel isolation level
+     * @param autoCommit implicit commit if true
+     * @param filter the filter
+     * @param agent the EntryProcessor
+     * @return a map of key, result pairs
+     * @param <R> result type of the entryprocessor
+     */
+    <R> Map<K, R> invokeAll(TransactionId tid, 
+            IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent);
 
-	public abstract void destroy();
+    /**
+     * Destroy the cache.
+     */
+    void destroy();
 
-	public abstract String getCacheName();
+    /**
+     * @return the logical cache name
+     */
+    String getCacheName();
 
-	public abstract CacheService getCacheService();
+    /**
+     * @return the Coherence service implementing the physical caches
+     */
+    CacheService getCacheService();
 
-	public abstract boolean isActive();
+    /**
+     * @return true if this cache is active.
+     */
+    boolean isActive();
 
-	public abstract void release();
+    /**
+     * release resources associated with this cache.
+     */
+    void release();
+
+    /**
+     * @return the {@link CacheName} object encapsulating logical cache name and physical key and version cache names.
+     */
+    CacheName getMVCCCacheName();
 
 }

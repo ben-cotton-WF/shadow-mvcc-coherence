@@ -8,49 +8,87 @@ import java.util.Date;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 
+/**
+ * Transaction identifier. All entries associated with a given transaction
+ * must have an identifier unique to that transaction. Transaction ids must have the
+ * following properties:
+ * <ul>
+ * <li>No two transactions may share the same id</li>
+ * <li>Transaction ids must provide a time ordering</li>
+ * </ul>
+ * These are achieved by using an internal millisecond time stamp,
+ * a transaction manager id unique to the manager producing the
+ * transactions, and a sequence number to distinguish transactions
+ * generated at high frequency (more than one in a millisecond interval)
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 @Portable
 public class TransactionId implements Comparable<TransactionId>, Serializable {
-    
-	private static final long serialVersionUID = 1887978179867482252L;
-	
-	public static final TransactionId END_OF_TIME = new TransactionId(Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
-	
-	public static final int POF_TS = 0;
-	@PortableProperty(POF_TS)
+
+    private static final long serialVersionUID = 1887978179867482252L;
+    private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+    public static final TransactionId END_OF_TIME =
+            new TransactionId(Long.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+    public static final int POF_TS = 0;
+    @PortableProperty(POF_TS)
     private long timeStampMillis;
-	
-	public static final int POF_CONTEXT = 1;
-	@PortableProperty(POF_CONTEXT)
+
+    public static final int POF_CONTEXT = 1;
+    @PortableProperty(POF_CONTEXT)
     private int contextId;
-	
-	public static final int POF_SUBSEQ = 2;
-	@PortableProperty(POF_SUBSEQ)
+
+    public static final int POF_SUBSEQ = 2;
+    @PortableProperty(POF_SUBSEQ)
     private int subSequence;
 
-	public TransactionId() {
+    /**
+     * Default constructor for POF use only.
+     */
+    public TransactionId() {
         super();
-	}
-	
-    public TransactionId(long timeStampMillis, int contextId, int subSequence) {
+    }
+
+    /**
+     * Constructor.
+     * @param timeStampMillis the timestamp for this id
+     * @param contextId the unique transaction manager id
+     * @param subSequence sequence number to distinguish transactions with the same manager
+     * and timestamp
+     */
+    public TransactionId(final long timeStampMillis, final int contextId, final int subSequence) {
         super();
         this.timeStampMillis = timeStampMillis;
         this.contextId = contextId;
         this.subSequence = subSequence;
     }
-    
+
+    /**
+     * @return the timestamp
+     */
     public long getTimeStampMillis() {
         return timeStampMillis;
     }
 
+    /**
+     * @return the transaction manager id
+     */
     public int getContextId() {
         return contextId;
     }
 
+    /**
+     * @return the sequence number
+     */
     public int getSubSequence() {
         return subSequence;
     }
 
-    public int compareTo(TransactionId o) {
+    @Override
+    public int compareTo(final TransactionId o) {
         if (timeStampMillis < o.getTimeStampMillis()) {
             return -1;
         } else if (timeStampMillis == o.getTimeStampMillis()) {
@@ -79,7 +117,7 @@ public class TransactionId implements Comparable<TransactionId>, Serializable {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj) {
             return true;
         }
@@ -102,13 +140,12 @@ public class TransactionId implements Comparable<TransactionId>, Serializable {
         return true;
     }
 
-    private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-	@Override
-	public String toString() {
-		return "TransactionId [" + dateFormat.format(new Date(timeStampMillis))
-				+ "(" + contextId + ")(" + subSequence
-				+ ")]";
-	}
+    @Override
+    public String toString() {
+        return "TransactionId [" + dateFormat.format(new Date(timeStampMillis))
+                + "(" + contextId + ")(" + subSequence
+                + ")]";
+    }
 
-    
+
 }

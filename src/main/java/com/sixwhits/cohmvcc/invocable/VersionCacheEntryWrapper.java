@@ -6,55 +6,68 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.ValueUpdater;
 
+/**
+ * Wrapper around a single version cache entry to make it look
+ * like a logical cache entry.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ * @param <K> logical key type
+ * @param <V> version type
+ */
 public class VersionCacheEntryWrapper<K, V> implements Entry {
 
-	private final Entry underlying;
-	
-	public VersionCacheEntryWrapper(Entry underlying) {
-		super();
-		this.underlying = underlying;
-	}
+    private final Entry underlying;
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public K getKey() {
-		return ((VersionedKey<K>)underlying.getKey()).getNativeKey();
-	}
+    /**
+     * Constructor.
+     * @param underlying version cache entry
+     */
+    public VersionCacheEntryWrapper(final Entry underlying) {
+        super();
+        this.underlying = underlying;
+    }
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public V getValue() {
-		return (V) underlying.getValue();
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public K getKey() {
+        return ((VersionedKey<K>) underlying.getKey()).getNativeKey();
+    }
 
-	@Override
-	public V setValue(Object obj) {
-		throw new UnsupportedOperationException("read only entry");
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public V getValue() {
+        return (V) underlying.getValue();
+    }
 
-	@Override
-	public Object extract(ValueExtractor valueextractor) {
-		return valueextractor.extract(getValue());
-	}
+    @Override
+    public V setValue(final Object obj) {
+        throw new UnsupportedOperationException("read only entry");
+    }
 
-	@Override
-	public void setValue(Object obj, boolean flag) {
-		throw new UnsupportedOperationException("read only entry");
-	}
+    @Override
+    public Object extract(final ValueExtractor valueextractor) {
+        return valueextractor.extract(getValue());
+    }
 
-	@Override
-	public void update(ValueUpdater valueupdater, Object obj) {
-		throw new UnsupportedOperationException("read only entry");
-	}
+    @Override
+    public void setValue(final Object obj, final boolean flag) {
+        throw new UnsupportedOperationException("read only entry");
+    }
 
-	@Override
-	public boolean isPresent() {
-		return underlying.isPresent();
-	}
+    @Override
+    public void update(final ValueUpdater valueupdater, final Object obj) {
+        throw new UnsupportedOperationException("read only entry");
+    }
 
-	@Override
-	public void remove(boolean flag) {
-		throw new UnsupportedOperationException("read only entry");
-	}
+    @Override
+    public boolean isPresent() {
+        return underlying.isPresent();
+    }
+
+    @Override
+    public void remove(final boolean flag) {
+        throw new UnsupportedOperationException("read only entry");
+    }
 
 }

@@ -23,124 +23,189 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.filter.EntryFilter;
 import com.tangosol.util.processor.AbstractProcessor;
 
+/**
+ * Abstract base class for {@code EntryProcessor} implementations that are invoked on
+ * the key cache to manipulate or query related version cache entries.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ * @param <K> key class for this cache
+ * @param <R> return type for the processor
+ */
 @Portable
-public abstract class AbstractMVCCProcessor<K,R> extends AbstractProcessor {
+public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
 
-	private static final long serialVersionUID = -8977457529050193716L;
-	
-	public static final int POF_TID = 1;
-	@PortableProperty(POF_TID)
-	protected TransactionId transactionId;
-	
-	public static final int POF_ISOLATION = 2;
-	@PortableProperty(POF_ISOLATION)
-	protected IsolationLevel isolationLevel;
-	
-	public static final int POF_VCACHENAME = 3;
-	@PortableProperty(POF_VCACHENAME)
-	protected CacheName cacheName;
+    private static final long serialVersionUID = -8977457529050193716L;
 
-	public static final int POF_FILTER = 4;
-	@PortableProperty(POF_FILTER)
-	protected Filter validationFilter = null;
-	
-	public AbstractMVCCProcessor(TransactionId transactionId,
-			IsolationLevel isolationLevel, CacheName cacheName) {
-		super();
-		this.transactionId = transactionId;
-		this.isolationLevel = isolationLevel;
-		this.cacheName = cacheName;
-	}
-	
-	public AbstractMVCCProcessor(TransactionId transactionId,
-			IsolationLevel isolationLevel, CacheName cacheName,
-			Filter validationFilter) {
-		super();
-		this.transactionId = transactionId;
-		this.isolationLevel = isolationLevel;
-		this.cacheName = cacheName;
-		this.validationFilter = validationFilter;
-	}
+    public static final int POF_TID = 1;
+    @PortableProperty(POF_TID)
+    protected TransactionId transactionId;
 
+    public static final int POF_ISOLATION = 2;
+    @PortableProperty(POF_ISOLATION)
+    protected IsolationLevel isolationLevel;
 
+    public static final int POF_VCACHENAME = 3;
+    @PortableProperty(POF_VCACHENAME)
+    protected CacheName cacheName;
 
-	public AbstractMVCCProcessor() {
-		super();
-	}
+    public static final int POF_FILTER = 4;
+    @PortableProperty(POF_FILTER)
+    protected Filter validationFilter = null;
 
-	public abstract ProcessorResult<K,R> process(Entry entryarg);
+    /**
+     * Constructor.
+     * @param transactionId the transaction Id
+     * @param isolationLevel the isolation level
+     * @param cacheName the cache name
+     */
+    public AbstractMVCCProcessor(final TransactionId transactionId, 
+            final IsolationLevel isolationLevel, final CacheName cacheName) {
+        super();
+        this.transactionId = transactionId;
+        this.isolationLevel = isolationLevel;
+        this.cacheName = cacheName;
+    }
 
-	protected NavigableSet<TransactionId> getReadTransactions(Entry entry) {
-		TransactionSetWrapper tsw = (TransactionSetWrapper)entry.getValue();
-		return tsw == null ? null : tsw.getTransactionIdSet();
-	}
+    /**
+     * Constructor.
+     * @param transactionId the transaction Id
+     * @param isolationLevel the isolation level
+     * @param cacheName the cache name
+     * @param validationFilter filter to apply to entry to confirm should be processed
+     */
+    public AbstractMVCCProcessor(final TransactionId transactionId, 
+            final IsolationLevel isolationLevel, final CacheName cacheName,
+            final Filter validationFilter) {
+        super();
+        this.transactionId = transactionId;
+        this.isolationLevel = isolationLevel;
+        this.cacheName = cacheName;
+        this.validationFilter = validationFilter;
+    }
 
-	protected void setReadTransactions(Entry entry, NavigableSet<TransactionId> readTimestamps) {
-		TransactionSetWrapper tsw = new TransactionSetWrapper();
-		tsw.setTransactionIdSet(readTimestamps);
-		entry.setValue(tsw);
-	}
+    /**
+     * Default constructor solely for POF use.
+     */
+    public AbstractMVCCProcessor() {
+        super();
+    }
 
-	@SuppressWarnings("unchecked")
-	protected TransactionId getNextWrite(BinaryEntry entry) {
-		MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
-		return index.ceilingTid((K)entry.getKey(), transactionId);
-	}
+    @Override
+    public abstract ProcessorResult<K, R> process(Entry entryarg);
 
-	protected TransactionId getNextRead(Entry entry) {
-		NavigableSet<TransactionId> readTimestamps = getReadTransactions(entry);
-		if (readTimestamps == null) {
-			return null;
-		}
-		return readTimestamps.ceiling(transactionId);
-	}
-	
-	protected BackingMapContext getVersionCacheBackingMapContext(BinaryEntry parentEntry) {
-		return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(cacheName.getVersionCacheName());
-	}
-	
-	@SuppressWarnings("unchecked")
-	protected Binary getPriorVersionBinaryKey(BinaryEntry parentEntry) {
-		
-		MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext(parentEntry).getIndexMap().get(MVCCExtractor.INSTANCE);
-		return index.floor((K) parentEntry.getKey(), transactionId);
-		
-	}
-	
-	protected void setReadTimestamp(BinaryEntry entry) {
-		NavigableSet<TransactionId> readTimestamps = getReadTransactions(entry);
-		if (readTimestamps == null) {
-			readTimestamps = new TreeSet<TransactionId>();
-		}
-		readTimestamps.add(transactionId);
-		setReadTransactions(entry, readTimestamps);
-	}
+    /**
+     * Get the set of read markers from the key cache entry.
+     * @param entry the key cache entry
+     * @return set of transactions.
+     */
+    protected NavigableSet<TransactionId> getReadTransactions(final Entry entry) {
+        TransactionSetWrapper tsw = (TransactionSetWrapper) entry.getValue();
+        return tsw == null ? null : tsw.getTransactionIdSet();
+    }
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public Map processAll(Set set) {
-		Map<K,ProcessorResult<K,R>> result = new HashMap<K, ProcessorResult<K,R>>();
-		
-		for (Entry entry : (Set<Entry>) set) {
-			ProcessorResult<K,R> epr = process(entry);
-			if (epr != null) {
-				result.put((K) entry.getKey(), epr);
-			}
-		}
-		
-		return result;
-	}
-	
-	protected final boolean confirmFilterMatch(Entry childEntry) {
-		if (validationFilter != null) {
-			if (validationFilter instanceof EntryFilter) {
-				if (!((EntryFilter)validationFilter).evaluateEntry(childEntry)) {
-					return false;
-				}
-			} else if (!validationFilter.evaluate(childEntry.getValue())) {
-				return false;
-			}
-		}
-		return true;
-	}
+    /**
+     * Replace the read marker set.
+     * @param entry the key cache entry
+     * @param readTimestamps the set of read timestamps
+     */
+    protected void setReadTransactions(final Entry entry, final NavigableSet<TransactionId> readTimestamps) {
+        TransactionSetWrapper tsw = new TransactionSetWrapper();
+        tsw.setTransactionIdSet(readTimestamps);
+        entry.setValue(tsw);
+    }
+
+    /**
+     * Get the transaction id of the first future update.
+     * @param entry the version cache entry
+     * @return the transaction id of the future update, or null if there are none.
+     */
+    @SuppressWarnings("unchecked")
+    protected TransactionId getNextWrite(final BinaryEntry entry) {
+        MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
+        return index.ceilingTid((K) entry.getKey(), transactionId);
+    }
+
+    /**
+     * Get the transaction id of the first future read.
+     * @param entry the key cache entry
+     * @return the transaction id or null if none found.
+     */
+    protected TransactionId getNextRead(final Entry entry) {
+        NavigableSet<TransactionId> readTimestamps = getReadTransactions(entry);
+        if (readTimestamps == null) {
+            return null;
+        }
+        return readTimestamps.ceiling(transactionId);
+    }
+
+    /**
+     * Get the backing map context for the version cache.
+     * @param parentEntry key cache entry
+     * @return the backing map context
+     */
+    protected BackingMapContext getVersionCacheBackingMapContext(final BinaryEntry parentEntry) {
+        return parentEntry.getBackingMapContext().getManagerContext()
+                .getBackingMapContext(cacheName.getVersionCacheName());
+    }
+
+    /**
+     * get the binary key of the previous version from the version cache.
+     * @param parentEntry key cache binary entry
+     * @return binary key of the version cache, or null if none found
+     */
+    @SuppressWarnings("unchecked")
+    protected Binary getPriorVersionBinaryKey(final BinaryEntry parentEntry) {
+
+        MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext(parentEntry)
+                .getIndexMap().get(MVCCExtractor.INSTANCE);
+        return index.floor((K) parentEntry.getKey(), transactionId);
+
+    }
+
+    /**
+     * Set a read timestamp.
+     * @param entry the key cache entry
+     */
+    protected void setReadTimestamp(final BinaryEntry entry) {
+        NavigableSet<TransactionId> readTimestamps = getReadTransactions(entry);
+        if (readTimestamps == null) {
+            readTimestamps = new TreeSet<TransactionId>();
+        }
+        readTimestamps.add(transactionId);
+        setReadTransactions(entry, readTimestamps);
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public Map processAll(final Set set) {
+        Map<K, ProcessorResult<K, R>> result = new HashMap<K, ProcessorResult<K, R>>();
+
+        for (Entry entry : (Set<Entry>) set) {
+            ProcessorResult<K, R> epr = process(entry);
+            if (epr != null) {
+                result.put((K) entry.getKey(), epr);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Check that a version cache entry matches the given validation filter.
+     * @param childEntry a version cache entry
+     * @return true if it matches
+     */
+    protected final boolean confirmFilterMatch(final Entry childEntry) {
+        if (validationFilter != null) {
+            if (validationFilter instanceof EntryFilter) {
+                if (!((EntryFilter) validationFilter).evaluateEntry(childEntry)) {
+                    return false;
+                }
+            } else if (!validationFilter.evaluate(childEntry.getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

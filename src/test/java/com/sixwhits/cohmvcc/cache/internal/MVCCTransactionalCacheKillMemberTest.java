@@ -24,90 +24,90 @@ import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.filter.EqualsFilter;
 
 public class MVCCTransactionalCacheKillMemberTest {
-	
-	private ClusterMemberGroup cmg;
-	private static final String TESTCACHEMAME = "testcache";
-	private static final long BASETIME = 40L*365L*24L*60L*60L*1000L;
-	private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
 
-	@BeforeClass
-	public static void setSystemProperties() {
-		System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-		System.setProperty("tangosol.pof.enabled", "true");
-	}
+    private ClusterMemberGroup cmg;
+    private static final String TESTCACHEMAME = "testcache";
+    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
+    private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
 
-	@Before
-	public void setUp() throws Exception {
-		System.out.println("******setUp");
-		System.setProperty("tangosol.pof.enabled", "true");
-		DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-		cmg = builder.setStorageEnabledCount(4).build();
+    @BeforeClass
+    public static void setSystemProperties() {
+        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
+        System.setProperty("tangosol.pof.enabled", "true");
+    }
 
-		System.out.println("******initialise cache");
-		System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
-		cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME);
-	}
+    @Before
+    public void setUp() throws Exception {
+        System.out.println("******setUp");
+        System.setProperty("tangosol.pof.enabled", "true");
+        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
+        cmg = builder.setStorageEnabledCount(4).build();
 
-	@Test(timeout=10000)
-	public void testInvokeAllFilter() {
-		System.out.println("******InvokeAll(Filter)");
-		
-		final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-		final TransactionId ts2 = new TransactionId(BASETIME+1, 0, 0);
+        System.out.println("******initialise cache");
+        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
+        cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
+    }
 
-		SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
-		SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
+    @Test(timeout = 10000)
+    public void testInvokeAllFilter() {
+        System.out.println("******InvokeAll(Filter)");
 
-		for (int key = 0; key < 5; key++) {
-			cache.insert(ts1, true, key * 2, val1);
-			cache.insert(ts1, true, key * 2 + 1, val2);
-		}
-		
-		Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
-		EntryProcessor ep = new LongWaitingEntryProcessor(); 
+        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
+        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
 
-		asynchMemberKill(1);
-		
-		Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, filter, ep).keySet();
-		
-		Set<Integer> expected = new HashSet<Integer>(5);
-		expected.add(1);
-		expected.add(3);
-		expected.add(5);
-		expected.add(7);
-		expected.add(9);
-		
-		assertEquals(5, keySet.size());
-		assertTrue(keySet.containsAll(expected));
-		
-		for (Integer key : expected) {
-			assertEquals(val2, cache.get(ts2, repeatableRead, key));
-		}
-		
-	}
-	
-	
-	private void asynchMemberKill(final int memberId) {
-		new Thread(new Runnable() {
-			
-			@Override
-			public void run() {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-				}
-				cmg.getClusterMember(memberId).stop();
-			}
-		}).start();
-	}
+        SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
+        SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
-	@After
-	public void tearDown() throws Exception {
-		System.out.println("******tearDown");
-		CacheFactory.shutdown();
-		cmg.shutdownAll();
-		Thread.sleep(500);
-	}
-	
-	
+        for (int key = 0; key < 5; key++) {
+            cache.insert(ts1, true, key * 2, val1);
+            cache.insert(ts1, true, key * 2 + 1, val2);
+        }
+
+        Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
+        EntryProcessor ep = new LongWaitingEntryProcessor();
+
+        asynchMemberKill(1);
+
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, filter, ep).keySet();
+
+        Set<Integer> expected = new HashSet<Integer>(5);
+        expected.add(1);
+        expected.add(3);
+        expected.add(5);
+        expected.add(7);
+        expected.add(9);
+
+        assertEquals(5, keySet.size());
+        assertTrue(keySet.containsAll(expected));
+
+        for (Integer key : expected) {
+            assertEquals(val2, cache.get(ts2, repeatableRead, key));
+        }
+
+    }
+
+
+    private void asynchMemberKill(final int memberId) {
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                }
+                cmg.getClusterMember(memberId).stop();
+            }
+        }).start();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        System.out.println("******tearDown");
+        CacheFactory.shutdown();
+        cmg.shutdownAll();
+        Thread.sleep(500);
+    }
+
+
 }

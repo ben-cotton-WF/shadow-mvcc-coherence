@@ -23,7 +23,7 @@ import com.tangosol.util.filter.EntryFilter;
 
 /**
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
- * 
+ *
  * Used to evaluate a filter in the context of a MapListener registration by filter, where
  * it is necessary to check both present and previous (in timestamp ordering) versions for a match
  * in order to detect changes causing an entry to leave a result set.
@@ -33,68 +33,76 @@ import com.tangosol.util.filter.EntryFilter;
 @Portable
 public class MVCCEventFilter<K> implements EntryFilter {
 
-	public static final int POF_ISOLATION = 0;
-	@PortableProperty(POF_ISOLATION)
-	private IsolationLevel isolationLevel;
-	public static final int POF_FILTER = 1;
-	@PortableProperty(POF_FILTER)
-	private Filter delegate;
-	private static final int POF_CACHENAME = 2;
-	@PortableProperty(POF_CACHENAME)
-	private CacheName cacheName;
-	@Override
-	public boolean evaluate(Object obj) {
-		throw new UnsupportedOperationException("only supports binary entries");
-	}
+    public static final int POF_ISOLATION = 0;
+    @PortableProperty(POF_ISOLATION)
+    private IsolationLevel isolationLevel;
+    public static final int POF_FILTER = 1;
+    @PortableProperty(POF_FILTER)
+    private Filter delegate;
+    private static final int POF_CACHENAME = 2;
+    @PortableProperty(POF_CACHENAME)
+    private CacheName cacheName;
+    
+    @Override
+    public boolean evaluate(final Object obj) {
+        throw new UnsupportedOperationException("only supports binary entries");
+    }
 
-	@Override
-	public boolean evaluateEntry(@SuppressWarnings("rawtypes") Entry arg) {
-		
-		BinaryEntry entry = (BinaryEntry) arg;
-		
-		BinaryEntry wrappedEntry = new ReadOnlyEntryWrapper(entry, END_OF_TIME, isolationLevel, cacheName);
-		
-		boolean currentVersionMatch = match(wrappedEntry);
-		
-		if (currentVersionMatch) {
-			return true;
-		}
-		
-		@SuppressWarnings("unchecked")
-		MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
-		@SuppressWarnings("unchecked")
-		VersionedKey<K> currentVersion = (VersionedKey<K>) entry.getKey();
-		
-		Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
-		while (ixe != null && (isolationLevel != readUncommitted || ixe.getValue().isCommitted())) {
-			ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
-		}
-		
-		if (ixe != null) {
-			Binary priorBinaryKey = ixe.getValue().getBinaryKey();
-			Binary priorBinaryValue = (Binary) entry.getBackingMap().get(priorBinaryKey);
-			
-			@SuppressWarnings("unchecked")
-			VersionedKey<K> priorKey = (VersionedKey<K>) ExternalizableHelper.fromBinary(priorBinaryValue, entry.getSerializer());
-			Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getNativeKey());
-			
-			@SuppressWarnings("rawtypes")
-			BinaryEntry priorEntry = new SyntheticBinaryEntry(logicalBinaryKey, priorBinaryValue,
-					entry.getSerializer(), entry.getBackingMapContext());
-			
-			return match(priorEntry);
-			
-		}
-		
-		return false;
-		
-	}
-	
-	private boolean match(BinaryEntry entry) {
-		if (delegate instanceof EntryFilter) {
-			return ((EntryFilter) delegate).evaluateEntry(entry);
-		} else {
-			return delegate.evaluate(entry.getValue());
-		}
-	}
+    @Override
+    public boolean evaluateEntry(@SuppressWarnings("rawtypes") final Entry arg) {
+
+        BinaryEntry entry = (BinaryEntry) arg;
+
+        BinaryEntry wrappedEntry = new ReadOnlyEntryWrapper(entry, END_OF_TIME, isolationLevel, cacheName);
+
+        boolean currentVersionMatch = match(wrappedEntry);
+
+        if (currentVersionMatch) {
+            return true;
+        }
+
+        @SuppressWarnings("unchecked")
+        MVCCIndex<K> index = (MVCCIndex<K>) entry.getBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
+        @SuppressWarnings("unchecked")
+        VersionedKey<K> currentVersion = (VersionedKey<K>) entry.getKey();
+
+        Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(
+                currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
+        while (ixe != null && (isolationLevel != readUncommitted || ixe.getValue().isCommitted())) {
+            ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
+        }
+
+        if (ixe != null) {
+            Binary priorBinaryKey = ixe.getValue().getBinaryKey();
+            Binary priorBinaryValue = (Binary) entry.getBackingMap().get(priorBinaryKey);
+
+            @SuppressWarnings("unchecked")
+            VersionedKey<K> priorKey = (VersionedKey<K>) ExternalizableHelper.fromBinary(
+                    priorBinaryValue, entry.getSerializer());
+            Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getNativeKey());
+
+            @SuppressWarnings("rawtypes")
+            BinaryEntry priorEntry = new SyntheticBinaryEntry(logicalBinaryKey, priorBinaryValue, 
+                    entry.getSerializer(), entry.getBackingMapContext());
+
+            return match(priorEntry);
+
+        }
+
+        return false;
+
+    }
+
+    /**
+     * Check if the entry matches the filter.
+     * @param entry the entry
+     * @return true if it matches
+     */
+    private boolean match(final BinaryEntry entry) {
+        if (delegate instanceof EntryFilter) {
+            return ((EntryFilter) delegate).evaluateEntry(entry);
+        } else {
+            return delegate.evaluate(entry.getValue());
+        }
+    }
 }

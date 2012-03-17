@@ -9,18 +9,18 @@ import com.tangosol.util.processor.AbstractProcessor;
 @Portable
 public class LongWaitingEntryProcessor extends AbstractProcessor {
 
-	private static final long serialVersionUID = -4126192997745434280L;
+    private static final long serialVersionUID = -4126192997745434280L;
 
-	@Override
-	public Object process(Entry entry) {
-		Member thisMember = CacheFactory.getCluster().getLocalMember();
-		if (thisMember.getId() == 1) {
-			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e) {
-			};
-		}
-		return thisMember.getId();
-	}
+    @Override
+    public Object process(Entry entry) {
+        Member thisMember = CacheFactory.getCluster().getLocalMember();
+        if (thisMember.getId() == 1) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+            }
+        }
+        return thisMember.getId();
+    }
 
 }
