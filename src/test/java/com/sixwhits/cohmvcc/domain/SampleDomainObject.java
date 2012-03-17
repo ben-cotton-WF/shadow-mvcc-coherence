@@ -3,6 +3,12 @@ package com.sixwhits.cohmvcc.domain;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 
+/**
+ * A sample object used in tests.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 @Portable
 public class SampleDomainObject {
     public static final int POF_INTV = 0;
@@ -13,24 +19,43 @@ public class SampleDomainObject {
     private String stringValue;
 
 
+    /**
+     *  Default constructor for POF use only.
+     */
     public SampleDomainObject() {
         super();
     }
-    public SampleDomainObject(int intValue, String stringValue) {
+    /**
+     * @param intValue int value
+     * @param stringValue string value
+     */
+    public SampleDomainObject(final int intValue, final String stringValue) {
         super();
         this.intValue = intValue;
         this.stringValue = stringValue;
     }
+    /**
+     * @return int value
+     */
     public int getIntValue() {
         return intValue;
     }
-    public void setIntValue(int intValue) {
+    /**
+     * @param intValue int value
+     */
+    public void setIntValue(final int intValue) {
         this.intValue = intValue;
     }
+    /**
+     * @return string value
+     */
     public String getStringValue() {
         return stringValue;
     }
-    public void setStringValue(String stringValue) {
+    /**
+     * @param stringValue string value
+     */
+    public void setStringValue(final String stringValue) {
         this.stringValue = stringValue;
     }
     @Override
@@ -43,7 +68,7 @@ public class SampleDomainObject {
         return result;
     }
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj) {
             return true;
         }

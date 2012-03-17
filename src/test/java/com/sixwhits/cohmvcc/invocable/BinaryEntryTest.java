@@ -16,6 +16,12 @@ import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 
+/**
+ * Simple test of BinaryEntry.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class BinaryEntryTest {
 
     private ClusterMemberGroup cmg;
@@ -23,6 +29,9 @@ public class BinaryEntryTest {
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache testCache;
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("tangosol.pof.enabled", "true");
@@ -30,8 +39,11 @@ public class BinaryEntryTest {
     }
 
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(1).build();
 
@@ -40,6 +52,9 @@ public class BinaryEntryTest {
         testCache.addIndex(new MVCCExtractor(), false, null);
     }
 
+    /**
+     * Test invoke.
+     */
     @Test
     public void testEp() {
         putTestValue(testCache, 100, BASETIME, "a test value");
@@ -50,15 +65,26 @@ public class BinaryEntryTest {
 
     }
 
+    /**
+     * shutdown the cluster.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         CacheFactory.shutdown();
         cmg.shutdownAll();
     }
 
 
+    /**
+     * Put a test value in the cache.
+     * @param cache cache 
+     * @param key key
+     * @param timestamp transaction id
+     * @param value value
+     */
     @SuppressWarnings("unchecked")
-    private void putTestValue(@SuppressWarnings("rawtypes") Map cache, int key, long timestamp, String value) {
+    private void putTestValue(@SuppressWarnings("rawtypes") final Map cache, final int key,
+            final long timestamp, final String value) {
         VersionedKey<Integer> vkey = new VersionedKey<Integer>(key, new TransactionId(timestamp, 0, 0));
         cache.put(vkey, value);
     }

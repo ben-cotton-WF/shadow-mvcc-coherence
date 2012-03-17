@@ -14,34 +14,55 @@ import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
 
+/**
+ * Test serialisation of domain objects.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class DomainSerialisationTest {
 
     private ConfigurablePofContext pofContext;
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
 
+    /**
+     * initialise POF context.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         pofContext = new ConfigurablePofContext("mvcc-pof-config-test.xml");
     }
 
+    /**
+     * TransactionId.
+     */
     @Test
     public void testTransactionId() {
         TransactionId vo = new TransactionId(BASETIME, 123, 456);
         assertPofFidelity(vo);
     }
 
+    /**
+     * VersionedKey.
+     */
     @Test
     public void testVersionedKey() {
         VersionedKey<Integer> vo = new VersionedKey<Integer>(982, new TransactionId(BASETIME + 17, 124, 457));
         assertPofFidelity(vo);
     }
 
+    /**
+     * SampleDomainObject.
+     */
     @Test
     public void testSampleDomainObject() {
         SampleDomainObject vo = new SampleDomainObject(123, "456");
         assertPofFidelity(vo);
     }
 
+    /**
+     * TransactionSetWrapper.
+     */
     @Test
     public void testTransactionSetWrapper() {
         TransactionSetWrapper tsw = new TransactionSetWrapper();
@@ -53,25 +74,41 @@ public class DomainSerialisationTest {
         assertPofFidelityByReflection(tsw);
     }
 
+    /**
+     * Processor result with retry key.
+     */
     public void testProcessorResult1() {
         TransactionId ts = new TransactionId(BASETIME + 17, 124, 457);
-        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(null, new VersionedKey<String>("ABC", ts));
+        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(
+                null, new VersionedKey<String>("ABC", ts));
         assertPofFidelityByReflection(pr);
     }
+    /**
+     * Processor result with return value.
+     */
     public void testProcessorResult2() {
         ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, null);
         assertPofFidelityByReflection(pr);
     }
 
 
-    private void assertPofFidelity(Object expected) {
+    /**
+     * Check using equals.
+     * 
+     * @param expected the test object
+     */
+    private void assertPofFidelity(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 
         assertEquals(expected, result);
 
     }
-    private void assertPofFidelityByReflection(Object expected) {
+    /**
+     * Check using EqualsBuilder.
+     * @param expected the test object
+     */
+    private void assertPofFidelityByReflection(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 

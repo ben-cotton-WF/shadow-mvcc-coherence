@@ -23,6 +23,12 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.filter.EqualsFilter;
 
+/**
+ * Test that distributed invocation works correctly when a member dies.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCTransactionalCacheKillMemberTest {
 
     private ClusterMemberGroup cmg;
@@ -30,14 +36,20 @@ public class MVCCTransactionalCacheKillMemberTest {
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.out.println("******setUp");
         System.setProperty("tangosol.pof.enabled", "true");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
@@ -48,6 +60,11 @@ public class MVCCTransactionalCacheKillMemberTest {
         cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 
+    /**
+     * invoke a long-running entryprocessor on all members,
+     * then kill a member before it completes. Check that the
+     * invocation still produces the correct result
+     */
     @Test(timeout = 10000)
     public void testInvokeAllFilter() {
         System.out.println("******InvokeAll(Filter)");
@@ -87,6 +104,10 @@ public class MVCCTransactionalCacheKillMemberTest {
     }
 
 
+    /**
+     * Spawn a thread to kill a member.  
+     * @param memberId the member to kill
+     */
     private void asynchMemberKill(final int memberId) {
         new Thread(new Runnable() {
 
@@ -95,12 +116,17 @@ public class MVCCTransactionalCacheKillMemberTest {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
+                    System.out.println("interrupted");
                 }
                 cmg.getClusterMember(memberId).stop();
             }
         }).start();
     }
 
+    /**
+     * shutdown the cluster.
+     * @throws Exception if interrupted
+     */
     @After
     public void tearDown() throws Exception {
         System.out.println("******tearDown");

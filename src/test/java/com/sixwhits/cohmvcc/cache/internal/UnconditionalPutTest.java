@@ -19,20 +19,32 @@ import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 
+/**
+ * Test the UnconditionalPutProcessor.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class UnconditionalPutTest {
 
     private ClusterMemberGroup cmg;
     private static final String TESTCACHEMAME = "testcache";
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.out.println("******setUp");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(2).build();
@@ -42,6 +54,9 @@ public class UnconditionalPutTest {
         new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 
+    /**
+     * Do the test.
+     */
     @Test
     public void testPut() {
 
@@ -54,14 +69,18 @@ public class UnconditionalPutTest {
         NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
 
         keyCache.invoke(theKey, 
-                new MVCCEntryProcessorWrapper<Integer, String>(ts, new UnconditionalPutProcessor(theValue, true), readCommitted, true, cacheName));
+                new MVCCEntryProcessorWrapper<Integer, String>(
+                        ts, new UnconditionalPutProcessor(theValue, true), readCommitted, true, cacheName));
 
         assertEquals(theValue, versionCache.get(new VersionedKey<Integer>(99, ts)));
 
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         System.out.println("******tearDown");
         CacheFactory.shutdown();
         cmg.shutdownAll();

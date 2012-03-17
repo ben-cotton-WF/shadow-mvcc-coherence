@@ -13,15 +13,27 @@ import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
 
+/**
+ * Serialisation test for transaction internal package.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class SerialisationTest {
 
     private ConfigurablePofContext pofContext;
 
+    /**
+     * Initialise POF context.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
     }
 
+    /**
+     * ReadMarkingProcessor.
+     */
     @Test
     public void testReadMarkingProcessor() {
         ReadMarkingProcessor<Integer> obj = new ReadMarkingProcessor<Integer>(
@@ -31,17 +43,26 @@ public class SerialisationTest {
         assertPofFidelity(obj);
     }
 
+    /**
+     * EntryCommitProcessor.
+     */
     @Test
     public void testEntryCommitProcessor() {
         Object obj = new EntryCommitProcessor();
         assertPofFidelity(obj);
     }
 
+    /**
+     * EntryRollbackProcessor.
+     */
     @Test
     public void testEntryRollbackProcessor() {
         Object obj = new EntryRollbackProcessor();
         assertPofFidelity(obj);
     }
+    /**
+     * ExistenceCheckProcessor.
+     */
     @Test
     public void testExistenceCheckProcessor() {
         Object obj = new ExistenceCheckProcessor();
@@ -49,7 +70,10 @@ public class SerialisationTest {
     }
 
 
-    private void assertPofFidelity(Object expected) {
+    /**
+     * @param expected object to check.
+     */
+    private void assertPofFidelity(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 

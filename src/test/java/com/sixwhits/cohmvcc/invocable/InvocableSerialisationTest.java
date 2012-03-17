@@ -22,15 +22,26 @@ import com.tangosol.util.aggregator.Count;
 import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.processor.ConditionalPut;
 
+/**
+ * Serialisation tests for the invocable package.
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class InvocableSerialisationTest {
 
     private ConfigurablePofContext pofContext;
 
+    /**
+     * Initialise the POF context.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
     }
 
+    /**
+     * MVCCEntryProcessorWrapper.
+     */
     @Test
     public void testMVCCEntryProcessorWrapper() {
 
@@ -42,6 +53,9 @@ public class InvocableSerialisationTest {
         assertPofFidelity(wrapper);
     }
 
+    /**
+     * MVCCReadOnlyEntryProcessorWrapper.
+     */
     @Test
     public void testMVCCReadOnlyEntryProcessorWrapper() {
 
@@ -53,6 +67,9 @@ public class InvocableSerialisationTest {
         assertPofFidelity(wrapper);
     }
 
+    /**
+     * EntryProcessorInvoker.
+     */
     @Test
     public void testEntryProcessorInvoker() {
 
@@ -63,6 +80,9 @@ public class InvocableSerialisationTest {
         assertPofFidelity(obj);
     }
 
+    /**
+     * EntryProcessorInvokerResult.
+     */
     @Test
     public void testEntryProcessorInvokerResult() {
 
@@ -72,12 +92,18 @@ public class InvocableSerialisationTest {
         assertPofFidelity(obj);
     }
 
+    /**
+     * UnconditionalPutProcessor.
+     */
     @Test
     public void testUnconditionalPut() {
         Object obj = new UnconditionalPutProcessor("Test value", true);
         assertPofFidelity(obj);
     }
 
+    /**
+     * ParallelAwareAggregatorWrapper.
+     */
     @Ignore
     @Test
     public void testParallelAwareAggregatorWrapper() {
@@ -85,6 +111,9 @@ public class InvocableSerialisationTest {
         assertPofFidelity(obj);
     }
 
+    /**
+     * AggregatorWrapper.
+     */
     @Ignore
     @Test
     public void testAggregatorWrapper() {
@@ -93,7 +122,10 @@ public class InvocableSerialisationTest {
     }
 
 
-    private void assertPofFidelity(Object expected) {
+    /**
+     * @param expected object to test.
+     */
+    private void assertPofFidelity(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 

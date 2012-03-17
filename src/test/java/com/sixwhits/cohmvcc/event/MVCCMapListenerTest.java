@@ -38,6 +38,12 @@ import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.MapEventTransformerFilter;
 import com.tangosol.util.processor.ConditionalPut;
 
+/**
+ * test the MVCC map listener.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCMapListenerTest {
 
     private ClusterMemberGroup cmg;
@@ -47,14 +53,20 @@ public class MVCCMapListenerTest {
     private NamedCache keyCache;
     private final BlockingQueue<MapEvent> events = new ArrayBlockingQueue<MapEvent>(100);
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("tangosol.pof.enabled", "true");
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.setProperty("tangosol.pof.enabled", "true");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(1).build();
@@ -68,18 +80,22 @@ public class MVCCMapListenerTest {
 
     }
 
-    private void addListener(IsolationLevel isolationLevel) {
+    /**
+     * Add the listener.
+     * @param isolationLevel isolation level
+     */
+    private void addListener(final IsolationLevel isolationLevel) {
         MapListener testMapListener = new MapListener() {
             @Override
-            public void entryUpdated(MapEvent mapevent) {
+            public void entryUpdated(final MapEvent mapevent) {
                 events.add(mapevent);
             }
             @Override
-            public void entryInserted(MapEvent mapevent) {
+            public void entryInserted(final MapEvent mapevent) {
                 events.add(mapevent);
             }
             @Override
-            public void entryDeleted(MapEvent mapevent) {
+            public void entryDeleted(final MapEvent mapevent) {
                 events.add(mapevent);
             }
         };
@@ -88,16 +104,23 @@ public class MVCCMapListenerTest {
         events.clear();
 
         versionCache.addMapListener(new MVCCMapListener<Integer, String>(testMapListener), 
-                new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer, String>(isolationLevel, tsevent, CACHENAME)), false);
+                new MapEventTransformerFilter(AlwaysFilter.INSTANCE, new MVCCEventTransformer<Integer, String>(
+                        isolationLevel, tsevent, CACHENAME)), false);
 
     }
 
+    /**
+     * shutdown the cluster.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         CacheFactory.shutdown();
         cmg.shutdownAll();
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformInsert() throws InterruptedException {
 
@@ -115,6 +138,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformInsertUncommitted() throws InterruptedException {
 
@@ -131,6 +157,9 @@ public class MVCCMapListenerTest {
         checkEvent(event, ENTRY_INSERTED, ts, null, testValue, MVCCCacheEvent.CommitStatus.open);
 
     }
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformIgnoreUncommitted() throws InterruptedException {
 
@@ -148,6 +177,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformIgnoreBackdated() throws InterruptedException {
 
@@ -165,6 +197,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformUpdate() throws InterruptedException {
 
@@ -186,6 +221,9 @@ public class MVCCMapListenerTest {
         checkEvent(event, ENTRY_UPDATED, ts2, testValue, testValue2, MVCCCacheEvent.CommitStatus.commit);
 
     }
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testUpdateUncommittedReadUncomitted() throws InterruptedException {
 
@@ -214,6 +252,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testUpdateUncommittedReadCommitted() throws InterruptedException {
 
@@ -241,6 +282,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformDelete() throws InterruptedException {
 
@@ -262,6 +306,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testTransformRollback() throws InterruptedException {
 
@@ -283,6 +330,9 @@ public class MVCCMapListenerTest {
 
     }
 
+    /**
+     * @throws InterruptedException if interrupted
+     */
     @Test
     public void testIgnoreVersionReap() throws InterruptedException {
 
@@ -303,23 +353,52 @@ public class MVCCMapListenerTest {
 
     }
 
-    private void put(Integer key, TransactionId ts, String value) {
+    /**
+     * Put a test value in the cache.
+     * @param key key
+     * @param ts transaction id
+     * @param value value
+     */
+    private void put(final Integer key, final TransactionId ts, final String value) {
         put(key, ts, value, true);
     }
 
-    private void put(Integer key, TransactionId ts, String value, boolean autocommit) {
+    /**
+     * Put a test value in the cache.
+     * @param key key
+     * @param ts transaction id
+     * @param value value
+     * @param autocommit auto commit if true
+     */
+    private void put(final Integer key, final TransactionId ts, final String value, final boolean autocommit) {
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, value);
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts, insertProcessor, readUncommitted, autocommit, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts, insertProcessor, readUncommitted, autocommit, CACHENAME);
         keyCache.invoke(99, wrapper);
     }
 
-    private void remove(Integer key, TransactionId ts) {
-        EntryProcessor ep = new MVCCEntryProcessorWrapper<String, Object>(ts, new UnconditionalRemoveProcessor(), serializable, true, CACHENAME);
+    /**
+     * Remove an entry from the cache.
+     * @param key key
+     * @param ts transaction id
+     */
+    private void remove(final Integer key, final TransactionId ts) {
+        EntryProcessor ep = new MVCCEntryProcessorWrapper<String, Object>(
+                ts, new UnconditionalRemoveProcessor(), serializable, true, CACHENAME);
         keyCache.invoke(99, ep);
     }
 
-    private void checkEvent(MVCCCacheEvent event, int expectedType, TransactionId ts, 
-            String oldExpected, String newExpected, MVCCCacheEvent.CommitStatus commitstatus) {
+    /**
+     * Check an event has expected contents.
+     * @param event actual event to check
+     * @param expectedType expected type
+     * @param ts expected transaction id
+     * @param oldExpected old value
+     * @param newExpected new value
+     * @param commitstatus committed
+     */
+    private void checkEvent(final MVCCCacheEvent event, final int expectedType, final TransactionId ts, 
+            final String oldExpected, final String newExpected, final MVCCCacheEvent.CommitStatus commitstatus) {
         assertNotNull(event);
         assertEquals(99, event.getKey());
         assertEquals(newExpected, event.getNewValue());

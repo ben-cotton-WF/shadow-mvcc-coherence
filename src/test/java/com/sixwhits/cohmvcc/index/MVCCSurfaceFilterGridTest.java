@@ -28,6 +28,12 @@ import com.tangosol.util.filter.AndFilter;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.KeyAssociatedFilter;
 
+/**
+ * Test the MVCCSurfaceFilter with a littlegtid.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCSurfaceFilterGridTest {
 
     private ClusterMemberGroup cmg;
@@ -35,8 +41,11 @@ public class MVCCSurfaceFilterGridTest {
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache testCache;
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.setProperty("tangosol.pof.enabled", "true");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(1).build();
@@ -44,7 +53,8 @@ public class MVCCSurfaceFilterGridTest {
         System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
-        testCache.addIndex(new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), false, null);
+        testCache.addIndex(new PofExtractor(null,
+                new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), false, null);
         putTestValue(testCache, 100, BASETIME, "oldest version");
         putTestValue(testCache, 100, BASETIME + 1000, "medium version");
         putTestValue(testCache, 100, BASETIME + 2000, "newest version");
@@ -56,8 +66,11 @@ public class MVCCSurfaceFilterGridTest {
         putTestValue(testCache, 102, BASETIME + 200, "newest version");
     }
 
+    /**
+     * shutdown the cluster.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         CacheFactory.shutdown();
         cmg.shutdownAll();
     }
@@ -76,11 +89,15 @@ public class MVCCSurfaceFilterGridTest {
 //        putTestValue(testCache, 100, BASETIME +1000, "medium version");
 //        putTestValue(testCache, 100, BASETIME +2000, "newest version");
 //        @SuppressWarnings("rawtypes")
-//        Set result = testCache.entrySet(new EqualsFilter(new PofExtractor(null, TransactionalValue.POF_VALUE), "medium version"));
+//        Set result = testCache.entrySet(new EqualsFilter(new PofExtractor(null,
+//              TransactionalValue.POF_VALUE), "medium version"));
 //
 //        Assert.assertEquals(1, result.size());
 //    }
 
+    /**
+     * Get an entrySet to see that we get the right versions back.
+     */
     @Test
     public void testUseIndex() {
 
@@ -98,6 +115,9 @@ public class MVCCSurfaceFilterGridTest {
 
     }
 
+    /**
+     * Does the SurfaceFilter work correctly when Anded with another filter?
+     */
     @Test
     public void testAndFilter() {
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
@@ -125,6 +145,9 @@ public class MVCCSurfaceFilterGridTest {
 
     }
 
+    /**
+     * Surface filter with a filter nested in it.
+     */
     @Test
     public void testNestedFilter() {
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
@@ -150,6 +173,9 @@ public class MVCCSurfaceFilterGridTest {
 
     }
 
+    /**
+     * Surface filter with a key.
+     */
     @Test
     public void testFilterWithSpecifiedKey() {
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
@@ -167,6 +193,9 @@ public class MVCCSurfaceFilterGridTest {
 
     }
 
+    /**
+     * Test when restricted to partition by key association.
+     */
     @Test
     public void testKeyAssociationFilter() {
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
@@ -187,8 +216,16 @@ public class MVCCSurfaceFilterGridTest {
 
     }
 
+    /**
+     * Put a test value in the version cache.
+     * @param cache cache
+     * @param key key
+     * @param timestamp transaction id
+     * @param value value
+     */
     @SuppressWarnings("unchecked")
-    private void putTestValue(@SuppressWarnings("rawtypes") Map cache, int key, long timestamp, String value) {
+    private void putTestValue(@SuppressWarnings("rawtypes") final Map cache, final int key,
+            final long timestamp, final String value) {
         VersionedKey<Integer> vkey = new VersionedKey<Integer>(key, new TransactionId(timestamp, 0, 0));
 
         cache.put(vkey, value);

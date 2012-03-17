@@ -42,6 +42,13 @@ import com.tangosol.util.processor.ConditionalPut;
 import com.tangosol.util.processor.ConditionalRemove;
 import com.tangosol.util.processor.ExtractorProcessor;
 
+/**
+ * Test the MVCCEntryProcessorWrapper by making EntryProcessor invocations to excercise
+ * all the behaviours of the EntryProcessor and associated BinaryEntry wrappers.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCEntryProcessorWrapperTest {
 
     private ClusterMemberGroup cmg;
@@ -50,14 +57,20 @@ public class MVCCEntryProcessorWrapperTest {
     private NamedCache versionCache;
     private NamedCache keyCache;
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("tangosol.pof.enabled", "true");
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.setProperty("tangosol.pof.enabled", "true");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(1).build();
@@ -68,25 +81,36 @@ public class MVCCEntryProcessorWrapperTest {
         keyCache = CacheFactory.getCache(CACHENAME.getKeyCacheName());
     }
 
+    /**
+     * Test inserting from an EntryProcessor.
+     */
     @Test
     public void testInsert() {
 
         TransactionId ts = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "a test value");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
 
         keyCache.invoke(99, wrapper);
 
         assertEquals(versionCache.size(), 1);
         @SuppressWarnings("unchecked")
-        Map.Entry<VersionedKey<Integer>, String> versionCachEntry = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
+        Map.Entry<VersionedKey<Integer>, String> versionCachEntry 
+            = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
         assertEquals(new VersionedKey<Integer>(99, ts), versionCachEntry.getKey());
-        assertTrue((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
-        assertFalse((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
+        assertTrue((Boolean) versionCache.invoke(
+                versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+        assertFalse((Boolean) versionCache.invoke(
+                versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
         assertEquals("a test value", versionCachEntry.getValue());
 
     }
+    
+    /**
+     * Test using a PofExtractor.
+     */
     @Test
     public void testPofExtract() {
 
@@ -95,21 +119,26 @@ public class MVCCEntryProcessorWrapperTest {
         SampleDomainObject sdo = new SampleDomainObject(77, "a test value");
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, sdo);
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<SampleDomainObject, Object>(ts, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<SampleDomainObject, Object>(
+                ts, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
 
         keyCache.invoke(99, wrapper);
 
         Assert.assertEquals(versionCache.size(), 1);
         @SuppressWarnings("unchecked")
-        Map.Entry<VersionedKey<Integer>, String> versionCachEntry = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
+        Map.Entry<VersionedKey<Integer>, String> versionCachEntry
+            = (Entry<VersionedKey<Integer>, String>) versionCache.entrySet().iterator().next();
         Assert.assertEquals(new VersionedKey<Integer>(99, ts), versionCachEntry.getKey());
-        assertTrue((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
-        assertFalse((Boolean) versionCache.invoke(versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
+        assertTrue((Boolean) versionCache.invoke(
+                versionCachEntry.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+        assertFalse((Boolean) versionCache.invoke(
+                versionCachEntry.getKey(), DecorationExtractorProcessor.DELETED_INSTANCE));
         assertEquals(sdo, versionCachEntry.getValue());
 
         TransactionId ts2 = new TransactionId(BASETIME + 125, 0, 0);
         EntryProcessor extractProcessor = new ExtractorProcessor(new PofExtractor(null, SampleDomainObject.POF_INTV));
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<SampleDomainObject, Integer>(ts2, extractProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<SampleDomainObject, Integer>(
+                ts2, extractProcessor, IsolationLevel.serializable, true, CACHENAME);
         @SuppressWarnings("unchecked")
         ProcessorResult<Integer, Integer> pr =  (ProcessorResult<Integer, Integer>) keyCache.invoke(99, wrapper2);
         Assert.assertEquals(77, pr.getResult().intValue());
@@ -119,18 +148,24 @@ public class MVCCEntryProcessorWrapperTest {
         MatcherAssert.assertThat(readSet, Matchers.hasItem(ts2));
     }
 
+    /**
+     * Test updating (create new version).
+     */
     @Test
     public void testConditionalUpdate() {
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper);
 
         TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        EntryProcessor updateProcessor = new ConditionalPut(new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor updateProcessor = new ConditionalPut(
+                new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper2);
 
         Assert.assertEquals(2, versionCache.size());
@@ -153,23 +188,30 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
+    /**
+     * Update a deleted entry.
+     */
     @Test
     public void testConditionalUpdateOnDeleted() {
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper);
 
         TransactionId ts2 = new TransactionId(BASETIME + 30000, 0, 0);
         EntryProcessor removeProcessor = new ConditionalRemove(new EqualsFilter(new IdentityExtractor(), "version 1"));
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, removeProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, removeProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper2);
 
         TransactionId ts3 = new TransactionId(BASETIME + 60000, 0, 0);
-        EntryProcessor updateProcessor = new ConditionalPut(new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
-        EntryProcessor wrapper3 = new MVCCEntryProcessorWrapper<String, Object>(ts3, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor updateProcessor = new ConditionalPut(
+                new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
+        EntryProcessor wrapper3 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts3, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper3);
 
         Assert.assertEquals(2, versionCache.size());
@@ -193,23 +235,32 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
-    private Collection<TransactionId> getReadTransactions(int key) {
+    /**
+     * @param key entry key
+     * @return the read markers for the entry
+     */
+    private Collection<TransactionId> getReadTransactions(final int key) {
         TransactionSetWrapper tsw = (TransactionSetWrapper) keyCache.get(key);
         return tsw == null ? null : tsw.getTransactionIdSet();
     }
 
+    /**
+     * Test conditional delete.
+     */
     @Test
     public void testConditionalDelete() {
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper);
 
         TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
         EntryProcessor removeProcessor = new ConditionalRemove(new EqualsFilter(new IdentityExtractor(), "version 1"));
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, removeProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, removeProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper2);
 
         Assert.assertEquals(2, versionCache.size());
@@ -232,19 +283,24 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
+    /**
+     * Conditional update where the condition is not met.
+     */
     @Test
-
     public void testConditionalNonUpdate() {
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper);
 
         TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        EntryProcessor updateProcessor = new ConditionalPut(new EqualsFilter(new IdentityExtractor(), "version 0"), "version 2");
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor updateProcessor = new ConditionalPut(
+                new EqualsFilter(new IdentityExtractor(), "version 0"), "version 2");
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper2);
 
         Assert.assertEquals(1, versionCache.size());
@@ -262,17 +318,23 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
-    public void testUpdateOnUncommitted() throws Throwable {
+    /**
+     * Check that we get an uncommitted result when updating an uncommitted row.
+     */
+    public void testUpdateOnUncommitted() {
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, false, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, false, CACHENAME);
         keyCache.invoke(99, wrapper);
 
         TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        EntryProcessor updateProcessor = new ConditionalPut(new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, updateProcessor, IsolationLevel.serializable, false, CACHENAME);
+        EntryProcessor updateProcessor = new ConditionalPut(
+                new EqualsFilter(new IdentityExtractor(), "version 1"), "version 2");
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, updateProcessor, IsolationLevel.serializable, false, CACHENAME);
 
         @SuppressWarnings("unchecked")
         ProcessorResult<Integer, Object> pr = (ProcessorResult<Integer, Object>) keyCache.invoke(99, wrapper2);
@@ -281,18 +343,25 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
+    /**
+     * Check that we get a FutureReadException when updating earlier than already read.
+     * @throws Throwable expect a FutureReadException
+     */
     @Test(expected = FutureReadException.class)
     public void testWriteEarlierThanRead() throws Throwable {
 
         TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        EntryProcessor updateProcessor = new ConditionalPut(new EqualsFilter(new IdentityExtractor(), "version 0"), "version 2");
-        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor updateProcessor = new ConditionalPut(
+                new EqualsFilter(new IdentityExtractor(), "version 0"), "version 2");
+        EntryProcessor wrapper2 = new MVCCEntryProcessorWrapper<String, Object>(
+                ts2, updateProcessor, IsolationLevel.serializable, true, CACHENAME);
         keyCache.invoke(99, wrapper2);
 
         TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
 
         EntryProcessor insertProcessor = new ConditionalPut(AlwaysFilter.INSTANCE, "version 1");
-        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
+        EntryProcessor wrapper = new MVCCEntryProcessorWrapper<String, Object>(
+                ts1, insertProcessor, IsolationLevel.serializable, true, CACHENAME);
         try {
             keyCache.invoke(99, wrapper);
         } catch (PortableException ex) {
@@ -302,8 +371,11 @@ public class MVCCEntryProcessorWrapperTest {
 
     }
 
+    /**
+     * shutdown the cluster.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         CacheFactory.shutdown();
         cmg.shutdownAll();
     }

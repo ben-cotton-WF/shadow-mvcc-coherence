@@ -13,15 +13,27 @@ import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
 
+/**
+ * event serialisation test.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class SerialisationTest {
 
     private ConfigurablePofContext pofContext;
 
+    /**
+     * Set up POF context.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
     }
 
+    /**
+     * Test MVCCEventTransformer.
+     */
     @Test
     public void testMVCCEventTransformer() {
 
@@ -30,7 +42,10 @@ public class SerialisationTest {
         assertPofFidelity(vo);
     }
 
-    private void assertPofFidelity(Object expected) {
+    /**
+     * @param expected object to test
+     */
+    private void assertPofFidelity(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 

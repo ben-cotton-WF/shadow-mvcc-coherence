@@ -41,6 +41,18 @@ import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
 import com.tangosol.util.processor.UpdaterProcessor;
 
+/**
+ * Test the various methods of MVCCTransactionalCacheImpl. The intent is to provide
+ * comprehensive coverage of the methods and associated entryprocessors, invocables etc
+ * including committed/uncommitted reads, operations where real-time sequence
+ * differs from transaction-time sequence etc.
+ * 
+ * This is really a fairly comprehensive integration test of the middle and low level
+ * functionality.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class MVCCTransactionalCacheImplTest {
 
     private ClusterMemberGroup cmg;
@@ -48,14 +60,20 @@ public class MVCCTransactionalCacheImplTest {
     private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
 
+    /**
+     * initialise system properties.
+     */
     @BeforeClass
     public static void setSystemProperties() {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
     }
 
+    /**
+     * create cluster and initialise cache.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         System.out.println("******setUp");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(2).build();
@@ -65,6 +83,9 @@ public class MVCCTransactionalCacheImplTest {
         cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 
+    /**
+     * Test putting a value uncommitted, then reading it waits for the commit.
+     */
     @Test
     public void testPutCommitRead() {
 
@@ -83,6 +104,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test the containsKey method.
+     */
     @Test
     public void testContainsKey() {
 
@@ -104,6 +128,9 @@ public class MVCCTransactionalCacheImplTest {
         assertFalse(cache.containsKey(ts2, repeatableRead, 97));
     }
 
+    /**
+     * Test the containsValue method.
+     */
     @Test
     public void testContainsValue() {
 
@@ -127,6 +154,10 @@ public class MVCCTransactionalCacheImplTest {
         assertFalse(cache.containsValue(ts2, repeatableRead, noValue));
     }
 
+    /**
+     * Test that reading a removed value (i.e. a delete marker)
+     * works correctly.
+     */
     @Test
     public void testPutRemoveRead() {
 
@@ -144,6 +175,11 @@ public class MVCCTransactionalCacheImplTest {
         assertNull(cache.get(ts3, readCommitted, theKey));
 
     }
+    
+    /**
+     * Test that reading a removed value works correctly if the 
+     * remove is initially uncommitted.
+     */
     @Test
     public void testPutRemoveReadCommit() {
 
@@ -169,6 +205,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test reading a value that is removed, then the remove is rolled back.
+     */
     @Test
     public void testPutRemoveReadRollback() {
 
@@ -189,6 +228,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test reading a value that is inserted, then the insert rolled back.
+     */
     @Test
     public void testInsertRollbackRead() {
 
@@ -207,6 +249,10 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test that inserting a value with a timestamp earlier than a read version
+     * fails.
+     */
     @Test(expected = PortableException.class)
     public void testPutEarlierPut() {
 
@@ -223,6 +269,10 @@ public class MVCCTransactionalCacheImplTest {
         cache.put(tsearlier, repeatableRead, true, theKey, earliervalue);
     }
 
+    /**
+     * Test that inserting a value earlier than an existing value succeeds when
+     * the later value has not been read.
+     */
     @Test
     public void testInsertEarlierPut() {
 
@@ -239,6 +289,9 @@ public class MVCCTransactionalCacheImplTest {
         assertNull(cache.put(tsearlier, repeatableRead, true, theKey, earliervalue));
     }
 
+    /**
+     * Test execution of an EntryProcessor.
+     */
     @Test
     public void testInvoke() {
 
@@ -257,6 +310,10 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test that the size() method returns the correct value for
+     * the timestamp at which it is invoked.
+     */
     @Test
     public void testSize() {
 
@@ -306,6 +363,9 @@ public class MVCCTransactionalCacheImplTest {
         assertEquals(5, cache.size(ts7, repeatableRead));
     }
 
+    /**
+     * Test that entrySet with a filter returns the correct values for its timestamp.
+     */
     @Test
     public void testEntrySet() {
         System.out.println("******EntrySet");
@@ -337,6 +397,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test that entrySet without a filter returns the correct values for its timestamp.
+     */
     @Test
     public void testEntrySetAll() {
         System.out.println("******EntrySetAll");
@@ -367,6 +430,10 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test that entrySet correctly waits for uncommitted changes
+     * and returns the right result with rollbacks and commits.
+     */
     @Test
     public void testEntrySetWithUncommitted() {
         System.out.println("******EntrySet");
@@ -415,6 +482,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test keySet with a filter.
+     */
     @Test
     public void testKeySet() {
         System.out.println("******KeySet");
@@ -446,6 +516,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * test keySet without a filter.
+     */
     @Test
     public void testKeySetAll() {
         System.out.println("******KeySetAll");
@@ -476,6 +549,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test invokeAll with a filter.
+     */
     @Test
     public void testInvokeAllFilter() {
         System.out.println("******InvokeAll(Filter)");
@@ -513,6 +589,11 @@ public class MVCCTransactionalCacheImplTest {
         }
 
     }
+    
+    
+    /**
+     * Test invokeAll with a collection of keys.
+     */
     @Test
     public void testInvokeAllKeys() {
         System.out.println("******InvokeAll(Keys)");
@@ -556,6 +637,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test getAll.
+     */
     @Test
     public void testGetAll() {
         System.out.println("******GetAll");
@@ -591,6 +675,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test putAll.
+     */
     @Test
     public void testPutAll() {
 
@@ -613,6 +700,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test that clear() works correctly. Creates deleted events for all extant entries
+     */
     @Test
     public void testClear() {
 
@@ -641,6 +731,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test the values() method.
+     */
     @Test
     public void testValues() {
         System.out.println("******Values");
@@ -673,6 +766,9 @@ public class MVCCTransactionalCacheImplTest {
 
     }
 
+    /**
+     * Test aggregation over a filter.
+     */
     @Test
     public void testAggregateFilter() {
 
@@ -693,9 +789,13 @@ public class MVCCTransactionalCacheImplTest {
         }
 
         assertEquals(3, 
-                cache.aggregate(ts3, repeatableRead, new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 88), new Count()));
+                cache.aggregate(ts3, repeatableRead, new EqualsFilter(
+                        new PofExtractor(null, SampleDomainObject.POF_INTV), 88), new Count()));
     }
 
+    /**
+     * Test aggregation over a collection of keys.
+     */
     @Test
     public void testAggregateKeys() {
 
@@ -721,22 +821,31 @@ public class MVCCTransactionalCacheImplTest {
         keys.add(11);
         keys.add(20);
         assertEquals(Long.valueOf(88 + 77 + 77), 
-                cache.aggregate(ts3, repeatableRead, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+                cache.aggregate(ts3, repeatableRead,
+                        keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
 
         cache.insert(ts2, false, 20, val4);
 
         assertEquals(Long.valueOf(88 + 77 + 77 + 77), 
-                cache.aggregate(ts3, readUncommitted, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+                cache.aggregate(ts3, readUncommitted,
+                        keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
 
         asynchCommit(ts2, 20);
 
         assertEquals(Long.valueOf(88 + 77 + 77 + 77), 
-                cache.aggregate(ts3, readCommitted, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+                cache.aggregate(ts3, readCommitted,
+                        keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
 
         assertEquals(Long.valueOf(88 + 77 + 77 + 77), 
-                cache.aggregate(ts3, repeatableRead, keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
+                cache.aggregate(ts3, repeatableRead,
+                        keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
     }
 
+    /**
+     * Utility method to spawn a thread that later commits a value.
+     * @param ts timestamp 
+     * @param key key
+     */
     private void asynchCommit(final TransactionId ts, final Integer key) {
         new Thread(new Runnable() {
 
@@ -745,6 +854,7 @@ public class MVCCTransactionalCacheImplTest {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
+                    System.out.println(e);
                 }
                 NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
                 vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
@@ -752,6 +862,12 @@ public class MVCCTransactionalCacheImplTest {
         }).start();
     }
 
+    /**
+     * Utility method to spawn a thread that later commits a value.
+     * @param flag semaphore to release after the commit
+     * @param ts timestamp 
+     * @param key key
+     */
     private void asynchCommit(final Semaphore flag, final TransactionId ts, final Integer key) {
         new Thread(new Runnable() {
 
@@ -760,6 +876,7 @@ public class MVCCTransactionalCacheImplTest {
                 try {
                     flag.acquire();
                 } catch (InterruptedException e) {
+                    System.out.println(e);
                 }
                 NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
                 vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
@@ -767,6 +884,11 @@ public class MVCCTransactionalCacheImplTest {
         }).start();
     }
 
+    /**
+     * Utility method to spawn a thread that later rolls back a value.
+     * @param ts timestamp 
+     * @param key key
+     */
     private void asynchRollback(final TransactionId ts, final Integer key) {
         Thread rbThread = new Thread(new Runnable() {
 
@@ -775,6 +897,7 @@ public class MVCCTransactionalCacheImplTest {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
+                    System.out.println(e);
                 }
                 NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
                 vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryRollbackProcessor());
@@ -784,8 +907,11 @@ public class MVCCTransactionalCacheImplTest {
         rbThread.start();
     }
 
+    /**
+     * shutdown the cluster.
+     */
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         System.out.println("******tearDown");
         CacheFactory.shutdown();
         cmg.shutdownAll();

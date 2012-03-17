@@ -12,22 +12,38 @@ import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
 
+/**
+ * Test serialisation of index related classes.
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class IndexSerialisationTest {
 
     private ConfigurablePofContext pofContext;
 
+    /**
+     * Setup POF context.
+     */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
     }
 
+    /**
+     * MVCCSurfaceFilter.
+     */
     @Test
     public void testMVCCSurfaceFilter() {
 
-        MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457));
+        MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(
+                new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457));
         assertPofFidelity(vo);
     }
 
+    /**
+     * MVCCSurfaceFilter with keys.
+     */
     @Test
     public void testMVCCSurfaceFilterWithKeys() {
 
@@ -37,7 +53,10 @@ public class IndexSerialisationTest {
         assertPofFidelity(vo);
     }
 
-    private void assertPofFidelity(Object expected) {
+    /**
+     * @param expected Object to test
+     */
+    private void assertPofFidelity(final Object expected) {
         Binary binary = ExternalizableHelper.toBinary(expected, pofContext);
         Object result = ExternalizableHelper.fromBinary(binary, pofContext);
 
