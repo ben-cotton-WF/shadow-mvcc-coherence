@@ -8,14 +8,10 @@ import org.junit.Test;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
-import com.sixwhits.cohmvcc.transaction.ManagerIdSource;
 import com.sixwhits.cohmvcc.transaction.SystemTimestampSource;
 import com.sixwhits.cohmvcc.transaction.ThreadTransactionManager;
 import com.sixwhits.cohmvcc.transaction.TimestampSource;
 import com.sixwhits.cohmvcc.transaction.TransactionManager;
-import com.sixwhits.cohmvcc.transaction.internal.ManagerIdSourceImpl;
-import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
-import com.sixwhits.cohmvcc.transaction.internal.TransactionCacheImpl;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 
@@ -36,13 +32,10 @@ public class IntegrationTest extends AbstractLittlegridTest {
     public void initialiseTransactionManager() {
         
         TimestampSource timestampSource = new SystemTimestampSource();
-        ManagerIdSource managerIdSource = new ManagerIdSourceImpl();
-        TransactionCache transactionCache = new TransactionCacheImpl(INVOCATIONSERVICENAME);
         
         transactionManager = new ThreadTransactionManager(
-                timestampSource, managerIdSource, INVOCATIONSERVICENAME, transactionCache, false, false, readCommitted);
+                timestampSource, false, false, readCommitted);
         
-
     }
     /**
      * Get the cache and run a couple of transactions.

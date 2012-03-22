@@ -5,7 +5,6 @@ import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import com.sixwhits.cohmvcc.cache.internal.MVCCNamedCache;
 import com.sixwhits.cohmvcc.cache.internal.MVCCTransactionalCacheImpl;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
-import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 
 /**
  * Implementation of {@TransactionManager} to provide a separate transaction context per thread.
@@ -18,9 +17,6 @@ import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 public class ThreadTransactionManager implements TransactionManager {
 
     private final TimestampSource timestampSource;
-    private final ManagerIdSource managerIdSource;
-    private final String invocationServiceName;
-    private final TransactionCache transactionCache;
     private final boolean readOnly;
     private final boolean autoCommit;
     private final IsolationLevel isolationLevel;
@@ -28,18 +24,10 @@ public class ThreadTransactionManager implements TransactionManager {
 
     /**
      * @param timestampSource source of timestamps
-     * @param managerIdSource source of manager id
-     * @param invocationServiceName name of service to perform invocations
-     * @param transactionCache DAO for accessing the transaction cache
      */
-    public ThreadTransactionManager(final TimestampSource timestampSource, 
-            final ManagerIdSource managerIdSource, final String invocationServiceName,
-            final TransactionCache transactionCache) {
+    public ThreadTransactionManager(final TimestampSource timestampSource) {
         super();
         this.timestampSource = timestampSource;
-        this.managerIdSource = managerIdSource;
-        this.invocationServiceName = invocationServiceName;
-        this.transactionCache = transactionCache;
         readOnly = false;
         autoCommit = false;
         isolationLevel = readCommitted;
@@ -47,22 +35,14 @@ public class ThreadTransactionManager implements TransactionManager {
 
     /**
      * @param timestampSource source of timestamps
-     * @param managerIdSource source of manager id
-     * @param invocationServiceName name of service to perform invocations
-     * @param transactionCache DAO for accessing the transaction cache
      * @param readOnly default read-only state for new transactions
      * @param autoCommit default auto-commit status for new transactions
      * @param isolationLevel default isolation level for new transaction
      */
     public ThreadTransactionManager(final TimestampSource timestampSource, 
-            final ManagerIdSource managerIdSource, final String invocationServiceName,
-            final TransactionCache transactionCache,
             final boolean readOnly, final boolean autoCommit, final IsolationLevel isolationLevel) {
         super();
         this.timestampSource = timestampSource;
-        this.managerIdSource = managerIdSource;
-        this.invocationServiceName = invocationServiceName;
-        this.transactionCache = transactionCache;
         this.readOnly = readOnly;
         this.autoCommit = autoCommit;
         this.isolationLevel = isolationLevel;
@@ -74,15 +54,24 @@ public class ThreadTransactionManager implements TransactionManager {
     private TransactionManager getThreadTransactionManager() {
         if (transactionManagers.get() == null) {
             transactionManagers.set(
-                    new SessionTransactionManager(timestampSource, managerIdSource,
-                            invocationServiceName, transactionCache, readOnly, autoCommit, isolationLevel));
+                    new SessionTransactionManager(timestampSource, readOnly, autoCommit, isolationLevel));
         }
         return transactionManagers.get();
     }
+    
+    /**
+     * Get the invocation service name. Override to provide an alternate
+     * @return the invocation service name.
+     * TODO configuration option
+     */
+    protected String getInvocationServiceName() {
+        return DEFAULT_INVOCATION_SERVICE_NAME;
+    }
+    
     @SuppressWarnings("rawtypes")
     @Override
     public MVCCNamedCache getCache(final String cacheName) {
-        return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, invocationServiceName));
+        return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
 
     @Override

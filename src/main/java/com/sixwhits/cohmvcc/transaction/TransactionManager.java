@@ -12,6 +12,11 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
  *
  */
 public interface TransactionManager {
+    
+    /**
+     * Default name for the invocation service.
+     */
+    String DEFAULT_INVOCATION_SERVICE_NAME = "InvocationService";
 
     /**
      * Construct and return an {@link MVCCNamedCache}.
