@@ -1,13 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.IsolationLevel;
-import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.Utils;
-import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.sixwhits.cohmvcc.exception.UncommittedReadException;
-import com.sixwhits.cohmvcc.index.MVCCExtractor;
-import com.sixwhits.cohmvcc.index.MVCCIndex;
 import com.tangosol.io.Serializer;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.BackingMapManagerContext;
@@ -28,35 +21,22 @@ import com.tangosol.util.extractor.PofExtractor;
 public abstract class AbstractEntryWrapper implements EntryWrapper {
 
     private final BinaryEntry parentEntry;
+    private final BinaryEntry priorBinaryEntry;
     private boolean priorRead = false;
-    private TransactionId transactionId;
     private CacheName cacheName;
-    private IsolationLevel isolationLevel;
 
     /**
      * Constructor.
      * @param parentEntry parent BinaryEntry from the key cache
-     * @param transactionId current transaction Id
-     * @param isolationLevel transaction isolation level
+     * @param priorBinaryEntry binary entry for prior version
      * @param cacheName name of the current cache
      */
-    public AbstractEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
-            final IsolationLevel isolationLevel, final CacheName cacheName) {
+    public AbstractEntryWrapper(final BinaryEntry parentEntry, final BinaryEntry priorBinaryEntry,
+            final CacheName cacheName) {
         super();
         this.parentEntry = parentEntry;
-        this.transactionId = transactionId;
-        this.isolationLevel = isolationLevel;
+        this.priorBinaryEntry = priorBinaryEntry;
         this.cacheName = cacheName;
-    }
-
-    /**
-     * @return the version cache binary key for the previous version
-     */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private Binary getPriorBinaryKey() {
-        priorRead = true;
-        MVCCIndex index = (MVCCIndex) getVersionCacheBackingMapContext().getIndexMap().get(MVCCExtractor.INSTANCE);
-        return index.floor(parentEntry.getKey(), transactionId);
     }
 
     /**
@@ -84,32 +64,9 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
     /**
      * @return the binary entry from the version cache for the previous version
      */
-    @SuppressWarnings("rawtypes")
     private BinaryEntry getPriorBinaryEntry() {
-        BinaryEntry priorEntry = null;
-
-        Binary priorBinaryKey = getPriorBinaryKey();
-
-        if (priorBinaryKey != null) {
-            priorEntry = (BinaryEntry) getBackingMapContext().getBackingMapEntry(priorBinaryKey);
-
-            boolean committed = Utils.isCommitted(priorEntry);
-            if (isolationLevel != IsolationLevel.readUncommitted) {
-                if (!committed) {
-                    // TODO should this be throwing an exception?
-                    throw new UncommittedReadException(
-                            (VersionedKey) getContext().getKeyFromInternalConverter().convert(priorBinaryKey));
-                }
-            }
-
-            boolean deleted = Utils.isDeleted(priorEntry);
-            if (deleted && committed) {
-                priorEntry = null;
-            }
-        }
-
-        return priorEntry;
-
+        priorRead = true;
+        return priorBinaryEntry;
     }
 
     @Override

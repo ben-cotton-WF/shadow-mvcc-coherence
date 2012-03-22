@@ -101,7 +101,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
 
         if (delegate != null) {
 
-            ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+            ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, priorEntry, cacheName);
 
             if (!confirmFilterMatch(childEntry)) {
                 return null;

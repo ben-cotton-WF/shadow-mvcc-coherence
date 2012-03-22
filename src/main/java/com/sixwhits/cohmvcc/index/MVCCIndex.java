@@ -1,6 +1,5 @@
 package com.sixwhits.cohmvcc.index;
 
-import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
@@ -115,7 +114,7 @@ public class MVCCIndex<K> implements MapIndex {
                     result.add(floorEntry.getValue().getBinaryKey());
                 }
                 while (floorEntry != null && !floorEntry.getValue().isCommitted()) {
-                    floorEntry = nextFloor(vk.getNativeKey(), floorEntry.getKey());
+                    floorEntry = lowerEntry(vk.getNativeKey(), floorEntry.getKey());
                     if (floorEntry != null && !floorEntry.getValue().isDeleted()) {
                         result.add(floorEntry.getValue().getBinaryKey());
                     }
@@ -205,28 +204,6 @@ public class MVCCIndex<K> implements MapIndex {
                     return line.firstEntry();
                 } else {
                     return line.higherEntry(ts);
-                }
-            }
-        } else {
-            return null;
-        }
-    }
-    
-    /**
-     * @param sKey the key 
-     * @param ts the transaction id
-     * @return next lower entry
-     */
-    //TODO this is redundant - replace with lowerEntry()
-    private Entry<TransactionId, IndexEntry> nextFloor(final K sKey, final TransactionId ts) {
-        NavigableMap<TransactionId, IndexEntry> line = getLine(sKey);
-        if (line != null && ts != null) {
-            synchronized (line) {
-                TransactionId lowerts = line.lowerKey(ts);
-                if (lowerts == null) {
-                    return null;
-                } else {
-                    return new AbstractMap.SimpleEntry<TransactionId, IndexEntry>(lowerts, line.get(lowerts));
                 }
             }
         } else {

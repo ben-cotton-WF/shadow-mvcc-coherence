@@ -102,4 +102,9 @@ public class CacheName implements Serializable {
         return true;
     }
 
+    @Override
+    public String toString() {
+        return "CacheName [logicalName=" + logicalName + "]";
+    }
+
 }

@@ -1,8 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
-import com.sixwhits.cohmvcc.domain.IsolationLevel;
-import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.ValueUpdater;
@@ -19,14 +17,12 @@ public class ReadOnlyEntryWrapper extends AbstractEntryWrapper {
 
     /**
      * @param parentEntry the version cache entry
-     * @param transactionId the transaction id
-     * @param isolationLevel the isolation level
+     * @param priorBinaryEntry prior version binary entry
      * @param cacheName the cache name
      */
-    public ReadOnlyEntryWrapper(final BinaryEntry parentEntry, 
-            final TransactionId transactionId, final IsolationLevel isolationLevel, 
+    public ReadOnlyEntryWrapper(final BinaryEntry parentEntry, final BinaryEntry priorBinaryEntry,
             final CacheName cacheName) {
-        super(parentEntry, transactionId, isolationLevel, cacheName);
+        super(parentEntry, priorBinaryEntry, cacheName);
     }
 
     @Override

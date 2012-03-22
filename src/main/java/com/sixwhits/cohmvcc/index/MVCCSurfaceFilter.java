@@ -114,8 +114,7 @@ public class MVCCSurfaceFilter<K> implements IndexAwareFilter, Serializable {
             candidates.retainAll(floorBinaryKeys);
         } else {
             if (filter != null && filter instanceof IndexAwareFilter) {
-                // TODO is wrapper redundant?
-                result = new IndexAwareFilterWrapper((IndexAwareFilter) filter).applyIndex(indexes, candidates);
+                result = ((IndexAwareFilter) filter).applyIndex(indexes, candidates);
             } else {
                 result = filter;
             }

@@ -71,7 +71,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
             }
         }
 
-        ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+        ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, priorEntry, cacheName);
 
         if (!confirmFilterMatch(childEntry)) {
             return null;

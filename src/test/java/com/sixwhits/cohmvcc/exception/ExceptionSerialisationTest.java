@@ -40,17 +40,6 @@ public class ExceptionSerialisationTest {
                 new VersionedKey<Integer>(99, new TransactionId(BASETIME, 0, 0)));
         assertPofFidelity(vo);
     }
-    /**
-     * Uncommitted read.
-     */
-    @Test
-    public void testUncommittedReadException() {
-
-        UncommittedReadException vo = new UncommittedReadException(
-                new VersionedKey<Integer>(99, new TransactionId(BASETIME, 0, 0)));
-        assertPofFidelity(vo);
-    }
-
 
     /**
      * @param expected value to check

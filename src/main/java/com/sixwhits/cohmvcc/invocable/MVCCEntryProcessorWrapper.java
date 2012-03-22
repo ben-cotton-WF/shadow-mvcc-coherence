@@ -81,13 +81,15 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
     public ProcessorResult<K, R> process(final Entry entryarg) {
 
         BinaryEntry entry = (BinaryEntry) entryarg;
+        BinaryEntry priorEntry = null;
+        Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
 
-        if (isolationLevel != IsolationLevel.readUncommitted && isolationLevel != IsolationLevel.readProhibited) {
-            Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
-            if (priorVersionBinaryKey != null) {
+        if (priorVersionBinaryKey != null) {
 
-                BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
-                        .getBackingMapEntry(priorVersionBinaryKey);
+            priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
+                    .getBackingMapEntry(priorVersionBinaryKey);
+            
+            if (isolationLevel != IsolationLevel.readUncommitted && isolationLevel != IsolationLevel.readProhibited) {
 
                 if (isolationLevel != IsolationLevel.readUncommitted) {
                     boolean committed = Utils.isCommitted(priorEntry);
@@ -98,7 +100,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
             }
         }
 
-        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, priorEntry, cacheName);
 
         if (!confirmFilterMatch(childEntry)) {
             return null;
