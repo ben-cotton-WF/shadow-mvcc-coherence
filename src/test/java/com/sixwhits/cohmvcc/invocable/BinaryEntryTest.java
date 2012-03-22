@@ -6,9 +6,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
-import org.littlegrid.coherence.testsupport.SystemPropertyConst;
-import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
+import org.littlegrid.ClusterMemberGroup;
+import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
@@ -45,9 +44,8 @@ public class BinaryEntryTest {
     @Before
     public void setUp() {
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(1).build();
+        cmg = builder.setStorageEnabledCount(1).buildAndConfigureForStorageDisabledClient();
 
-        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
     }

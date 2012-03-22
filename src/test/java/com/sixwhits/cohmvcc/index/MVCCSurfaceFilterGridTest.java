@@ -5,16 +5,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
-import org.littlegrid.coherence.testsupport.SystemPropertyConst;
-import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
+import org.littlegrid.support.SystemUtils;
 
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.io.pof.reflect.SimplePofPath;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
@@ -29,28 +27,23 @@ import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.filter.KeyAssociatedFilter;
 
 /**
- * Test the MVCCSurfaceFilter with a littlegtid.
+ * Test the MVCCSurfaceFilter with a littlegrid.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MVCCSurfaceFilterGridTest {
+public class MVCCSurfaceFilterGridTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final String TESTCACHENAME = "testcache";
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache testCache;
 
     /**
-     * create cluster and initialise cache.
+     * initialise cache.
      */
     @Before
     public void setUp() {
-        System.setProperty("tangosol.pof.enabled", "true");
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(1).build();
-
-        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
+        System.out.println("***MVCCSurfaceFilterGridTest testUseIndex");
+        System.out.println(SystemUtils.getSystemPropertiesWithPrefix("tangosol"));
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
         testCache.addIndex(new PofExtractor(null,
@@ -64,15 +57,6 @@ public class MVCCSurfaceFilterGridTest {
         putTestValue(testCache, 102, BASETIME, "oldest version");
         putTestValue(testCache, 102, BASETIME + 100, "medium version");
         putTestValue(testCache, 102, BASETIME + 200, "newest version");
-    }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
     }
 
     /**
@@ -101,6 +85,7 @@ public class MVCCSurfaceFilterGridTest {
     @Test
     public void testUseIndex() {
 
+        System.out.println("***MVCCSurfaceFilterGridTest testUseIndex");
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
         putTestValue(expected, 100, BASETIME, "oldest version");
         putTestValue(expected, 102, BASETIME + 200, "newest version");
@@ -120,6 +105,7 @@ public class MVCCSurfaceFilterGridTest {
      */
     @Test
     public void testAndFilter() {
+        System.out.println("***MVCCSurfaceFilterGridTest testAndFilter");
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
 
         putTestValue(expected, 100, BASETIME, "oldest version");
@@ -150,6 +136,7 @@ public class MVCCSurfaceFilterGridTest {
      */
     @Test
     public void testNestedFilter() {
+        System.out.println("***MVCCSurfaceFilterGridTest testNestedFilter");
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
 
         putTestValue(expected, 100, BASETIME, "oldest version");
@@ -178,6 +165,7 @@ public class MVCCSurfaceFilterGridTest {
      */
     @Test
     public void testFilterWithSpecifiedKey() {
+        System.out.println("***MVCCSurfaceFilterGridTest testFilterWithSpecifiedKey");
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
 
         putTestValue(expected, 100, BASETIME, "oldest version");
@@ -198,6 +186,7 @@ public class MVCCSurfaceFilterGridTest {
      */
     @Test
     public void testKeyAssociationFilter() {
+        System.out.println("***MVCCSurfaceFilterGridTest testKeyAssociationFilter");
         Map<VersionedKey<Integer>, String> expected = new HashMap<VersionedKey<Integer>, String>();
 
         putTestValue(expected, 100, BASETIME, "oldest version");

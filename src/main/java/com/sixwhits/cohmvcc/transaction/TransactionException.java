@@ -1,12 +1,14 @@
 package com.sixwhits.cohmvcc.transaction;
 
+import com.tangosol.io.pof.PortableException;
+
 /**
  * Exception relating to transaction operations.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class TransactionException extends RuntimeException {
+public class TransactionException extends PortableException {
 
     private static final long serialVersionUID = 8655722432512244531L;
 

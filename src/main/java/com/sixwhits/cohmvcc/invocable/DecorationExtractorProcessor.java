@@ -10,7 +10,7 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.processor.AbstractProcessor;
 
 /**
- * {@code EntryProcessor} to extract and return a decoration value.
+ * Extract and return a decoration value from a cache entry.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
@@ -23,8 +23,14 @@ public class DecorationExtractorProcessor extends AbstractProcessor {
     @PortableProperty(0)
     private int decoId;
 
+    /**
+     * Instance to extract the commit status {code Boolean} value.
+     */
     public static final DecorationExtractorProcessor COMMITTED_INSTANCE =
             new DecorationExtractorProcessor(Constants.DECO_COMMIT);
+    /**
+     * Instance to extract the deleted status {code Boolean} value.
+     */
     public static final DecorationExtractorProcessor DELETED_INSTANCE =
             new DecorationExtractorProcessor(Constants.DECO_DELETED);
 

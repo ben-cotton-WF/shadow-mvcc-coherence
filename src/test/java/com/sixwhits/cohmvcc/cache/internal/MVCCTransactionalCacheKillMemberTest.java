@@ -11,9 +11,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
-import org.littlegrid.coherence.testsupport.SystemPropertyConst;
-import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
+import org.littlegrid.ClusterMemberGroup;
+import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
@@ -51,12 +50,10 @@ public class MVCCTransactionalCacheKillMemberTest {
     @Before
     public void setUp() {
         System.out.println("******setUp");
-        System.setProperty("tangosol.pof.enabled", "true");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(4).build();
+        cmg = builder.setStorageEnabledCount(4).buildAndConfigureForStorageDisabledClient();
 
         System.out.println("******initialise cache");
-        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
         cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 
@@ -65,7 +62,7 @@ public class MVCCTransactionalCacheKillMemberTest {
      * then kill a member before it completes. Check that the
      * invocation still produces the correct result
      */
-    @Test(timeout = 10000)
+    @Test(timeout = 20000)
     public void testInvokeAllFilter() {
         System.out.println("******InvokeAll(Filter)");
 

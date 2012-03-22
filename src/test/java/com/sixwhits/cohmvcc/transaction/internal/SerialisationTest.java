@@ -2,6 +2,8 @@ package com.sixwhits.cohmvcc.transaction.internal;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashSet;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,9 +11,12 @@ import org.junit.Test;
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
+import com.sixwhits.cohmvcc.domain.TransactionProcStatus;
 import com.tangosol.io.pof.ConfigurablePofContext;
+import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
+import com.tangosol.util.Filter;
 
 /**
  * Serialisation test for transaction internal package.
@@ -22,6 +27,8 @@ import com.tangosol.util.ExternalizableHelper;
 public class SerialisationTest {
 
     private ConfigurablePofContext pofContext;
+    private static final TransactionId TRANSACTIONID =
+            new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457);
 
     /**
      * Initialise POF context.
@@ -37,7 +44,7 @@ public class SerialisationTest {
     @Test
     public void testReadMarkingProcessor() {
         ReadMarkingProcessor<Integer> obj = new ReadMarkingProcessor<Integer>(
-                new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457), 
+                TRANSACTIONID, 
                 IsolationLevel.serializable, new CacheName("acachename"));
 
         assertPofFidelity(obj);
@@ -68,7 +75,34 @@ public class SerialisationTest {
         Object obj = new ExistenceCheckProcessor();
         assertPofFidelity(obj);
     }
-
+    
+    /**
+     * FilterTransactionInvocable.
+     */
+    @Test
+    public void testFilterTransactionInvocable() {
+        Object obj = new FilterTransactionInvocable(TRANSACTIONID, new CacheName("test-cache"),
+                new HashSet<Filter>(), new PartitionSet(13), TransactionProcStatus.committing);
+        assertPofFidelity(obj);
+    }
+    
+    /**
+     * KeyTransactionInvocable.
+     */
+    @Test
+    public void testKeyTransactionInvocable() {
+        Object obj = new KeyTransactionInvocable(TRANSACTIONID, new CacheName("test-cache"),
+                new HashSet<Object>(), TransactionProcStatus.rollingback);
+        assertPofFidelity(obj);
+    }
+    
+    /**
+     * TransactionStateUpdater.
+     */
+    @Test
+    public void testTransactionStateUpdate() {
+        assertPofFidelity(TransactionStateUpdater.COMMIT);
+    }
 
     /**
      * @param expected object to check.

@@ -288,7 +288,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     @Override
     public int size(final TransactionId tid, final IsolationLevel isolationLevel) {
-        return aggregate(tid, isolationLevel, (Filter) null, new Count());
+        return (Integer) aggregate(tid, isolationLevel, (Filter) null, new Count());
     }
 
     @Override

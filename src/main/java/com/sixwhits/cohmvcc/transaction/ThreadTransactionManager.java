@@ -5,6 +5,7 @@ import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import com.sixwhits.cohmvcc.cache.internal.MVCCNamedCache;
 import com.sixwhits.cohmvcc.cache.internal.MVCCTransactionalCacheImpl;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
+import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 
 /**
  * Implementation of {@TransactionManager} to provide a separate transaction context per thread.
@@ -19,6 +20,7 @@ public class ThreadTransactionManager implements TransactionManager {
     private final TimestampSource timestampSource;
     private final ManagerIdSource managerIdSource;
     private final String invocationServiceName;
+    private final TransactionCache transactionCache;
     private final boolean readOnly;
     private final boolean autoCommit;
     private final IsolationLevel isolationLevel;
@@ -28,13 +30,16 @@ public class ThreadTransactionManager implements TransactionManager {
      * @param timestampSource source of timestamps
      * @param managerIdSource source of manager id
      * @param invocationServiceName name of service to perform invocations
+     * @param transactionCache DAO for accessing the transaction cache
      */
     public ThreadTransactionManager(final TimestampSource timestampSource, 
-            final ManagerIdSource managerIdSource, final String invocationServiceName) {
+            final ManagerIdSource managerIdSource, final String invocationServiceName,
+            final TransactionCache transactionCache) {
         super();
         this.timestampSource = timestampSource;
         this.managerIdSource = managerIdSource;
         this.invocationServiceName = invocationServiceName;
+        this.transactionCache = transactionCache;
         readOnly = false;
         autoCommit = false;
         isolationLevel = readCommitted;
@@ -44,17 +49,20 @@ public class ThreadTransactionManager implements TransactionManager {
      * @param timestampSource source of timestamps
      * @param managerIdSource source of manager id
      * @param invocationServiceName name of service to perform invocations
+     * @param transactionCache DAO for accessing the transaction cache
      * @param readOnly default read-only state for new transactions
      * @param autoCommit default auto-commit status for new transactions
      * @param isolationLevel default isolation level for new transaction
      */
     public ThreadTransactionManager(final TimestampSource timestampSource, 
             final ManagerIdSource managerIdSource, final String invocationServiceName,
+            final TransactionCache transactionCache,
             final boolean readOnly, final boolean autoCommit, final IsolationLevel isolationLevel) {
         super();
         this.timestampSource = timestampSource;
         this.managerIdSource = managerIdSource;
         this.invocationServiceName = invocationServiceName;
+        this.transactionCache = transactionCache;
         this.readOnly = readOnly;
         this.autoCommit = autoCommit;
         this.isolationLevel = isolationLevel;
@@ -67,7 +75,7 @@ public class ThreadTransactionManager implements TransactionManager {
         if (transactionManagers.get() == null) {
             transactionManagers.set(
                     new SessionTransactionManager(timestampSource, managerIdSource,
-                            invocationServiceName, readOnly, autoCommit, isolationLevel));
+                            invocationServiceName, transactionCache, readOnly, autoCommit, isolationLevel));
         }
         return transactionManagers.get();
     }

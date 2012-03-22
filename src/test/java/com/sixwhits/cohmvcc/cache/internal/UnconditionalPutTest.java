@@ -7,9 +7,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
-import org.littlegrid.coherence.testsupport.SystemPropertyConst;
-import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
+import org.littlegrid.ClusterMemberGroup;
+import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
@@ -47,10 +46,9 @@ public class UnconditionalPutTest {
     public void setUp() {
         System.out.println("******setUp");
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(2).build();
+        cmg = builder.setStorageEnabledCount(2).buildAndConfigureForStorageDisabledClient();
 
         System.out.println("******initialise cache");
-        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
         new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 

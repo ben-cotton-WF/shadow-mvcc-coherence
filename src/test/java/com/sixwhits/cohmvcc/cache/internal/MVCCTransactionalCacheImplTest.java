@@ -15,17 +15,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.coherence.testsupport.ClusterMemberGroup;
-import org.littlegrid.coherence.testsupport.SystemPropertyConst;
-import org.littlegrid.coherence.testsupport.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
 import com.tangosol.io.pof.PortableException;
@@ -53,33 +49,18 @@ import com.tangosol.util.processor.UpdaterProcessor;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MVCCTransactionalCacheImplTest {
+public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final String TESTCACHEMAME = "testcache";
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-        System.setProperty("tangosol.pof.enabled", "true");
-    }
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        System.out.println("******setUp");
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(2).build();
 
         System.out.println("******initialise cache");
-        System.setProperty(SystemPropertyConst.DISTRIBUTED_LOCAL_STORAGE_KEY, "false");
         cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
 
@@ -905,16 +886,6 @@ public class MVCCTransactionalCacheImplTest {
         });
 
         rbThread.start();
-    }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        System.out.println("******tearDown");
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
     }
 
 

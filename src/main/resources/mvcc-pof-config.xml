@@ -146,6 +146,31 @@
       <type-id>1034</type-id>
       <class-name>com.sixwhits.cohmvcc.pof.IdentityPofPath</class-name>
     </user-type>
+    <user-type>
+      <type-id>1035</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.FilterTransactionInvocable</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1036</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.KeyTransactionInvocable</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1037</type-id>
+      <class-name>com.sixwhits.cohmvcc.domain.TransactionProcStatus</class-name>
+      <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
+    </user-type>
+    <user-type>
+      <type-id>1038</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.TransactionStateUpdater</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1039</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.TransactionException</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1040</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.CounterProcessor</class-name>
+    </user-type>
 
   </user-type-list>
 

@@ -25,7 +25,7 @@ public class MVCCNamedCache implements NamedCache {
 
     private final TransactionManager transactionManager;
     @SuppressWarnings("rawtypes")
-    private final MVCCTransactionalCache mvccTxCache;
+    private final MVCCTransactionalCache mvccCache;
 
     /**
      * @param transactionManager transaction manager used to provide transaction context
@@ -35,82 +35,82 @@ public class MVCCNamedCache implements NamedCache {
     public MVCCNamedCache(final TransactionManager transactionManager, final MVCCTransactionalCache mvccTxCache) {
         super();
         this.transactionManager = transactionManager;
-        this.mvccTxCache = mvccTxCache;
+        this.mvccCache = mvccTxCache;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Object get(final Object key) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.get(context.getTransactionId(), context.getIsolationLevel(), key);
+        return mvccCache.get(context.getTransactionId(), context.getIsolationLevel(), key);
     }
 
     @Override
     public void addMapListener(final MapListener listener) {
         Transaction context = transactionManager.getTransaction();
-        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel());
+        mvccCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel());
     }
 
     @Override
     public void addMapListener(final MapListener listener, final Object oKey, final boolean fLite) {
         Transaction context = transactionManager.getTransaction();
-        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), oKey, fLite);
+        mvccCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), oKey, fLite);
     }
 
     @Override
     public void addMapListener(final MapListener listener, final Filter filter, 
             final boolean fLite) {
         Transaction context = transactionManager.getTransaction();
-        mvccTxCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), filter, fLite);
+        mvccCache.addMapListener(listener, context.getTransactionId(), context.getIsolationLevel(), filter, fLite);
     }
 
     @Override
     public void removeMapListener(final MapListener listener) {
-        mvccTxCache.removeMapListener(listener);
+        mvccCache.removeMapListener(listener);
     }
 
     @Override
     public void removeMapListener(final MapListener listener, final Object oKey) {
-        mvccTxCache.removeMapListener(listener, oKey);
+        mvccCache.removeMapListener(listener, oKey);
     }
 
     @Override
     public void removeMapListener(final MapListener listener, final Filter filter) {
-        mvccTxCache.removeMapListener(listener, filter);
+        mvccCache.removeMapListener(listener, filter);
     }
 
     @Override
     public int size() {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.size(context.getTransactionId(), context.getIsolationLevel());
+        return mvccCache.size(context.getTransactionId(), context.getIsolationLevel());
     }
 
     @Override
     public boolean isEmpty() {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
+        return mvccCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public boolean containsKey(final Object key) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.containsKey(context.getTransactionId(), context.getIsolationLevel(), key);
+        return mvccCache.containsKey(context.getTransactionId(), context.getIsolationLevel(), key);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public boolean containsValue(final Object value) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
+        return mvccCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Object put(final Object key, final Object value) {
         Transaction context = transactionManager.getTransaction();
-        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
-        return mvccTxCache.put(context.getTransactionId(), context.getIsolationLevel(),
+        context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
+        return mvccCache.put(context.getTransactionId(), context.getIsolationLevel(),
                 context.isAutoCommit(), key, value);
     }
 
@@ -118,17 +118,17 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object remove(final Object key) {
         Transaction context = transactionManager.getTransaction();
-        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
-        return mvccTxCache.remove(context.getTransactionId(), context.getIsolationLevel(), context.isAutoCommit(), key);
+        context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
+        return mvccCache.remove(context.getTransactionId(), context.getIsolationLevel(), context.isAutoCommit(), key);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public void putAll(final Map m) {
         Transaction context = transactionManager.getTransaction();
-        context.addKeySetAffected(mvccTxCache.getMVCCCacheName(), m.keySet());
+        context.addKeySetAffected(mvccCache.getMVCCCacheName(), m.keySet());
         try {
-            mvccTxCache.putAll(context.getTransactionId(), context.isAutoCommit(), m);
+            mvccCache.putAll(context.getTransactionId(), context.isAutoCommit(), m);
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;
@@ -138,9 +138,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void clear() {
         Transaction context = transactionManager.getTransaction();
-        context.addFilterAffected(mvccTxCache.getMVCCCacheName(), AlwaysFilter.INSTANCE);
+        context.addFilterAffected(mvccCache.getMVCCCacheName(), AlwaysFilter.INSTANCE);
         try {
-            mvccTxCache.clear(context.getTransactionId(), context.isAutoCommit());
+            mvccCache.clear(context.getTransactionId(), context.isAutoCommit());
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;
@@ -151,28 +151,28 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet() {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.keySet(context.getTransactionId(), context.getIsolationLevel());
+        return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel());
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public Collection values() {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.values(context.getTransactionId(), context.getIsolationLevel());
+        return mvccCache.values(context.getTransactionId(), context.getIsolationLevel());
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public Set entrySet() {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
+        return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map getAll(final Collection colKeys) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.getAll(context.getTransactionId(), context.getIsolationLevel(), colKeys);
+        return mvccCache.getAll(context.getTransactionId(), context.getIsolationLevel(), colKeys);
     }
 
     @Override
@@ -194,14 +194,14 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void addIndex(final ValueExtractor extractor, final boolean fOrdered, 
             final Comparator comparator) {
-        mvccTxCache.addIndex(extractor, fOrdered, comparator);
+        mvccCache.addIndex(extractor, fOrdered, comparator);
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public Set entrySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
     }
 
     @SuppressWarnings("rawtypes")
@@ -214,33 +214,33 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
     }
 
     @Override
     public void removeIndex(final ValueExtractor extractor) {
-        mvccTxCache.removeIndex(extractor);
+        mvccCache.removeIndex(extractor);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public Object aggregate(final Collection collKeys, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
+        return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
     }
 
     @Override
     public Object aggregate(final Filter filter, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
-        return mvccTxCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
+        return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Object invoke(final Object key, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        context.addKeyAffected(mvccTxCache.getMVCCCacheName(), key);
-        return mvccTxCache.invoke(context.getTransactionId(),
+        context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
+        return mvccCache.invoke(context.getTransactionId(),
                 context.getIsolationLevel(), context.isAutoCommit(), key, agent);
     }
 
@@ -248,9 +248,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        context.addKeySetAffected(mvccTxCache.getMVCCCacheName(), collKeys);
+        context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
         try {
-            return mvccTxCache.invokeAll(context.getTransactionId(),
+            return mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), collKeys, agent);
         } catch (RuntimeException t) {
             context.setRollbackOnly();
@@ -262,9 +262,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        context.addFilterAffected(mvccTxCache.getMVCCCacheName(), filter);
+        context.addFilterAffected(mvccCache.getMVCCCacheName(), filter);
         try {
-            return mvccTxCache.invokeAll(context.getTransactionId(),
+            return mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
             //TODO update context with keys/partitions actually affected
         } catch (RuntimeException t) {
@@ -276,22 +276,22 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void destroy() {
         // TODO - force a rollback first?
-        mvccTxCache.destroy();
+        mvccCache.destroy();
     }
 
     @Override
     public String getCacheName() {
-        return mvccTxCache.getCacheName();
+        return mvccCache.getCacheName();
     }
 
     @Override
     public CacheService getCacheService() {
-        return mvccTxCache.getCacheService();
+        return mvccCache.getCacheService();
     }
 
     @Override
     public boolean isActive() {
-        return mvccTxCache.isActive();
+        return mvccCache.isActive();
     }
 
     @Override
@@ -301,7 +301,7 @@ public class MVCCNamedCache implements NamedCache {
 
     @Override
     public void release() {
-        mvccTxCache.release();
+        mvccCache.release();
     }
 
 }

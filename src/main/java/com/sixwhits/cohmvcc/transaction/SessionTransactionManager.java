@@ -8,12 +8,17 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.transaction.internal.AutoCommitTransaction;
 import com.sixwhits.cohmvcc.transaction.internal.ReadOnlyTransaction;
+import com.sixwhits.cohmvcc.transaction.internal.TransactionActualScope;
+import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionImpl;
 
 /**
  * Implementation of {@link TransactionManager} that provides a session-like interaction with caches.
  * All caches obtained from an instance of {@code SessionTransactionManager} share the same transaction, in particular, 
  * cache operations in different threads participate in the same transaction.
+ * 
+ * TODO is there a race condition if one thread is performing an operation at the same time as another
+ * thread starts a commit or rollback?
  *
  * @see ThreadTransactionManager
  *
@@ -26,6 +31,7 @@ public class SessionTransactionManager implements TransactionManager,
     private final TimestampSource timestampSource;
     private final int managerId;
     private final String invocationServiceName;
+    private final TransactionCache transactionCache;
     private volatile boolean readOnly = false;
     private volatile boolean autoCommit = false;
     private volatile IsolationLevel isolationLevel = readCommitted;
@@ -38,13 +44,16 @@ public class SessionTransactionManager implements TransactionManager,
      * @param timestampSource source of timestamps
      * @param managerIdSource source of transaction manager ids
      * @param invocationServiceName name of the invocation service to use
+     * @param transactionCache DAO for accessing the transaction cache
      */
     public SessionTransactionManager(final TimestampSource timestampSource, 
-            final ManagerIdSource managerIdSource, final String invocationServiceName) {
+            final ManagerIdSource managerIdSource, final String invocationServiceName,
+            final TransactionCache transactionCache) {
         super();
         this.timestampSource = timestampSource;
         this.managerId = managerIdSource.getManagerId();
         this.invocationServiceName = invocationServiceName;
+        this.transactionCache = transactionCache;
     }
 
     /**
@@ -54,14 +63,17 @@ public class SessionTransactionManager implements TransactionManager,
      * @param readOnly true to create read-only transactions
      * @param autoCommit true to autocommit all cache operations
      * @param isolationLevel default transaction isolation level
+     * @param transactionCache DAO for accessing the transaction cache
      */
     public SessionTransactionManager(final TimestampSource timestampSource, 
-            final ManagerIdSource managerIdSource, final String invocationServiceName, final boolean readOnly, 
+            final ManagerIdSource managerIdSource, final String invocationServiceName,
+            final TransactionCache transactionCache, final boolean readOnly, 
             final boolean autoCommit, final IsolationLevel isolationLevel) {
         super();
         this.timestampSource = timestampSource;
         this.managerId = managerIdSource.getManagerId();
         this.invocationServiceName = invocationServiceName;
+        this.transactionCache = transactionCache;
         this.readOnly = readOnly;
         this.autoCommit = autoCommit;
         this.isolationLevel = isolationLevel;
@@ -84,14 +96,25 @@ public class SessionTransactionManager implements TransactionManager,
     @Override
     public synchronized Transaction getTransaction() {
         if (currentTransaction == null) {
+            TransactionId transactionId = getNextId();
+            TransactionActualScope tas = transactionCache.beginTransaction(transactionId, isolationLevel);
+            
+            if (tas.isReadonly()) {
+                if (!this.readOnly) {
+                    throw new TransactionException("Transaction with this timestamp must be read-only");
+                }
+                this.isolationLevel = tas.getIsolationLevel();
+                transactionId = new TransactionId(tas.getTimestamp(), managerId, 0);
+            }
+            
             if (autoCommit) {
                 currentTransaction = new AutoCommitTransaction(getNextId(), isolationLevel, this);
             } else if (readOnly) {
                 currentTransaction = new ReadOnlyTransaction(getNextId(), isolationLevel, this);
 
-            // What about read-only & autocommit together?
+            // TODO What about read-only & autocommit together?
             } else {
-                currentTransaction = new TransactionImpl(getNextId(), isolationLevel, this);
+                currentTransaction = new TransactionImpl(getNextId(), isolationLevel, this, transactionCache);
             }
         }
         return currentTransaction;

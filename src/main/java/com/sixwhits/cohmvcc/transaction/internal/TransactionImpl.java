@@ -31,8 +31,10 @@ public class TransactionImpl implements Transaction {
     private final TransactionId transactionId;
     private final IsolationLevel isolationLevel;
     private final TransactionNotificationListener notificationListener;
+    private final TransactionCache transactionCache;
+    private final boolean readOnly;
     private volatile boolean rollbackOnly = false;
-    private volatile TransactionStatus transactionStatus = null;
+    private volatile TransactionStatus transactionStatus = open;
 
     private Map<CacheName, Set<Object>> cacheKeyMap = new HashMap<CacheName, Set<Object>>();
     private Map<CacheName, Set<Filter>> cacheFilterMap = new HashMap<CacheName, Set<Filter>>();
@@ -42,13 +44,21 @@ public class TransactionImpl implements Transaction {
      * @param transactionId transaction id
      * @param isolationLevel isolation level
      * @param notificationListener listener to notify on commit or rollback
+     * @param transactionCache transaction cache DAO
      */
     public TransactionImpl(final TransactionId transactionId, final IsolationLevel isolationLevel, 
-            final TransactionNotificationListener notificationListener) {
+            final TransactionNotificationListener notificationListener, final TransactionCache transactionCache) {
         super();
-        this.transactionId = transactionId;
-        this.isolationLevel = isolationLevel;
         this.notificationListener = notificationListener;
+        this.transactionCache = transactionCache;
+        TransactionActualScope scope = this.transactionCache.beginTransaction(transactionId, isolationLevel);
+        if (scope.getTimestamp() != transactionId.getTimeStampMillis()) {
+            this.transactionId = new TransactionId(scope.getTimestamp(), transactionId.getContextId(), 0);
+        } else {
+            this.transactionId = transactionId;
+        }
+        this.readOnly = scope.isReadonly();
+        this.isolationLevel = scope.getIsolationLevel();
     }
 
     @Override
@@ -100,6 +110,9 @@ public class TransactionImpl implements Transaction {
      * @param filter the filter
      */
     private void addCacheFilter(final CacheName cacheName, final Filter filter) {
+        if (readOnly) {
+            throw new TransactionException("read only transaction");
+        }
         synchronized (cacheFilterMap) {
             if (!cacheFilterMap.containsKey(cacheName)) {
                 cacheFilterMap.put(cacheName, new HashSet<Filter>());
@@ -110,33 +123,25 @@ public class TransactionImpl implements Transaction {
 
     @Override
     public void addKeyAffected(final CacheName cacheName, final Object key) {
-        checkTransactionInitialised();
-        addCacheKey(cacheName, key);
-    }
-
-    /**
-     * Lazily initialise the transaction.
-     */
-    private void checkTransactionInitialised() {
-        if (transactionStatus == null) {
-            synchronized (this) {
-                if (transactionStatus == null) {
-                    transactionStatus = open;
-                    // Create transaction cache entry
-                }
-            }
+        if (readOnly) {
+            throw new TransactionException("read only transaction");
         }
+        addCacheKey(cacheName, key);
     }
 
     @Override
     public void addKeySetAffected(final CacheName cacheName, final Collection<Object> keys) {
-        checkTransactionInitialised();
+        if (readOnly) {
+            throw new TransactionException("read only transaction");
+        }
         addCacheKeys(cacheName, keys);
     }
 
     @Override
     public int addFilterAffected(final CacheName cacheName, final Filter filter) {
-        checkTransactionInitialised();
+        if (readOnly) {
+            throw new TransactionException("read only transaction");
+        }
         addCacheFilter(cacheName, filter);
         return 0;
     }
@@ -168,7 +173,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot commit, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
-            //Do the commit
+            transactionCache.commitTransaction(transactionId, cacheKeyMap, cacheFilterMap);
         }
         transactionStatus = committed;
     }
@@ -180,7 +185,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot rollback, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
-            //Do the rollback
+            transactionCache.rollbackTransaction(transactionId, cacheKeyMap, cacheFilterMap);
         }
         transactionStatus = rolledback;
     }

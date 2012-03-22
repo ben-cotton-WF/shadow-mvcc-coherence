@@ -1,9 +1,10 @@
-package com.sixwhits.cohmvcc.transaction;
+package com.sixwhits.cohmvcc.transaction.internal;
 
 import java.util.Map;
 import java.util.Set;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
+import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.util.Filter;
 
@@ -19,8 +20,11 @@ public interface TransactionCache {
      * Store an open transaction event. Must be called before any other cache updates for this transactionId
      *
      * @param transactionId the transaction Id being started
+     * @param isolationLevel requested isolation level
+     * @return a {@link TransactionActualScope} specifying the isolation level,
+     * transaction id, and read only flag permitted
      */
-    void beginTransaction(TransactionId transactionId);
+    TransactionActualScope beginTransaction(TransactionId transactionId, IsolationLevel isolationLevel);
 
     /**
      * Commit an open transaction.

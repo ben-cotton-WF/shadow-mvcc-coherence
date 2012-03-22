@@ -14,30 +14,10 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 @Portable
 public class TransactionCacheValue {
 
-    /**
-     * Transaction status.
-     */
-    public enum TransactionProcStatus {
-        /**
-         * The transaction has started and is open.
-         */
-        open,
-        /**
-         * A commit has been issued on the transaction and update of the
-         * related cache entries is in progress.
-         */
-        committing,
-        /**
-         * A rollback has been issued on the transaction and removal of
-         * the related cache entries is in progress.
-         */
-        rollingback
-    };
-
-    @PortableProperty(0)
-    private TransactionProcStatus procStatus;
-    @PortableProperty(1)
-    private long realTimestamp;
+    public static final int POF_STATUS = 0;
+    @PortableProperty(POF_STATUS) private TransactionProcStatus procStatus;
+    public static final int POF_REALTIME = 1;
+    @PortableProperty(POF_REALTIME) private long realTimestamp;
 
     /**
      *  Default constructor for POF use only.

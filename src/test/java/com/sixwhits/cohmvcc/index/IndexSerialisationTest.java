@@ -27,6 +27,8 @@ public class IndexSerialisationTest {
      */
     @Before
     public void setUp() {
+        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
+        System.out.println("***IndexSerialisationTest setUp");
         pofContext = new ConfigurablePofContext("mvcc-pof-config.xml");
     }
 
@@ -36,6 +38,7 @@ public class IndexSerialisationTest {
     @Test
     public void testMVCCSurfaceFilter() {
 
+        System.out.println("***IndexSerialisationTest testMVCCSurfaceFilter");
         MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(
                 new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457));
         assertPofFidelity(vo);
@@ -47,6 +50,7 @@ public class IndexSerialisationTest {
     @Test
     public void testMVCCSurfaceFilterWithKeys() {
 
+        System.out.println("***IndexSerialisationTest testMVCCSurfaceFilterWithKeys");
         MVCCSurfaceFilter<Integer> vo = new MVCCSurfaceFilter<Integer>(
                 new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457), 
                 Collections.singleton(Integer.valueOf(99)));
