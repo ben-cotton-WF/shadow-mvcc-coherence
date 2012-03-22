@@ -6,7 +6,9 @@ import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 
 /**
- * Class to encapsulate a logical cache name, and the physical version and key cache names.
+ * Class to encapsulate a logical cache name, and the physical version and key cache names. Use
+ * the logical name to construct an instance, which can then be used to obtain the names of the
+ * physical key and version caches
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
@@ -40,6 +42,7 @@ public class CacheName implements Serializable {
     }
 
     /**
+     * Get the cache logical name.
      * @return the cache logical name
      */
     public String getLogicalName() {
@@ -47,6 +50,7 @@ public class CacheName implements Serializable {
     }
 
     /**
+     * Get the name of the physical version cache.
      * @return the version cache name
      */
     public String getVersionCacheName() {
@@ -57,6 +61,7 @@ public class CacheName implements Serializable {
     }
 
     /**
+     * Get the name of the physical key cache.
      * @return the key cache name
      */
     public String getKeyCacheName() {

@@ -7,7 +7,7 @@ import com.tangosol.util.InvocableMap.Entry;
 import com.tangosol.util.processor.AbstractProcessor;
 
 /**
- * Set a version cache entry to committed.
+ * Update the decoration on a version cache entry to set its status to committed.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
@@ -17,6 +17,9 @@ public class EntryCommitProcessor extends AbstractProcessor {
 
     private static final long serialVersionUID = 2004629159766780786L;
 
+    /**
+     * An instance of EntryCommitProcessor.
+     */
     public static final EntryCommitProcessor INSTANCE = new EntryCommitProcessor();
 
     @Override

@@ -15,6 +15,9 @@ public class EntryRollbackProcessor extends AbstractProcessor {
 
     private static final long serialVersionUID = 3573370467378537711L;
 
+    /**
+     * An instance of {@code EntryRollbackProcessor}.
+     */
     public static final EntryRollbackProcessor INSTANCE = new EntryRollbackProcessor();
 
     @Override

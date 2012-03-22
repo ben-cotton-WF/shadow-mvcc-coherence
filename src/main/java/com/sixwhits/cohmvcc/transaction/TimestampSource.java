@@ -10,6 +10,7 @@ package com.sixwhits.cohmvcc.transaction;
 public interface TimestampSource {
 
     /**
+     * Get a new timestamp.
      * @return a new timestamp
      */
     long getTimestamp();

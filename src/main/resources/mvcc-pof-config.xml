@@ -171,6 +171,10 @@
       <type-id>1040</type-id>
       <class-name>com.sixwhits.cohmvcc.transaction.internal.CounterProcessor</class-name>
     </user-type>
+    <user-type>
+      <type-id>1041</type-id>
+      <class-name>com.sixwhits.cohmvcc.event.MVCCEventFilter</class-name>
+    </user-type>
 
   </user-type-list>
 

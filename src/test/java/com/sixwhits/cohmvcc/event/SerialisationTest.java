@@ -8,10 +8,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
+import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
+import com.tangosol.util.filter.AlwaysFilter;
 
 /**
  * event serialisation test.
@@ -39,6 +41,17 @@ public class SerialisationTest {
 
         Object vo = new MVCCEventTransformer<Object, Object>(readCommitted, 
                 new TransactionId(40L * 365L * 24L * 60L * 60L * 1000L + 17, 124, 457), new CacheName("test"));
+        assertPofFidelity(vo);
+    }
+    
+    /**
+     * Test MVCCEventFilter.
+     */
+    @Test
+    public void testMVCCEventFilter() {
+
+        Object vo = new MVCCEventFilter<Object>(
+                IsolationLevel.readCommitted, AlwaysFilter.INSTANCE, new CacheName("xx"), null);
         assertPofFidelity(vo);
     }
 

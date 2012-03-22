@@ -39,21 +39,11 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
     private static final long serialVersionUID = 4499295487465987875L;
 
-    public static final int POF_CACHENAME = 0;
-    @PortableProperty(POF_CACHENAME)
-    private CacheName cacheName;
-    public static final int POF_FILTER = 1;
-    @PortableProperty(POF_FILTER)
-    private Filter filter;
-    public static final int POF_TS = 2;
-    @PortableProperty(POF_TS)
-    private TransactionId tid;
-    public static final int POF_EP = 3;
-    @PortableProperty(POF_EP)
-    private EntryProcessor entryProcessor;
-    public static final int POF_PARTITIONS = 4;
-    @PortableProperty(POF_PARTITIONS)
-    private PartitionSet partitions = null;
+    @PortableProperty(0) private CacheName cacheName;
+    @PortableProperty(1) private Filter filter;
+    @PortableProperty(2) private TransactionId tid;
+    @PortableProperty(3) private EntryProcessor entryProcessor;
+    @PortableProperty(4) private PartitionSet partitions = null;
 
     private transient PartitionSet memberParts;
     private transient Map<K, R> resultMap;

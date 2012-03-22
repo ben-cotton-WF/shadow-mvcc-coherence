@@ -22,7 +22,7 @@ import com.tangosol.util.InvocableMap.Entry;
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
- * @param <K>
+ * @param <K> the logical key type
  */
 @Portable
 public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, VersionedKey<K>> {

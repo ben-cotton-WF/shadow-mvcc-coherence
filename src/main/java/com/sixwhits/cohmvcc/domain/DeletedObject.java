@@ -12,6 +12,9 @@ import com.tangosol.io.pof.annotation.Portable;
 @Portable
 public class DeletedObject {
 
+    /**
+     * An instance of DeletedObject.
+     */
     public static final DeletedObject INSTANCE = new DeletedObject();
 
     @Override

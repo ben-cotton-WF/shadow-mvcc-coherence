@@ -10,7 +10,10 @@ import com.sixwhits.cohmvcc.transaction.TransactionNotificationListener;
 import com.tangosol.util.Filter;
 
 /**
- * Transaction implementation for an autocommit transaction.
+ * Transaction implementation for an autocommit transaction. Most methods are empty stubs as all cache
+ * updates are applied as already committed. When the {@code MVCCNamedCache} obtains the id from an autocommit
+ * transaction, the transaction is marked as complete so that the next request to the {@code TransactionManager}
+ * will obtain a new transaction
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *

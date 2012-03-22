@@ -22,9 +22,9 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.event.MVCCEventFilter;
 import com.sixwhits.cohmvcc.event.MVCCEventTransformer;
 import com.sixwhits.cohmvcc.event.MVCCMapListener;
-import com.sixwhits.cohmvcc.index.FilterWrapper;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
 import com.sixwhits.cohmvcc.invocable.AggregatorWrapper;
@@ -52,6 +52,7 @@ import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.InvocableMap.ParallelAwareAggregator;
+import com.tangosol.util.MapEventTransformer;
 import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.aggregator.Count;
@@ -236,7 +237,6 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             versionCache.addMapListener(mvccml, 
                     new MapEventTransformerFilter(AlwaysFilter.INSTANCE,
                             new MVCCEventTransformer<K, V>(isolationLevel, tid, cacheName)), false);
-            versionCache.addMapListener(mvccml);
         }
     }
 
@@ -249,7 +249,6 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             versionCache.addMapListener(mvccml, 
                     new MapEventTransformerFilter(keyFilter,
                             new MVCCEventTransformer<K, V>(isolationLevel, tid, cacheName)), false);
-            versionCache.addMapListener(mvccml);
         }
     }
 
@@ -258,10 +257,9 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             final IsolationLevel isolationLevel, final Filter filter, final boolean fLite) {
         MVCCMapListener<K, V> mvccml = new MVCCMapListener<K, V>(listener);
         if (listenerMap.putIfAbsent(new ListenerMapKey(listener, filter), mvccml) == null) {
-            versionCache.addMapListener(mvccml, 
-                    new MapEventTransformerFilter(new FilterWrapper(filter),
-                            new MVCCEventTransformer<K, V>(isolationLevel, tid, cacheName)), false);
-            versionCache.addMapListener(mvccml);
+            MapEventTransformer transformer = new MVCCEventTransformer<K, V>(isolationLevel, tid, cacheName);
+            Filter eventfilter = new MVCCEventFilter<K>(isolationLevel, filter, cacheName, transformer);
+            versionCache.addMapListener(mvccml, eventfilter, false);
         }
     }
 

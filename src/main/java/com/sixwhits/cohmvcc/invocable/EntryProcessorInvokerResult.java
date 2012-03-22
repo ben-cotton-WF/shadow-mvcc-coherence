@@ -21,15 +21,9 @@ import com.tangosol.net.partition.PartitionSet;
 @Portable
 public class EntryProcessorInvokerResult<K, R> {
 
-    public static final int POF_PARTITIONS = 0;
-    @PortableProperty(POF_PARTITIONS)
-    private PartitionSet partitions;
-    public static final int POF_RESULTS = 1;
-    @PortableProperty(POF_RESULTS)
-    private Map<K, R> resultMap;
-    public static final int POF_RETRY = 2;
-    @PortableProperty(POF_RETRY)
-    private Map<K, VersionedKey<K>> retryMap;
+    @PortableProperty(0) private PartitionSet partitions;
+    @PortableProperty(1) private Map<K, R> resultMap;
+    @PortableProperty(2) private Map<K, VersionedKey<K>> retryMap;
 
     /**
      *  Default constructor for POF use only.
@@ -39,6 +33,7 @@ public class EntryProcessorInvokerResult<K, R> {
     }
 
     /**
+     * Constructor.
      * @param partitions the set of partitions processed
      * @param resultMap the entry processor results
      * @param retryMap the uncommitted entries
@@ -52,6 +47,7 @@ public class EntryProcessorInvokerResult<K, R> {
     }
 
     /**
+     * Get the set of partitions that were processed by the invocation.
      * @return the set of partitions processed
      */
     public PartitionSet getPartitions() {
@@ -59,6 +55,7 @@ public class EntryProcessorInvokerResult<K, R> {
     }
 
     /**
+     * Get the result map linking logical key to the individual {@code EntryProcessor} results.
      * @return the {@code EntryProcessor} results
      */
     public Map<K, R> getResultMap() {
@@ -66,7 +63,9 @@ public class EntryProcessorInvokerResult<K, R> {
     }
 
     /**
-     * @return the map of uncommitted versions key is logical key, value is version cache key
+     * Get the map of entries that must be retried because of an uncommitted change. The key of the
+     * map is the logical key, the value is the version cache key of the uncommitted entry found.
+     * @return the map of uncommitted versions
      */
     public Map<K, VersionedKey<K>> getRetryMap() {
         return retryMap;

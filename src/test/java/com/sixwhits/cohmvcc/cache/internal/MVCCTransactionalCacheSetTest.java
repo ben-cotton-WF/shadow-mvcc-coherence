@@ -4,8 +4,6 @@ import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.repeatableRead;
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 
 import java.util.Collection;
@@ -13,20 +11,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
-import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.sixwhits.cohmvcc.domain.VersionedKey;
-import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
-import com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor;
-import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
-import com.tangosol.io.pof.PortableException;
-import com.tangosol.net.CacheFactory;
-import com.tangosol.net.NamedCache;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.aggregator.Count;
@@ -34,7 +22,6 @@ import com.tangosol.util.aggregator.LongSum;
 import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.extractor.PofUpdater;
 import com.tangosol.util.filter.EqualsFilter;
-import com.tangosol.util.processor.ExtractorProcessor;
 import com.tangosol.util.processor.UpdaterProcessor;
 
 /**
@@ -44,252 +31,12 @@ import com.tangosol.util.processor.UpdaterProcessor;
  * differs from transaction-time sequence etc.
  * 
  * This is really a fairly comprehensive integration test of the middle and low level
- * functionality.
+ * functionality for the set-based operations.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
-
-    private static final String TESTCACHEMAME = "testcache";
-    private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
-
-    /**
-     * create cluster and initialise cache.
-     */
-    @Before
-    public void setUp() {
-
-        System.out.println("******initialise cache");
-        cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
-    }
-
-    /**
-     * Test putting a value uncommitted, then reading it waits for the commit.
-     */
-    @Test
-    public void testPutCommitRead() {
-
-        System.out.println("******PutCommitRead");
-
-        final TransactionId ts = new TransactionId(BASETIME, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(ts, repeatableRead, false, theKey, theValue));
-
-        asynchCommit(ts, theKey);
-
-        TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        assertEquals(theValue, cache.get(ts2, repeatableRead, theKey));
-
-    }
-
-    /**
-     * Test the containsKey method.
-     */
-    @Test
-    public void testContainsKey() {
-
-        System.out.println("******ContainsKey");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-        Integer otherKey = 98;
-
-        assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-        assertNull(cache.put(ts3, repeatableRead, true, otherKey, theValue));
-
-
-        assertTrue(cache.containsKey(ts2, repeatableRead, theKey));
-        assertFalse(cache.containsKey(ts2, repeatableRead, otherKey));
-        assertFalse(cache.containsKey(ts2, repeatableRead, 97));
-    }
-
-    /**
-     * Test the containsValue method.
-     */
-    @Test
-    public void testContainsValue() {
-
-        System.out.println("******ContainsValue");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-        SampleDomainObject otherValue = new SampleDomainObject(99, "ninety-nine");
-        SampleDomainObject noValue = new SampleDomainObject(77, "seventy-seven");
-        Integer otherKey = 98;
-
-        assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-        assertNull(cache.put(ts3, repeatableRead, true, otherKey, otherValue));
-
-
-        assertTrue(cache.containsValue(ts2, repeatableRead, theValue));
-        assertFalse(cache.containsValue(ts2, repeatableRead, otherValue));
-        assertFalse(cache.containsValue(ts2, repeatableRead, noValue));
-    }
-
-    /**
-     * Test that reading a removed value (i.e. a delete marker)
-     * works correctly.
-     */
-    @Test
-    public void testPutRemoveRead() {
-
-        System.out.println("******PutRemoveRead");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 120000, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-        cache.remove(ts2, repeatableRead, true, theKey);
-
-        assertNull(cache.get(ts3, readCommitted, theKey));
-
-    }
-    
-    /**
-     * Test that reading a removed value works correctly if the 
-     * remove is initially uncommitted.
-     */
-    @Test
-    public void testPutRemoveReadCommit() {
-
-        System.out.println("******PutRemoveReadCommit");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 120000, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-        cache.remove(ts2, repeatableRead, false, theKey);
-
-        Semaphore flag = new Semaphore(0);
-        asynchCommit(flag, ts2, theKey);
-
-        assertNull(cache.get(ts3, readUncommitted, theKey));
-
-        flag.release();
-
-        assertNull(cache.get(ts3, readCommitted, theKey));
-
-    }
-
-    /**
-     * Test reading a value that is removed, then the remove is rolled back.
-     */
-    @Test
-    public void testPutRemoveReadRollback() {
-
-        System.out.println("******PutRemoveRead");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 120000, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(ts1, repeatableRead, true, theKey, theValue));
-        cache.remove(ts2, repeatableRead, false, theKey);
-
-        asynchRollback(ts2, theKey);
-
-        assertEquals(theValue, cache.get(ts3, readCommitted, theKey));
-
-    }
-
-    /**
-     * Test reading a value that is inserted, then the insert rolled back.
-     */
-    @Test
-    public void testInsertRollbackRead() {
-
-        System.out.println("******InsertRollbackRead");
-
-        final TransactionId ts = new TransactionId(BASETIME, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(ts, repeatableRead, false, theKey, theValue));
-
-        asynchRollback(ts, theKey);
-
-        TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        assertNull(cache.get(ts2, repeatableRead, theKey));
-
-    }
-
-    /**
-     * Test that inserting a value with a timestamp earlier than a read version
-     * fails.
-     */
-    @Test(expected = PortableException.class)
-    public void testPutEarlierPut() {
-
-        System.out.println("******PutEarlierPut");
-
-        final TransactionId tslater = new TransactionId(BASETIME + 60000, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        assertNull(cache.put(tslater, repeatableRead, true, theKey, theValue));
-
-        TransactionId tsearlier = new TransactionId(BASETIME, 0, 0);
-        SampleDomainObject earliervalue = new SampleDomainObject(77, "seventy-seven");
-        cache.put(tsearlier, repeatableRead, true, theKey, earliervalue);
-    }
-
-    /**
-     * Test that inserting a value earlier than an existing value succeeds when
-     * the later value has not been read.
-     */
-    @Test
-    public void testInsertEarlierPut() {
-
-        System.out.println("******InsertEarlierPut");
-
-        final TransactionId tslater = new TransactionId(BASETIME + 60000, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        cache.insert(tslater, true, theKey, theValue);
-
-        TransactionId tsearlier = new TransactionId(BASETIME, 0, 0);
-        SampleDomainObject earliervalue = new SampleDomainObject(77, "seventy-seven");
-        assertNull(cache.put(tsearlier, repeatableRead, true, theKey, earliervalue));
-    }
-
-    /**
-     * Test execution of an EntryProcessor.
-     */
-    @Test
-    public void testInvoke() {
-
-        System.out.println("******Invoke");
-
-        final TransactionId ts = new TransactionId(BASETIME, 0, 0);
-        Integer theKey = 99;
-        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
-
-        cache.insert(ts, true, theKey, theValue);
-
-        EntryProcessor ep = new ExtractorProcessor(new PofExtractor(null, SampleDomainObject.POF_INTV));
-
-        final TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
-        assertEquals(88, cache.invoke(ts2, repeatableRead, true, theKey, ep));
-
-    }
+public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCacheTest {
 
     /**
      * Test that the size() method returns the correct value for
@@ -299,14 +46,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testSize() {
 
         System.out.println("******Size");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-        final TransactionId ts4 = new TransactionId(BASETIME + 3, 0, 0);
-        final TransactionId ts5 = new TransactionId(BASETIME + 4, 0, 0);
-        final TransactionId ts6 = new TransactionId(BASETIME + 5, 0, 0);
-        final TransactionId ts7 = new TransactionId(BASETIME + 6, 0, 0);
 
         SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val4 = new SampleDomainObject(88, "eighty-eight");
@@ -351,9 +90,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testEntrySet() {
         System.out.println("******EntrySet");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
@@ -385,10 +121,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testEntrySetAll() {
         System.out.println("******EntrySetAll");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
@@ -418,10 +150,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testEntrySetWithUncommitted() {
         System.out.println("******EntrySet");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
@@ -470,9 +198,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testKeySet() {
         System.out.println("******KeySet");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
@@ -504,10 +229,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testKeySetAll() {
         System.out.println("******KeySetAll");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
@@ -536,9 +257,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testInvokeAllFilter() {
         System.out.println("******InvokeAll(Filter)");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
@@ -578,9 +296,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testInvokeAllKeys() {
         System.out.println("******InvokeAll(Keys)");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
@@ -625,9 +340,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testGetAll() {
         System.out.println("******GetAll");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
 
@@ -664,15 +376,12 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
 
         System.out.println("******PutAll");
 
-        final TransactionId ts = new TransactionId(BASETIME, 0, 0);
         Map<Integer, SampleDomainObject> valueMap = new HashMap<Integer, SampleDomainObject>();
         for (Integer theKey = 0; theKey < 10; theKey++) {
             valueMap.put(theKey, new SampleDomainObject(theKey, "eighty-eight"));
         }
 
-        cache.putAll(ts, true, valueMap);
-
-        TransactionId ts2 = new TransactionId(BASETIME + 60000, 0, 0);
+        cache.putAll(ts1, true, valueMap);
 
         assertEquals(10, cache.size(ts2, readCommitted));
 
@@ -689,11 +398,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
 
         System.out.println("******Clear");
 
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-        final TransactionId ts4 = new TransactionId(BASETIME + 3, 0, 0);
-        final TransactionId ts5 = new TransactionId(BASETIME + 4, 0, 0);
         SampleDomainObject firstTranche = new SampleDomainObject(1, "first tranche");
         SampleDomainObject secondTranche = new SampleDomainObject(2, "second tranche");
         Map<Integer, SampleDomainObject> expected = new HashMap<Integer, SampleDomainObject>();
@@ -718,10 +422,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testValues() {
         System.out.println("******Values");
-
-        final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val2 = new SampleDomainObject(77, "seventy-seven");
@@ -755,9 +455,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
 
         System.out.println("******AggregateFilter");
 
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
-
         SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val4 = new SampleDomainObject(77, "seventy-seven");
 
@@ -781,9 +478,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
     public void testAggregateKeys() {
 
         System.out.println("******AggregateKeys");
-
-        final TransactionId ts2 = new TransactionId(BASETIME + 1, 0, 0);
-        final TransactionId ts3 = new TransactionId(BASETIME + 2, 0, 0);
 
         SampleDomainObject val2 = new SampleDomainObject(88, "eighty-eight");
         SampleDomainObject val4 = new SampleDomainObject(77, "seventy-seven");
@@ -820,72 +514,6 @@ public class MVCCTransactionalCacheImplTest extends AbstractLittlegridTest {
         assertEquals(Long.valueOf(88 + 77 + 77 + 77), 
                 cache.aggregate(ts3, repeatableRead,
                         keys, new LongSum(new PofExtractor(null, SampleDomainObject.POF_INTV))));
-    }
-
-    /**
-     * Utility method to spawn a thread that later commits a value.
-     * @param ts timestamp 
-     * @param key key
-     */
-    private void asynchCommit(final TransactionId ts, final Integer key) {
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
-                NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
-                vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
-            }
-        }).start();
-    }
-
-    /**
-     * Utility method to spawn a thread that later commits a value.
-     * @param flag semaphore to release after the commit
-     * @param ts timestamp 
-     * @param key key
-     */
-    private void asynchCommit(final Semaphore flag, final TransactionId ts, final Integer key) {
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    flag.acquire();
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
-                NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
-                vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryCommitProcessor());
-            }
-        }).start();
-    }
-
-    /**
-     * Utility method to spawn a thread that later rolls back a value.
-     * @param ts timestamp 
-     * @param key key
-     */
-    private void asynchRollback(final TransactionId ts, final Integer key) {
-        Thread rbThread = new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
-                NamedCache vcache = CacheFactory.getCache(cache.getMVCCCacheName().getVersionCacheName());
-                vcache.invoke(new VersionedKey<Integer>(key, ts), new EntryRollbackProcessor());
-            }
-        });
-
-        rbThread.start();
     }
 
 

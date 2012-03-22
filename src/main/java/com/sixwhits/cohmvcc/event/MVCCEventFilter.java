@@ -1,7 +1,6 @@
 package com.sixwhits.cohmvcc.event;
 
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readUncommitted;
-import static com.sixwhits.cohmvcc.domain.TransactionId.END_OF_TIME;
 
 import java.util.Map.Entry;
 
@@ -12,13 +11,19 @@ import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.index.MVCCIndex;
 import com.sixwhits.cohmvcc.index.MVCCIndex.IndexEntry;
-import com.sixwhits.cohmvcc.invocable.ReadOnlyEntryWrapper;
+import com.tangosol.io.Serializer;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
+import com.tangosol.net.BackingMapContext;
+import com.tangosol.net.CacheFactory;
+import com.tangosol.net.DistributedCacheService;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.Filter;
+import com.tangosol.util.MapEvent;
+import com.tangosol.util.MapEventTransformer;
+import com.tangosol.util.ObservableMap;
 import com.tangosol.util.filter.EntryFilter;
 
 /**
@@ -31,21 +36,39 @@ import com.tangosol.util.filter.EntryFilter;
  * @param <K> The key type of the logical cache
  */
 @Portable
-public class MVCCEventFilter<K> implements EntryFilter {
+public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
 
-    public static final int POF_ISOLATION = 0;
-    @PortableProperty(POF_ISOLATION)
-    private IsolationLevel isolationLevel;
-    public static final int POF_FILTER = 1;
-    @PortableProperty(POF_FILTER)
-    private Filter delegate;
-    private static final int POF_CACHENAME = 2;
-    @PortableProperty(POF_CACHENAME)
-    private CacheName cacheName;
+    @PortableProperty(0) private IsolationLevel isolationLevel;
+    @PortableProperty(1) private Filter delegate;
+    @PortableProperty(2) private CacheName cacheName;
+    @PortableProperty(3) private MapEventTransformer transformer;
     
+    /**
+     *  Default constructor for POF use only.
+     */
+    public MVCCEventFilter() {
+        super();
+    }
+
+    /**
+     * Constructor.
+     * @param isolationLevel isolation level
+     * @param delegate filter to delegate evaluation to
+     * @param cacheName the cache name
+     * @param transformer event transformer to delegate to
+     */
+    public MVCCEventFilter(final IsolationLevel isolationLevel, final Filter delegate,
+            final CacheName cacheName, final MapEventTransformer transformer) {
+        super();
+        this.isolationLevel = isolationLevel;
+        this.delegate = delegate;
+        this.cacheName = cacheName;
+        this.transformer = transformer;
+    }
+
     @Override
     public boolean evaluate(final Object obj) {
-        throw new UnsupportedOperationException("only supports binary entries");
+        return true;
     }
 
     @Override
@@ -53,9 +76,7 @@ public class MVCCEventFilter<K> implements EntryFilter {
 
         BinaryEntry entry = (BinaryEntry) arg;
 
-        BinaryEntry wrappedEntry = new ReadOnlyEntryWrapper(entry, END_OF_TIME, isolationLevel, cacheName);
-
-        boolean currentVersionMatch = match(wrappedEntry);
+        boolean currentVersionMatch = match(entry);
 
         if (currentVersionMatch) {
             return true;
@@ -68,7 +89,7 @@ public class MVCCEventFilter<K> implements EntryFilter {
 
         Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(
                 currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
-        while (ixe != null && (isolationLevel != readUncommitted || ixe.getValue().isCommitted())) {
+        while (ixe != null && !(isolationLevel == readUncommitted || ixe.getValue().isCommitted())) {
             ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
         }
 
@@ -78,7 +99,7 @@ public class MVCCEventFilter<K> implements EntryFilter {
 
             @SuppressWarnings("unchecked")
             VersionedKey<K> priorKey = (VersionedKey<K>) ExternalizableHelper.fromBinary(
-                    priorBinaryValue, entry.getSerializer());
+                    priorBinaryKey, entry.getSerializer());
             Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getNativeKey());
 
             @SuppressWarnings("rawtypes")
@@ -103,6 +124,31 @@ public class MVCCEventFilter<K> implements EntryFilter {
             return ((EntryFilter) delegate).evaluateEntry(entry);
         } else {
             return delegate.evaluate(entry.getValue());
+        }
+    }
+
+    @Override
+    public MapEvent transform(final MapEvent mapevent) {
+        
+        DistributedCacheService cacheService = (DistributedCacheService) CacheFactory.getCache(
+                cacheName.getVersionCacheName()).getCacheService();
+        
+        Serializer serializer = cacheService.getSerializer();
+        
+        BackingMapContext bmc = cacheService.getBackingMapManager().getContext().
+                getBackingMapContext(cacheName.getVersionCacheName());
+        ObservableMap map = bmc.getBackingMap();
+        
+        Binary binaryKey = (Binary) bmc.getManagerContext().getKeyToInternalConverter().convert(mapevent.getKey());
+        Binary binaryValue = (Binary) map.get(binaryKey);
+        
+        @SuppressWarnings("rawtypes")
+        SyntheticBinaryEntry entry = new SyntheticBinaryEntry(binaryKey, binaryValue, serializer, bmc);
+        
+        if (evaluateEntry(entry)) {
+            return transformer.transform(mapevent);
+        } else {
+            return null;
         }
     }
 }

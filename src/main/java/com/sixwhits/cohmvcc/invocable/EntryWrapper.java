@@ -12,6 +12,7 @@ import com.tangosol.util.BinaryEntry;
 public interface EntryWrapper extends BinaryEntry {
 
     /**
+     * Has this entry been marked for removal by the {@code EntryProcessor}?
      * @return true if after processing, this entry is to be removed
      */
     boolean isRemove();
