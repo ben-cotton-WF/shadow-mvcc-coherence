@@ -47,7 +47,6 @@ import com.tangosol.util.processor.ConditionalPut;
  */
 public class TransactionCacheImpl implements TransactionCache {
 
-    public static final String CACHENAME = "mvcc-transaction";
     private final String invocationServiceName;
     private static final Filter NOTPRESENT = new NotFilter(PresentFilter.INSTANCE);
     

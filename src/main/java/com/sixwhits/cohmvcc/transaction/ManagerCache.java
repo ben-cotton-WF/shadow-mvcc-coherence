@@ -10,6 +10,9 @@ package com.sixwhits.cohmvcc.transaction;
  *
  */
 public interface ManagerCache {
+
+    String MGRCACHENAME = "mvcc-transaction-manager";
+
     /**
      * @return a new, unique transaction manager id
      */

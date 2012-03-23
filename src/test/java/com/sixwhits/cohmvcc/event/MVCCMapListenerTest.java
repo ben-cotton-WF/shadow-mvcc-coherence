@@ -14,12 +14,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.cache.internal.UnconditionalRemoveProcessor;

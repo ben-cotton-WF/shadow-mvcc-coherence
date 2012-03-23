@@ -8,6 +8,15 @@ import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.tangosol.net.CacheFactory;
 
+/**
+ * Base class for unit tests using littlegrid. Responsible for setup and teardown
+ * of the cluster, and ensuring required system properties are set.
+ * 
+ * Provides some useful constants
+ * 
+ * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+ *
+ */
 public class AbstractLittlegridTest {
 
     private ClusterMemberGroup cmg;
@@ -21,10 +30,6 @@ public class AbstractLittlegridTest {
     public static void setSystemProperties() {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
-    }
-
-    public AbstractLittlegridTest() {
-        super();
     }
 
     /**

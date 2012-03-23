@@ -14,7 +14,6 @@ import com.tangosol.net.NamedCache;
 public class ManagerCacheImpl implements ManagerCache {
 
     private static final String IDCACHENAME = "mvcc-transaction-manager-id";
-    private static final String MGRCACHENAME = "mvcc-transaction-manager";
     private static final int KEY = 0;
 
     @Override

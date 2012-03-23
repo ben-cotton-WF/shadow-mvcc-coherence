@@ -16,6 +16,7 @@ import com.tangosol.util.Filter;
  */
 public interface TransactionCache {
 
+    String CACHENAME = "mvcc-transaction";
     /**
      * Store an open transaction event. Must be called before any other cache updates for this transactionId
      *
