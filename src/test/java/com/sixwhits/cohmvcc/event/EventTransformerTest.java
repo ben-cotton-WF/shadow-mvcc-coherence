@@ -14,12 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.cache.internal.UnconditionalRemoveProcessor;
@@ -29,6 +25,7 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
 import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.InvocableMap.EntryProcessor;
@@ -44,32 +41,18 @@ import com.tangosol.util.processor.ConditionalPut;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class EventTransformerTest {
+public class EventTransformerTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final CacheName CACHENAME = new CacheName("testcache");
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache versionCache;
     private NamedCache keyCache;
     private final BlockingQueue<MapEvent> events = new ArrayBlockingQueue<MapEvent>(100);
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("tangosol.pof.enabled", "true");
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-    }
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(1).buildAndConfigureForStorageDisabledClient();
-
         versionCache = CacheFactory.getCache(CACHENAME.getVersionCacheName());
         versionCache.addIndex(new MVCCExtractor(), false, null);
         keyCache = CacheFactory.getCache(CACHENAME.getKeyCacheName());
@@ -106,15 +89,6 @@ public class EventTransformerTest {
                 new MapEventTransformerFilter(AlwaysFilter.INSTANCE,
                         new MVCCEventTransformer<Integer, String>(isolationLevel, tsevent, CACHENAME)), false);
 
-    }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
     }
 
     /**

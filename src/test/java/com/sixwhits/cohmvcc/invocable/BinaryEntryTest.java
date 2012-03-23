@@ -2,16 +2,13 @@ package com.sixwhits.cohmvcc.invocable;
 
 import java.util.Map;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 
@@ -21,31 +18,16 @@ import com.tangosol.net.NamedCache;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class BinaryEntryTest {
+public class BinaryEntryTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final String TESTCACHENAME = "testcache";
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache testCache;
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("tangosol.pof.enabled", "true");
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-    }
-
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(1).buildAndConfigureForStorageDisabledClient();
-
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
     }
@@ -62,16 +44,6 @@ public class BinaryEntryTest {
         testCache.invoke(vkey, new DummyBinaryProcessor());
 
     }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
-    }
-
 
     /**
      * Put a test value in the cache.

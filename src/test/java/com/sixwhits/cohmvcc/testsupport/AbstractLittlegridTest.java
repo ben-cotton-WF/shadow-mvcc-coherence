@@ -6,8 +6,6 @@ import org.junit.BeforeClass;
 import org.littlegrid.ClusterMemberGroup;
 import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
-import com.tangosol.net.CacheFactory;
-
 /**
  * Base class for unit tests using littlegrid. Responsible for setup and teardown
  * of the cluster, and ensuring required system properties are set.
@@ -30,6 +28,9 @@ public class AbstractLittlegridTest {
     public static void setSystemProperties() {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
+        System.setProperty("littlegrid.join.timeout.milliseconds", "100");
+        System.setProperty("tangosol.coherence.cachefactorybuilder",
+                "com.sixwhits.cohmvcc.monitor.CacheFactoryBuilder");
     }
 
     /**
@@ -41,6 +42,14 @@ public class AbstractLittlegridTest {
         DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
         cmg = builder.setStorageEnabledCount(2).buildAndConfigureForStorageDisabledClient();
     }
+    
+    /**
+     * Get the ClusterMemberGroup.
+     * @return the ClusterMemberGroup
+     */
+    protected ClusterMemberGroup getClusterMemberGroup() {
+        return cmg;
+    }
 
     /**
      * shutdown the cluster.
@@ -48,8 +57,8 @@ public class AbstractLittlegridTest {
     @After
     public void tearDown() {
         System.out.println("******tearDown");
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
+//        CacheFactory.shutdown();
+        cmg.stopAll();
     }
 
 }

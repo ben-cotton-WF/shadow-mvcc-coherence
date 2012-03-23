@@ -37,6 +37,7 @@ public class IntegrationTest extends AbstractLittlegridTest {
                 timestampSource, false, false, readCommitted);
         
     }
+    
     /**
      * Get the cache and run a couple of transactions.
      */
@@ -56,6 +57,28 @@ public class IntegrationTest extends AbstractLittlegridTest {
         CacheName cacheName = new CacheName(cache.getCacheName()); 
         
         Assert.assertEquals(2, CacheFactory.getCache(cacheName.getVersionCacheName()).size());
+    }
+    
+    /**
+     * Test that an uncommitted transaction gets unwound by timeout.
+     * @throws InterruptedException if interrupted
+     */
+    @Test
+    public void testRollbackIncompleteTransaction() throws InterruptedException {
+
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache = transactionManager.getCache(cachename.getLogicalName());
+        
+        cache.put(1, "version 1");
+        
+        NamedCache vcache = CacheFactory.getCache(cachename.getVersionCacheName());
+
+        Assert.assertEquals(1, vcache.size());
+
+        Thread.sleep(60000);
+        
+        Assert.assertEquals(0, vcache.size());
+
     }
 
 }

@@ -35,6 +35,12 @@ import com.tangosol.util.processor.ConditionalRemove;
  * committing or rolling back status longer than the completion timeout, then invoke
  * the commit/rollback completion process.
  * 
+ * This thread should never normally terminate, so must be run as a daemon thread.
+ * 
+ * Any activity undertaken by this class may be interrupted when partially completed by a member
+ * failure. The member that is assigned the partitions of the transaction cache should identify and
+ * complete the outstanding transaction cleanup seamlessly
+ * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
@@ -67,6 +73,10 @@ public class MemberTransactionMonitor implements Runnable {
 
     @Override
     public void run() {
+
+        if (!isStorageEnabled()) {
+            return;
+        }
         
         do {
             try {
@@ -81,6 +91,20 @@ public class MemberTransactionMonitor implements Runnable {
         
     }
     
+    /**
+     * Check if local storage is enabled for the transaction cache.
+     * @return true if storage is enabled
+     */
+    private boolean isStorageEnabled() {
+        
+        NamedCache transactionCache = CacheFactory.getCache(TransactionCache.CACHENAME);
+        
+        DistributedCacheService cacheService = (DistributedCacheService) transactionCache.getCacheService();
+        
+        return cacheService.isLocalStorageEnabled();
+        
+    }
+
     /**
      * Check all of the transactions in partitions of the transaction cache owned by this member.
      * Any that have been open too long are set to rollback, these together with any that have been

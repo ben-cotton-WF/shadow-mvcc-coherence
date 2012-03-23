@@ -336,10 +336,12 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         // TODO run in parallel
         for (Member member : (Set<Member>) service.getOwnershipEnabledMembers()) {
             Map<K, V> valueMap = memberValueMap.get(member.getId());
-            EntryProcessor putProcessor = new PutAllProcessor<K, V>(valueMap);
-            EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, Object>(
-                    tid, putProcessor, readProhibited, autoCommit, cacheName);
-            invokeAllUntilCommitted(valueMap.keySet(), tid, wrappedProcessor);
+            if (valueMap != null) {
+                EntryProcessor putProcessor = new PutAllProcessor<K, V>(valueMap);
+                EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, Object>(
+                        tid, putProcessor, readProhibited, autoCommit, cacheName);
+                invokeAllUntilCommitted(valueMap.keySet(), tid, wrappedProcessor);
+            }
         }
 
     }

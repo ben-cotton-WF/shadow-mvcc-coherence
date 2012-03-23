@@ -7,16 +7,12 @@ import static junit.framework.Assert.assertTrue;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.tangosol.net.CacheFactory;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
@@ -28,31 +24,16 @@ import com.tangosol.util.filter.EqualsFilter;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MVCCTransactionalCacheKillMemberTest {
+public class MVCCTransactionalCacheKillMemberTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final String TESTCACHEMAME = "testcache";
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private MVCCTransactionalCacheImpl<Integer, SampleDomainObject> cache;
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-        System.setProperty("tangosol.pof.enabled", "true");
-    }
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        System.out.println("******setUp");
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(4).buildAndConfigureForStorageDisabledClient();
-
         System.out.println("******initialise cache");
         cache = new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
@@ -115,22 +96,9 @@ public class MVCCTransactionalCacheKillMemberTest {
                 } catch (InterruptedException e) {
                     System.out.println("interrupted");
                 }
-                cmg.getClusterMember(memberId).stop();
+                getClusterMemberGroup().getClusterMember(memberId).stop();
             }
         }).start();
     }
-
-    /**
-     * shutdown the cluster.
-     * @throws Exception if interrupted
-     */
-    @After
-    public void tearDown() throws Exception {
-        System.out.println("******tearDown");
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
-        Thread.sleep(500);
-    }
-
 
 }

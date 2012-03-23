@@ -16,6 +16,7 @@ import com.sixwhits.cohmvcc.domain.SampleDomainObject;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.util.extractor.IdentityExtractor;
@@ -27,30 +28,15 @@ import com.tangosol.util.processor.ExtractorProcessor;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class GetTest {
+public class GetTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final String TESTCACHEMAME = "testcache";
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-        System.setProperty("tangosol.pof.enabled", "true");
-    }
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        System.out.println("******setUp");
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(2).buildAndConfigureForStorageDisabledClient();
-
         System.out.println("******initialise cache");
         new MVCCTransactionalCacheImpl<Integer, SampleDomainObject>(TESTCACHEMAME, "InvocationService");
     }
@@ -78,16 +64,5 @@ public class GetTest {
         assertEquals(theValue, result.getResult());
 
     }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        System.out.println("******tearDown");
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
-    }
-
 
 }

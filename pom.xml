@@ -55,7 +55,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.11</version>
         <configuration>
-            <argLine>-Xmx3g -XX:MaxPermSize=1g -Dtangosol.pof.enabled=true</argLine>
+            <argLine>-Xmx3g -XX:MaxPermSize=1g -Dtangosol.pof.enabled=true -Dlittlegrid.join.timeout.milliseconds=100</argLine>
             <forkMode>always</forkMode>
             <runOrder>reversealphabetical</runOrder>
         </configuration>

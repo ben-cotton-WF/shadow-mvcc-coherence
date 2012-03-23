@@ -12,12 +12,8 @@ import junit.framework.Assert;
 
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.DeletedObject;
@@ -29,6 +25,7 @@ import com.sixwhits.cohmvcc.domain.TransactionSetWrapper;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.FutureReadException;
 import com.sixwhits.cohmvcc.index.MVCCExtractor;
+import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.io.pof.PortableException;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
@@ -48,32 +45,17 @@ import com.tangosol.util.processor.ExtractorProcessor;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MVCCEntryProcessorWrapperTest {
+public class MVCCEntryProcessorWrapperTest extends AbstractLittlegridTest {
 
-    private ClusterMemberGroup cmg;
     private static final CacheName CACHENAME = new CacheName("testcache");
-    private static final long BASETIME = 40L * 365L * 24L * 60L * 60L * 1000L;
     private NamedCache versionCache;
     private NamedCache keyCache;
-
-    /**
-     * initialise system properties.
-     */
-    @BeforeClass
-    public static void setSystemProperties() {
-        System.setProperty("tangosol.pof.enabled", "true");
-        System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
-    }
 
     /**
      * create cluster and initialise cache.
      */
     @Before
     public void setUp() {
-        System.setProperty("tangosol.pof.enabled", "true");
-        DefaultClusterMemberGroupBuilder builder = new DefaultClusterMemberGroupBuilder();
-        cmg = builder.setStorageEnabledCount(1).buildAndConfigureForStorageDisabledClient();
-
         versionCache = CacheFactory.getCache(CACHENAME.getVersionCacheName());
         versionCache.addIndex(new MVCCExtractor(), false, null);
         keyCache = CacheFactory.getCache(CACHENAME.getKeyCacheName());
@@ -368,15 +350,4 @@ public class MVCCEntryProcessorWrapperTest {
         }
 
     }
-
-    /**
-     * shutdown the cluster.
-     */
-    @After
-    public void tearDown() {
-        CacheFactory.shutdown();
-        cmg.shutdownAll();
-    }
-
-
 }
