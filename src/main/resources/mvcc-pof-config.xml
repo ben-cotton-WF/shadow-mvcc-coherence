@@ -47,6 +47,10 @@
       <class-name>com.sixwhits.cohmvcc.exception.FutureReadException</class-name>
     </user-type>
     <user-type>
+      <type-id>1010</type-id>
+      <class-name>com.sixwhits.cohmvcc.transaction.internal.CacheRegistration</class-name>
+    </user-type>
+    <user-type>
       <type-id>1011</type-id>
       <class-name>com.sixwhits.cohmvcc.domain.TransactionSetWrapper</class-name>
     </user-type>

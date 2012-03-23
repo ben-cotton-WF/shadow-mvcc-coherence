@@ -705,6 +705,8 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
         Map<K, R> resultMap = new HashMap<K, R>();
 
+        // TODO would it be more efficient to use invocation service for this?
+        
         for (Map.Entry<K, ProcessorResult<K, R>> entry
                 : ((Map<K, ProcessorResult<K, R>>) keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
             if (entry.getValue().isUncommitted()) {

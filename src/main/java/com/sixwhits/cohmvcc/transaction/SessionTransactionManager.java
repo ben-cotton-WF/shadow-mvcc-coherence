@@ -7,7 +7,7 @@ import com.sixwhits.cohmvcc.cache.internal.MVCCTransactionalCacheImpl;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.transaction.internal.AutoCommitTransaction;
-import com.sixwhits.cohmvcc.transaction.internal.ManagerIdSourceImpl;
+import com.sixwhits.cohmvcc.transaction.internal.ManagerCacheImpl;
 import com.sixwhits.cohmvcc.transaction.internal.ReadOnlyTransaction;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionActualScope;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
@@ -74,8 +74,8 @@ public class SessionTransactionManager implements TransactionManager,
      * unit testing or alternate implementations.
      * @return the managerIdSource.
      */
-    protected ManagerIdSource getManagerIdSource() {
-        return new ManagerIdSourceImpl();
+    protected ManagerCache getManagerIdSource() {
+        return new ManagerCacheImpl();
     }
     
     /**
@@ -107,6 +107,7 @@ public class SessionTransactionManager implements TransactionManager,
     @SuppressWarnings("rawtypes")
     @Override
     public MVCCNamedCache getCache(final String cacheName) {
+        getManagerIdSource().registerCache(managerId, cacheName);
         return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
 

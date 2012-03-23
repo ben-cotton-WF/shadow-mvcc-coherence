@@ -6,7 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
-import com.sixwhits.cohmvcc.transaction.ManagerIdSource;
+import com.sixwhits.cohmvcc.transaction.ManagerCache;
 
 /**
  * Test unique generation of transaction manager ids.
@@ -16,7 +16,7 @@ import com.sixwhits.cohmvcc.transaction.ManagerIdSource;
  */
 public class ManagerIdSourceImplTest extends AbstractLittlegridTest {
     
-    private ManagerIdSource managerIdSource;
+    private ManagerCache managerIdSource;
 
     /**
      * Create the id.
@@ -26,7 +26,7 @@ public class ManagerIdSourceImplTest extends AbstractLittlegridTest {
     @Before
     public void setUp() {
         
-        managerIdSource = new ManagerIdSourceImpl();
+        managerIdSource = new ManagerCacheImpl();
     }
 
     /**
