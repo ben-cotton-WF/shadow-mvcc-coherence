@@ -29,8 +29,6 @@ public class AbstractLittlegridTest {
         System.setProperty("pof-config-file", "mvcc-pof-config-test.xml");
         System.setProperty("tangosol.pof.enabled", "true");
         System.setProperty("littlegrid.join.timeout.milliseconds", "100");
-        System.setProperty("tangosol.coherence.cachefactorybuilder",
-                "com.sixwhits.cohmvcc.monitor.CacheFactoryBuilder");
     }
 
     /**

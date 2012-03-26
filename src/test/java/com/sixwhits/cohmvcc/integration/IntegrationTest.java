@@ -4,6 +4,7 @@ import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import junit.framework.Assert;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
@@ -14,6 +15,11 @@ import com.sixwhits.cohmvcc.transaction.TimestampSource;
 import com.sixwhits.cohmvcc.transaction.TransactionManager;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.Filter;
+import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.extractor.IdentityExtractor;
+import com.tangosol.util.filter.EqualsFilter;
+import com.tangosol.util.processor.ConditionalPut;
 
 /**
  * Simple integration test to pull all the components together.
@@ -25,6 +31,15 @@ public class IntegrationTest extends AbstractLittlegridTest {
     
     private TransactionManager transactionManager;
     
+    /**
+     * initialise system properties.
+     */
+    @BeforeClass
+    public static void setMonitorProperties() {
+        System.setProperty("sixwhits.cohmvcc.opentransactiontimeout", "1000");
+        System.setProperty("sixwhits.cohmvcc.transactioncompletiontimeout", "1000");
+        System.setProperty("sixwhits.cohmvcc.pollinterval", "100");
+    }
     /**
      * Set up the tm.
      */
@@ -75,10 +90,39 @@ public class IntegrationTest extends AbstractLittlegridTest {
 
         Assert.assertEquals(1, vcache.size());
 
-        Thread.sleep(60000);
+        Thread.sleep(1500);
         
         Assert.assertEquals(0, vcache.size());
 
+    }
+    
+    /**
+     * Finding the entries to rollback based on a filter may break if the
+     * update causes the row to no longer match the filter.
+     * @throws InterruptedException if interrupted
+     */
+    @Test
+    public void testUpdateCausesFilterToNoLongerMatch() throws InterruptedException {
+        
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache = transactionManager.getCache(cachename.getLogicalName());
+        
+        cache.put(1, "A");
+        
+        transactionManager.getTransaction().commit();
+        
+        Filter afilter = new EqualsFilter(IdentityExtractor.INSTANCE, "A");
+        EntryProcessor putb = new ConditionalPut(afilter, "B");
+        cache.invokeAll(afilter, putb);
+        
+        NamedCache vcache = CacheFactory.getCache(cachename.getVersionCacheName());
+
+        Assert.assertEquals(2, vcache.size());
+
+        transactionManager.getTransaction().rollback();
+        
+        // only the original version
+        Assert.assertEquals(1, vcache.size());
     }
 
 }

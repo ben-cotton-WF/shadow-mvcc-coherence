@@ -3,7 +3,10 @@ package com.sixwhits.cohmvcc.monitor;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
+import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.Constants;
 import com.sixwhits.cohmvcc.domain.TransactionCacheValue;
 import com.sixwhits.cohmvcc.domain.TransactionId;
@@ -14,10 +17,12 @@ import com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionStateUpdater;
 import com.tangosol.net.CacheFactory;
+import com.tangosol.net.Cluster;
 import com.tangosol.net.DistributedCacheService;
 import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.partition.PartitionSet;
+import com.tangosol.util.Disposable;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
@@ -41,14 +46,30 @@ import com.tangosol.util.processor.ConditionalRemove;
  * failure. The member that is assigned the partitions of the transaction cache should identify and
  * complete the outstanding transaction cleanup seamlessly
  * 
+ * TODO graceful shutdown of this thread if the node is stopped or shutdown.
+ * At the moment you can get spurious exceptions
+ * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MemberTransactionMonitor implements Runnable {
+public class MemberTransactionMonitor implements Runnable, Disposable {
 
     private final int openTransactionTimeoutMillis;
     private final int transactionCompletionTimeoutMillis;
     private final int pollInterval;
+    private final Semaphore shutdownFlag = new Semaphore(0);
+    /**
+     * Default maximum time between beginning a transaction and commit or rollback.
+     */
+    public static final int DEFAULT_OPEN_TRANSACTION_TIMEOUT_MILLIS = 60000;
+    /**
+     * Default maximum time from starting a commit or rollback before the monitor takes over to force completion.
+     */
+    public static final int DEFAULT_TRANSACTION_COMPLETION_TIMEOUT_MILLIS = 10000;
+    /**
+     * Default interval between polls of the transaction cache.
+     */
+    public static final int DEFAULT_POLL_INTERVAL_MILLIS = 5000;
 
     private static final PofExtractor TIMEEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_REALTIME);
     private static final PofExtractor STATUSEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_STATUS);
@@ -58,7 +79,7 @@ public class MemberTransactionMonitor implements Runnable {
     private static final EntryProcessor REMOVEPROCESSOR = new ConditionalRemove(AlwaysFilter.INSTANCE, false);
     
     /**
-     * Constructor.
+     * Constructor using user provided timeout values.
      * @param openTransactionTimeoutMillis timeout before an open transaction is rolled back
      * @param transactionCompletionTimeoutMillis timeout before a committing or rolling back transaction is completed
      * @param pollInterval how often to poll the transaction cache
@@ -70,6 +91,16 @@ public class MemberTransactionMonitor implements Runnable {
         this.transactionCompletionTimeoutMillis = transactionCompletionTimeoutMillis;
         this.pollInterval = pollInterval;
     }
+    
+    /**
+     * Default constructor using the default timeout values. 
+     */
+    public MemberTransactionMonitor() {
+        super();
+        this.openTransactionTimeoutMillis = DEFAULT_OPEN_TRANSACTION_TIMEOUT_MILLIS;
+        this.transactionCompletionTimeoutMillis = DEFAULT_TRANSACTION_COMPLETION_TIMEOUT_MILLIS;
+        this.pollInterval = DEFAULT_POLL_INTERVAL_MILLIS;
+    }
 
     @Override
     public void run() {
@@ -78,9 +109,14 @@ public class MemberTransactionMonitor implements Runnable {
             return;
         }
         
+        Cluster cluster = CacheFactory.getCluster();
+        cluster.registerResource("memberTransactionMonitor:" + cluster.getLocalMember().getId(), this);
+        
         do {
             try {
-                Thread.sleep(pollInterval);
+                if (shutdownFlag.tryAcquire(pollInterval, TimeUnit.MILLISECONDS)) {
+                    return;
+                }
             } catch (InterruptedException e) {
             }
             
@@ -146,22 +182,26 @@ public class MemberTransactionMonitor implements Runnable {
         @SuppressWarnings("unchecked")
         Set<TransactionId> expiredCommits = transactionCache.keySet(commitPartionFilter);
 
-        for (String cacheName : getCachesForTransactions(expiredCommits)) {
-            NamedCache cache = CacheFactory.getCache(cacheName);
-            Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredCommits);
-            cache.invokeAll(inTransactionsFilter, EntryCommitProcessor.INSTANCE);
+        if (!expiredCommits.isEmpty()) {
+            for (String cacheName : getCachesForTransactions(expiredCommits)) {
+                NamedCache cache = CacheFactory.getCache(cacheName);
+                Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredCommits);
+                cache.invokeAll(inTransactionsFilter, EntryCommitProcessor.INSTANCE);
+            }
+
+            //TODO consider any failure conditions that we should deal with before doing this?
+            transactionCache.invokeAll(expiredCommits, REMOVEPROCESSOR);
         }
         
-        //TODO consider any failure conditions that we should deal with before doing this?
-        transactionCache.invokeAll(expiredCommits, REMOVEPROCESSOR);
-        
-        for (String cacheName : getCachesForTransactions(expiredRollBacks)) {
-            NamedCache cache = CacheFactory.getCache(cacheName);
-            Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredRollBacks);
-            cache.invokeAll(inTransactionsFilter, EntryRollbackProcessor.INSTANCE);
+        if (!expiredRollBacks.isEmpty()) {
+            for (String cacheName : getCachesForTransactions(expiredRollBacks)) {
+                NamedCache cache = CacheFactory.getCache(new CacheName(cacheName).getVersionCacheName());
+                Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredRollBacks);
+                cache.invokeAll(inTransactionsFilter, EntryRollbackProcessor.INSTANCE);
+            }
+
+            transactionCache.invokeAll(expiredRollBacks, REMOVEPROCESSOR);
         }
-        
-        transactionCache.invokeAll(expiredRollBacks, REMOVEPROCESSOR);
     }
     
     /**
@@ -190,6 +230,11 @@ public class MemberTransactionMonitor implements Runnable {
         
         return result;
         
+    }
+    
+    @Override
+    public void dispose() {
+        shutdownFlag.release();
     }
 
 }

@@ -10,5 +10,23 @@
       <join-timeout-milliseconds>300</join-timeout-milliseconds>
     </multicast-listener>
   </cluster-config>
+  
+  <cache-factory-builder-config>
+    <class-name system-property="tangosol.coherence.cachefactorybuilder">com.sixwhits.cohmvcc.monitor.CacheFactoryBuilder</class-name>
+    <init-params>
+      <init-param>
+        <param-type>int</param-type>
+        <param-value system-property="sixwhits.cohmvcc.opentransactiontimeout">60000</param-value>
+      </init-param>
+      <init-param>
+        <param-type>int</param-type>
+        <param-value system-property="sixwhits.cohmvcc.transactioncompletiontimeout">10000</param-value>
+      </init-param>
+      <init-param>
+        <param-type>int</param-type>
+        <param-value system-property="sixwhits.cohmvcc.pollinterval">5000</param-value>
+      </init-param>
+    </init-params>
+  </cache-factory-builder-config>
 
 </coherence>

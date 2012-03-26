@@ -85,7 +85,7 @@ public class TransactionCacheImpl implements TransactionCache {
     }
     
     @Override
-    public TransactionActualScope beginTransaction(final TransactionId transactionId,
+    public void beginTransaction(final TransactionId transactionId,
             final IsolationLevel isolationLevel) {
         
         NamedCache transactionCache = getCache(CACHENAME);
@@ -96,8 +96,6 @@ public class TransactionCacheImpl implements TransactionCache {
         if (transactionCache.invoke(transactionId, new ConditionalPut(NOTPRESENT, openTransaction, true)) != null) {
             throw new TransactionException("Transaction already exists: " + transactionId);
         }
-        //TODO this is just echoing what was asked for. Implement the checks once windowing is implemented
-        return new TransactionActualScope(isolationLevel, transactionId.getTimeStampMillis(), false);
         
     }
 

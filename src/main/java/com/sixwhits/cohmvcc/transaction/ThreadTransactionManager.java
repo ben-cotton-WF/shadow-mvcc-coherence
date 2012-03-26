@@ -20,7 +20,7 @@ public class ThreadTransactionManager implements TransactionManager {
     private final boolean readOnly;
     private final boolean autoCommit;
     private final IsolationLevel isolationLevel;
-    private ThreadLocal<TransactionManager> transactionManagers = new ThreadLocal<TransactionManager>();
+    private ThreadLocal<SessionTransactionManager> transactionManagers = new ThreadLocal<SessionTransactionManager>();
 
     /**
      * @param timestampSource source of timestamps
@@ -51,7 +51,7 @@ public class ThreadTransactionManager implements TransactionManager {
     /**
      * @return the session transaction manager instance for the current thread.
      */
-    private TransactionManager getThreadTransactionManager() {
+    private SessionTransactionManager getThreadTransactionManager() {
         if (transactionManagers.get() == null) {
             transactionManagers.set(
                     new SessionTransactionManager(timestampSource, readOnly, autoCommit, isolationLevel));
@@ -71,6 +71,7 @@ public class ThreadTransactionManager implements TransactionManager {
     @SuppressWarnings("rawtypes")
     @Override
     public MVCCNamedCache getCache(final String cacheName) {
+        getThreadTransactionManager().registerCache(cacheName);
         return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
 

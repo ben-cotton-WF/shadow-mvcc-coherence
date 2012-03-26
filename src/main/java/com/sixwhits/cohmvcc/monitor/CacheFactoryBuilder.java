@@ -1,8 +1,6 @@
 package com.sixwhits.cohmvcc.monitor;
 
-import com.tangosol.net.ConfigurableCacheFactory;
 import com.tangosol.net.DefaultCacheFactoryBuilder;
-import com.tangosol.run.xml.XmlElement;
 
 /**
  * Cache factory builder that starts a transaction monitor thread
@@ -12,22 +10,48 @@ import com.tangosol.run.xml.XmlElement;
  *
  */
 public class CacheFactoryBuilder extends DefaultCacheFactoryBuilder {
+    
+    private final MemberTransactionMonitor monitor;
+    
+    /**
+     * Constructor. Starts the monitor thread.
+     */
+    public CacheFactoryBuilder() {
+        super();
+        
+        monitor = new MemberTransactionMonitor();
+        startMonitorThread(monitor);
+        
+    }
+    
+    /**
+     * Constructor with configured monitor timeouts.
+     * @param openTransactionTimeoutMillis timeout before an open transaction is rolled back
+     * @param transactionCompletionTimeoutMillis timeout before a committing or rolling back transaction is completed
+     * @param pollInterval how often to poll the transaction cache
+     */
+    public CacheFactoryBuilder(final int openTransactionTimeoutMillis,
+            final int transactionCompletionTimeoutMillis, final int pollInterval) {
+        super();
+        
+        monitor = new MemberTransactionMonitor(
+                openTransactionTimeoutMillis, transactionCompletionTimeoutMillis, pollInterval);
+        startMonitorThread(monitor);
+    }
 
-    @Override
-    protected ConfigurableCacheFactory buildFactory(final XmlElement xmlConfig,
-            final ClassLoader loader) {
+    /**
+     * Start the monitor thread.
+     * @param monitor the monitor object
+     */
+    protected void startMonitorThread(final Runnable monitor) {
         
-        ConfigurableCacheFactory factory = super.buildFactory(xmlConfig, loader);
-        
-        //TODO set configuration options
         Thread memberTransactionMonitorThread = new Thread(
-                new MemberTransactionMonitor(30000, 10000, 5000), "MemberTransactionMonitor");
+                monitor, "MemberTransactionMonitor");
         
         memberTransactionMonitorThread.setDaemon(true);
         
         memberTransactionMonitorThread.start();
         
-        return factory;
     }
 
 }

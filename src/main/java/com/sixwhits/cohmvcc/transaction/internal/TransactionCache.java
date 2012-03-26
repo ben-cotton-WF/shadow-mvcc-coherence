@@ -22,10 +22,9 @@ public interface TransactionCache {
      *
      * @param transactionId the transaction Id being started
      * @param isolationLevel requested isolation level
-     * @return a {@link TransactionActualScope} specifying the isolation level,
      * transaction id, and read only flag permitted
      */
-    TransactionActualScope beginTransaction(TransactionId transactionId, IsolationLevel isolationLevel);
+    void beginTransaction(TransactionId transactionId, IsolationLevel isolationLevel);
 
     /**
      * Commit an open transaction.

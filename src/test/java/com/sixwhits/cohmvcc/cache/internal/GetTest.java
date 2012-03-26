@@ -3,12 +3,8 @@ package com.sixwhits.cohmvcc.cache.internal;
 import static com.sixwhits.cohmvcc.domain.IsolationLevel.readCommitted;
 import static junit.framework.Assert.assertEquals;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.littlegrid.ClusterMemberGroup;
-import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.ProcessorResult;

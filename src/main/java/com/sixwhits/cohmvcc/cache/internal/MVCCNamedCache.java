@@ -264,9 +264,9 @@ public class MVCCNamedCache implements NamedCache {
         Transaction context = transactionManager.getTransaction();
         context.addFilterAffected(mvccCache.getMVCCCacheName(), filter);
         try {
-            return mvccCache.invokeAll(context.getTransactionId(),
+            Map result = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
-            //TODO update context with keys/partitions actually affected
+            return result;
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;

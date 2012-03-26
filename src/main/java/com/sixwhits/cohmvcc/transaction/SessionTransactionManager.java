@@ -9,7 +9,6 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.transaction.internal.AutoCommitTransaction;
 import com.sixwhits.cohmvcc.transaction.internal.ManagerCacheImpl;
 import com.sixwhits.cohmvcc.transaction.internal.ReadOnlyTransaction;
-import com.sixwhits.cohmvcc.transaction.internal.TransactionActualScope;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionCache;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionCacheImpl;
 import com.sixwhits.cohmvcc.transaction.internal.TransactionImpl;
@@ -33,6 +32,7 @@ public class SessionTransactionManager implements TransactionManager,
     private final TimestampSource timestampSource;
     private final int managerId;
     private final TransactionCache transactionCache;
+    private final ManagerCache managerCache;
     private volatile boolean readOnly = false;
     private volatile boolean autoCommit = false;
     private volatile IsolationLevel isolationLevel = readCommitted;
@@ -47,7 +47,8 @@ public class SessionTransactionManager implements TransactionManager,
     public SessionTransactionManager(final TimestampSource timestampSource) {
         super();
         this.timestampSource = timestampSource;
-        this.managerId = getManagerIdSource().getManagerId();
+        this.managerCache = getManagerCache();
+        this.managerId = managerCache.getManagerId();
         this.transactionCache = getTransactionCache();
     }
 
@@ -62,7 +63,8 @@ public class SessionTransactionManager implements TransactionManager,
             final boolean autoCommit, final IsolationLevel isolationLevel) {
         super();
         this.timestampSource = timestampSource;
-        this.managerId = getManagerIdSource().getManagerId();
+        this.managerCache = getManagerCache();
+        this.managerId = managerCache.getManagerId();
         this.transactionCache = getTransactionCache();
         this.readOnly = readOnly;
         this.autoCommit = autoCommit;
@@ -72,9 +74,9 @@ public class SessionTransactionManager implements TransactionManager,
     /**
      * Get the managerIdSource. Protected to allow override for
      * unit testing or alternate implementations.
-     * @return the managerIdSource.
+     * @return the ManagerCache.
      */
-    protected ManagerCache getManagerIdSource() {
+    protected ManagerCache getManagerCache() {
         return new ManagerCacheImpl();
     }
     
@@ -103,28 +105,28 @@ public class SessionTransactionManager implements TransactionManager,
         }
         currentTransaction = null;
     }
+    
+    /**
+     * Register a cache with this transaction manager.
+     * Used to ensure correct transaction completeion if this client
+     * should fail with incomplete transactions.
+     * @param cacheName name of the cache to register
+     */
+    public void registerCache(final String cacheName) {
+        managerCache.registerCache(managerId, cacheName);
+    }
 
     @SuppressWarnings("rawtypes")
     @Override
     public MVCCNamedCache getCache(final String cacheName) {
-        getManagerIdSource().registerCache(managerId, cacheName);
+        registerCache(cacheName);
         return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
 
     @Override
     public synchronized Transaction getTransaction() {
         if (currentTransaction == null) {
-            TransactionId transactionId = getNextId();
-            TransactionActualScope tas = transactionCache.beginTransaction(transactionId, isolationLevel);
-            
-            if (tas.isReadonly()) {
-                if (!this.readOnly) {
-                    throw new TransactionException("Transaction with this timestamp must be read-only");
-                }
-                this.isolationLevel = tas.getIsolationLevel();
-                transactionId = new TransactionId(tas.getTimestamp(), managerId, 0);
-            }
-            
+
             if (autoCommit) {
                 currentTransaction = new AutoCommitTransaction(getNextId(), isolationLevel, this);
             } else if (readOnly) {
