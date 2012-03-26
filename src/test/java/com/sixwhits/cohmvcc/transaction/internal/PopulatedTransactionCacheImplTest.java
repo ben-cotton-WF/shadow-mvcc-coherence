@@ -24,10 +24,7 @@ import com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper;
 import com.sixwhits.cohmvcc.testsupport.AbstractLittlegridTest;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
-import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
-import com.tangosol.util.extractor.IdentityExtractor;
-import com.tangosol.util.filter.EqualsFilter;
 
 /**
  * Test the transaction cache implementation for basic
@@ -87,33 +84,33 @@ public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest {
     /**
      * Commit transaction with filter, no baggage.
      */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testFilterCommit() {
-        
-        transactionCache.beginTransaction(TX, readCommitted);
-        
-        for (int i = 0; i < 10; i++) {
-            put(testCacheName, TX, i, TESTVALUE);
-            assertFalse((Boolean) testCache.invoke(
-                    new VersionedKey<Integer>(i, TX), DecorationExtractorProcessor.COMMITTED_INSTANCE));
-        }
-        Map<CacheName, Set<Filter>> cacheFilterMap = new HashMap<CacheName, Set<Filter>>();
-        
-        Filter filter = new EqualsFilter(IdentityExtractor.INSTANCE, TESTVALUE);
-        cacheFilterMap.put(testCacheName, Collections.singleton(filter));
-        
-        transactionCache.commitTransaction(TX, Collections.EMPTY_MAP, cacheFilterMap);
-        
-        assertEquals(10, testCache.size());
-        
-        for (int i = 0; i < 10; i++) {
-            assertTrue((Boolean) testCache.invoke(
-                    new VersionedKey<Integer>(i, TX), DecorationExtractorProcessor.COMMITTED_INSTANCE));
-        }
-        
-    }
-    
+//    @SuppressWarnings("unchecked")
+//    @Test
+//    public void testFilterCommit() {
+//        
+//        transactionCache.beginTransaction(TX, readCommitted);
+//        
+//        for (int i = 0; i < 10; i++) {
+//            put(testCacheName, TX, i, TESTVALUE);
+//            assertFalse((Boolean) testCache.invoke(
+//                    new VersionedKey<Integer>(i, TX), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+//        }
+//        Map<CacheName, Set<Filter>> cacheFilterMap = new HashMap<CacheName, Set<Filter>>();
+//        
+//        Filter filter = new EqualsFilter(IdentityExtractor.INSTANCE, TESTVALUE);
+//        cacheFilterMap.put(testCacheName, Collections.singleton(filter));
+//        
+//        transactionCache.commitTransaction(TX, Collections.EMPTY_MAP, cacheFilterMap);
+//        
+//        assertEquals(10, testCache.size());
+//        
+//        for (int i = 0; i < 10; i++) {
+//            assertTrue((Boolean) testCache.invoke(
+//                    new VersionedKey<Integer>(i, TX), DecorationExtractorProcessor.COMMITTED_INSTANCE));
+//        }
+//        
+//    }
+//    
     /**
      * Rollback transaction, no baggage.
      */

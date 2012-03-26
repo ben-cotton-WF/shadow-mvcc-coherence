@@ -7,7 +7,7 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.transaction.Transaction;
 import com.sixwhits.cohmvcc.transaction.TransactionNotificationListener;
-import com.tangosol.util.Filter;
+import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Transaction implementation for an autocommit transaction. Most methods are empty stubs as all cache
@@ -64,20 +64,6 @@ public class AutoCommitTransaction implements Transaction {
     }
 
     @Override
-    public int addFilterAffected(final CacheName cacheName, final Filter filter) {
-        return 0;
-    }
-
-    @Override
-    public void filterKeysAffected(final int invocationId, final Collection<?> keys) {
-    }
-
-    @Override
-    public void filterPartitionsAffected(final int invocationId, 
-            final Collection<Integer> keys) {
-    }
-
-    @Override
     public void setRollbackOnly() {
     }
 
@@ -87,6 +73,11 @@ public class AutoCommitTransaction implements Transaction {
 
     @Override
     public void rollback() {
+    }
+
+    @Override
+    public void addPartitionSetAffected(final CacheName cacheName,
+            final PartitionSet partitionSet) {
     }
 
 }

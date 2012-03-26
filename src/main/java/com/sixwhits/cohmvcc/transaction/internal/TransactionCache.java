@@ -6,7 +6,7 @@ import java.util.Set;
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.tangosol.util.Filter;
+import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Cache persistence of transaction state.
@@ -30,18 +30,18 @@ public interface TransactionCache {
      * Commit an open transaction.
      * @param transactionId the transaction Id
      * @param cacheKeyMap map of cache names, and keys in the caches that have been modified
-     * @param cacheFilterMap map of cache names, and filters on the caches that match modified entries
+     * @param cachePartitionMap map of cache names, and partitions on the caches that contain many modified entries
      */
     void commitTransaction(TransactionId transactionId, 
-            Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, Set<Filter>> cacheFilterMap);
+            Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, PartitionSet> cachePartitionMap);
 
     /**
      * Rollback an open transaction.
      * @param transactionId the transaction Id
      * @param cacheKeyMap map of cache names, and keys in the caches that have been modified
-     * @param cacheFilterMap map of cache names, and filters on the caches that match modified entries
+     * @param cachePartitionMap map of cache names, and partitions on the caches that contain many modified entries
      */
     void rollbackTransaction(TransactionId transactionId, 
-            Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, Set<Filter>> cacheFilterMap);
+            Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, PartitionSet> cachePartitionMap);
 
 }

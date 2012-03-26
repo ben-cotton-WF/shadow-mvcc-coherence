@@ -8,12 +8,14 @@ import java.util.Set;
 import com.sixwhits.cohmvcc.cache.MVCCTransactionalCache;
 import com.sixwhits.cohmvcc.transaction.Transaction;
 import com.sixwhits.cohmvcc.transaction.TransactionManager;
+import com.tangosol.coherence.component.util.daemon.queueProcessor.service.grid.partitionedService.PartitionedCache;
+import com.tangosol.net.CacheFactory;
 import com.tangosol.net.CacheService;
 import com.tangosol.net.NamedCache;
+import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Filter;
 import com.tangosol.util.MapListener;
 import com.tangosol.util.ValueExtractor;
-import com.tangosol.util.filter.AlwaysFilter;
 
 /**
  * MVCC implementation of {@link NamedCache}.
@@ -138,13 +140,26 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void clear() {
         Transaction context = transactionManager.getTransaction();
-        context.addFilterAffected(mvccCache.getMVCCCacheName(), AlwaysFilter.INSTANCE);
         try {
             mvccCache.clear(context.getTransactionId(), context.isAutoCommit());
+            context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), getFullPartitionSet());
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;
         }
+    }
+    
+    /**
+     * Get a filled partitionset for this cache.
+     * @return the partition set
+     */
+    private PartitionSet getFullPartitionSet() {
+        PartitionedCache cacheService = 
+                (PartitionedCache) CacheFactory.getCache(
+                        mvccCache.getMVCCCacheName().getVersionCacheName()).getCacheService();
+        PartitionSet partitionSet = new PartitionSet(cacheService.getPartitionCount());
+        partitionSet.fill();
+        return partitionSet;
     }
 
     @SuppressWarnings("rawtypes")
@@ -258,14 +273,14 @@ public class MVCCNamedCache implements NamedCache {
         }
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        context.addFilterAffected(mvccCache.getMVCCCacheName(), filter);
         try {
             Map result = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
+            context.addKeySetAffected(mvccCache.getMVCCCacheName(), result.keySet());
             return result;
         } catch (RuntimeException t) {
             context.setRollbackOnly();

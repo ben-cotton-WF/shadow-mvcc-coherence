@@ -7,7 +7,7 @@ import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.transaction.Transaction;
 import com.sixwhits.cohmvcc.transaction.TransactionNotificationListener;
-import com.tangosol.util.Filter;
+import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Read-only transaction.
@@ -62,22 +62,6 @@ public class ReadOnlyTransaction implements Transaction {
     }
 
     @Override
-    public int addFilterAffected(final CacheName cacheName, final Filter filter) {
-        throw new UnsupportedOperationException("read only transaction");
-    }
-
-    @Override
-    public void filterKeysAffected(final int invocationId, final Collection<?> keys) {
-        throw new UnsupportedOperationException("read only transaction");
-    }
-
-    @Override
-    public void filterPartitionsAffected(final int invocationId, 
-            final Collection<Integer> keys) {
-        throw new UnsupportedOperationException("read only transaction");
-    }
-
-    @Override
     public void setRollbackOnly() {
         throw new UnsupportedOperationException("read only transaction");
     }
@@ -92,4 +76,8 @@ public class ReadOnlyTransaction implements Transaction {
         throw new UnsupportedOperationException("read only transaction");
     }
 
+    @Override
+    public void addPartitionSetAffected(final CacheName cacheName,
+            final PartitionSet partitionSet) {
+    }
 }

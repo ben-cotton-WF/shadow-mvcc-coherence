@@ -17,7 +17,7 @@ import com.sixwhits.cohmvcc.domain.TransactionStatus;
 import com.sixwhits.cohmvcc.transaction.Transaction;
 import com.sixwhits.cohmvcc.transaction.TransactionException;
 import com.sixwhits.cohmvcc.transaction.TransactionNotificationListener;
-import com.tangosol.util.Filter;
+import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Implementation of {@link Transaction}. Stores all open state
@@ -36,8 +36,7 @@ public class TransactionImpl implements Transaction {
     private volatile TransactionStatus transactionStatus = open;
 
     private Map<CacheName, Set<Object>> cacheKeyMap = new HashMap<CacheName, Set<Object>>();
-    // TODO use of filters to identify entries to rollback or commit is completely and irredeemably broken.
-    private Map<CacheName, Set<Filter>> cacheFilterMap = new HashMap<CacheName, Set<Filter>>();
+    private Map<CacheName, PartitionSet> cachePartitionMap = new HashMap<CacheName, PartitionSet>();
 
     /**
      * Constructor.
@@ -95,21 +94,7 @@ public class TransactionImpl implements Transaction {
             if (!cacheKeyMap.containsKey(cacheName)) {
                 cacheKeyMap.put(cacheName, new HashSet<Object>());
             }
-            cacheKeyMap.get(cacheName).add(keys);
-        }
-    }
-
-    /**
-     * Add a filter to the set of affected filters for a cache.
-     * @param cacheName the cache name
-     * @param filter the filter
-     */
-    private void addCacheFilter(final CacheName cacheName, final Filter filter) {
-        synchronized (cacheFilterMap) {
-            if (!cacheFilterMap.containsKey(cacheName)) {
-                cacheFilterMap.put(cacheName, new HashSet<Filter>());
-            }
-            cacheFilterMap.get(cacheName).add(filter);
+            cacheKeyMap.get(cacheName).addAll(keys);
         }
     }
 
@@ -122,24 +107,17 @@ public class TransactionImpl implements Transaction {
     public void addKeySetAffected(final CacheName cacheName, final Collection<Object> keys) {
         addCacheKeys(cacheName, keys);
     }
-
+    
     @Override
-    public int addFilterAffected(final CacheName cacheName, final Filter filter) {
-        addCacheFilter(cacheName, filter);
-        return 0;
-    }
-
-    @Override
-    public void filterKeysAffected(final int invocationId, final Collection<?> keys) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("not yet implemented");
-    }
-
-    @Override
-    public void filterPartitionsAffected(final int invocationId, 
-            final Collection<Integer> keys) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("not yet implemented");
+    public void addPartitionSetAffected(final CacheName cacheName,
+            final PartitionSet addSet) {
+        synchronized (cachePartitionMap) {
+            if (!cachePartitionMap.containsKey(cacheName)) {
+                cachePartitionMap.put(cacheName, new PartitionSet(addSet));
+            } else {
+                cachePartitionMap.get(cacheName).add(addSet);
+            }
+        }
     }
 
     @Override
@@ -156,7 +134,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot commit, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
-            transactionCache.commitTransaction(transactionId, cacheKeyMap, cacheFilterMap);
+            transactionCache.commitTransaction(transactionId, cacheKeyMap, cachePartitionMap);
         }
         transactionStatus = committed;
     }
@@ -168,7 +146,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot rollback, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
-            transactionCache.rollbackTransaction(transactionId, cacheKeyMap, cacheFilterMap);
+            transactionCache.rollbackTransaction(transactionId, cacheKeyMap, cachePartitionMap);
         }
         transactionStatus = rolledback;
     }

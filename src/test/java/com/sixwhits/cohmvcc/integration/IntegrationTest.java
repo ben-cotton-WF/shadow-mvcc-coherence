@@ -99,6 +99,7 @@ public class IntegrationTest extends AbstractLittlegridTest {
     /**
      * Finding the entries to rollback based on a filter may break if the
      * update causes the row to no longer match the filter.
+     * Now fixed as we no longer record the filter for this
      * @throws InterruptedException if interrupted
      */
     @Test
@@ -118,7 +119,7 @@ public class IntegrationTest extends AbstractLittlegridTest {
         NamedCache vcache = CacheFactory.getCache(cachename.getVersionCacheName());
 
         Assert.assertEquals(2, vcache.size());
-
+        
         transactionManager.getTransaction().rollback();
         
         // only the original version

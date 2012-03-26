@@ -16,7 +16,6 @@ import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
-import com.tangosol.util.Filter;
 
 /**
  * Serialisation test for transaction internal package.
@@ -81,8 +80,8 @@ public class SerialisationTest {
      */
     @Test
     public void testFilterTransactionInvocable() {
-        Object obj = new FilterTransactionInvocable(TRANSACTIONID, new CacheName("test-cache"),
-                new HashSet<Filter>(), new PartitionSet(13), TransactionProcStatus.committing);
+        Object obj = new PartitionTransactionInvocable(TRANSACTIONID, new CacheName("test-cache"),
+                new PartitionSet(13), TransactionProcStatus.committing);
         assertPofFidelity(obj);
     }
     

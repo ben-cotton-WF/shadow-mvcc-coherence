@@ -5,7 +5,7 @@ import java.util.Collection;
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
-import com.tangosol.util.Filter;
+import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Transaction Context containing all state pertaining to an open transaction.
@@ -42,30 +42,15 @@ public interface Transaction {
      * @param keys the key affected by the change
      */
     void addKeySetAffected(CacheName cacheName, Collection<Object> keys);
-
+    
     /**
-     * Add a cache name and filter that have used to effect changes. Returns an invocation id that may be used
-     * in a subsequent call to {@code filterKeysAffected} or {@code filterPartitionsAffected} to replace the
-     * recorded filter.
-     * @param cacheName the name of the changed cache
-     * @param filter the filter used to find entries to change
-     * @return the invocation id
+     * Add a set of partitions for a cache that may have been changed in this transaction.
+     * Used when the number of keys affected per partition is sufficiently large that
+     * it is more efficient to update by filtering on partition.
+     * @param cacheName the cache name
+     * @param partitionSet the set of affected partitions
      */
-    int addFilterAffected(CacheName cacheName, Filter filter);
-
-    /**
-     * Provide the collection of keys affected by a filter operation.
-     * @param invocationId identifies the previously notified filter
-     * @param keys the keys affected
-     */
-    void filterKeysAffected(int invocationId, Collection<?> keys);
-
-    /**
-     * Provide the collection of partitions affected by a filter operation.
-     * @param invocationId identifies the previously notified filter
-     * @param keys the keys affected
-     */
-    void filterPartitionsAffected(int invocationId, Collection<Integer> keys);
+    void addPartitionSetAffected(CacheName cacheName, PartitionSet partitionSet);
 
     /**
      * Set the transaction in a rollback-only mode. An attempt to commit

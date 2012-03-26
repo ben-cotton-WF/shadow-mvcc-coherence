@@ -102,7 +102,7 @@ public class TransactionCacheImpl implements TransactionCache {
     @Override
     public void commitTransaction(final TransactionId transactionId, 
             final Map<CacheName, Set<Object>> cacheKeyMap, 
-            final Map<CacheName, Set<Filter>> cacheFilterMap) {
+            final Map<CacheName, PartitionSet> cachePartitionMap) {
         
         NamedCache transactionCache = getCache(CACHENAME);
 
@@ -116,7 +116,7 @@ public class TransactionCacheImpl implements TransactionCache {
             }
         }
 
-        actionTransaction(transactionId, cacheKeyMap, cacheFilterMap, committing);
+        actionTransaction(transactionId, cacheKeyMap, cachePartitionMap, committing);
 
         transactionCache.remove(transactionId);
     }
@@ -124,7 +124,7 @@ public class TransactionCacheImpl implements TransactionCache {
     @Override
     public void rollbackTransaction(final TransactionId transactionId, 
             final Map<CacheName, Set<Object>> cacheKeyMap, 
-            final Map<CacheName, Set<Filter>> cacheFilterMap) {
+            final Map<CacheName, PartitionSet> cachePartitionMap) {
         NamedCache transactionCache = getCache(CACHENAME);
         
         try {
@@ -137,7 +137,7 @@ public class TransactionCacheImpl implements TransactionCache {
             }
         }
 
-        actionTransaction(transactionId, cacheKeyMap, cacheFilterMap, rollingback);
+        actionTransaction(transactionId, cacheKeyMap, cachePartitionMap, rollingback);
 
         transactionCache.remove(transactionId);
     }
@@ -148,12 +148,12 @@ public class TransactionCacheImpl implements TransactionCache {
      * this transaction.
      * @param transactionId the transaction id
      * @param cacheKeyMap map of affected caches to sets of keys
-     * @param cacheFilterMap map of affected caches to sets of filters
+     * @param cachePartitionMap map of affected caches to sets of partitions
      * @param transactionStatus commit or rollback
      */
     private void actionTransaction(final TransactionId transactionId, 
             final Map<CacheName, Set<Object>> cacheKeyMap, 
-            final Map<CacheName, Set<Filter>> cacheFilterMap, 
+            final Map<CacheName, PartitionSet> cachePartitionMap, 
             final TransactionProcStatus transactionStatus) {
 
         final Set<InvocationObserver> outstanding = new HashSet<InvocationObserver>(); 
@@ -165,14 +165,9 @@ public class TransactionCacheImpl implements TransactionCache {
                     transactionStatus, outstanding, observerResultQueue);
         }
         
-        for (Map.Entry<CacheName, Set<Filter>> cacheFilterEntry : cacheFilterMap.entrySet()) {
-            PartitionedService cacheService =
-                    (PartitionedService) getCache(
-                            cacheFilterEntry.getKey().getVersionCacheName()).getCacheService();
-            PartitionSet allPartitions = new PartitionSet(cacheService.getPartitionCount());
-            allPartitions.fill();
-            invokeActionForFilterSet(transactionId, allPartitions, cacheFilterEntry.getKey(),
-                    cacheFilterEntry.getValue(), transactionStatus, outstanding, observerResultQueue);
+        for (Map.Entry<CacheName, PartitionSet> cachePartitionEntry : cachePartitionMap.entrySet()) {
+            invokeActionForFilterSet(transactionId, cachePartitionEntry.getValue(), cachePartitionEntry.getKey(),
+                    transactionStatus, outstanding, observerResultQueue);
         }
         
         while (!outstanding.isEmpty()) {
@@ -188,10 +183,10 @@ public class TransactionCacheImpl implements TransactionCache {
                     KeyInvocationObserver keyObserver = (KeyInvocationObserver) observer;
                     invokeActionForKeyset(transactionId, keyObserver.getCachename(), keyObserver.getKeys(),
                             transactionStatus, outstanding, observerResultQueue);
-                } else if (observer instanceof FilterInvocationObserver) {
-                    FilterInvocationObserver filterObserver = (FilterInvocationObserver) observer;
+                } else if (observer instanceof PartitionInvocationObserver) {
+                    PartitionInvocationObserver filterObserver = (PartitionInvocationObserver) observer;
                     invokeActionForFilterSet(transactionId, filterObserver.getPartitionSet(),
-                            filterObserver.getCachename(), filterObserver.getFilterSet(), transactionStatus,
+                            filterObserver.getCachename(), transactionStatus,
                             outstanding, observerResultQueue);
                 }
             }
@@ -204,7 +199,6 @@ public class TransactionCacheImpl implements TransactionCache {
      * @param transactionId transaction id
      * @param partitionSet partitions to process
      * @param cacheName cache name
-     * @param filters filters
      * @param transactionStatus insert or rollback
      * @param outstanding each invocable send is added to this collection
      * @param observerResultQueue result queue for notifying completion of invocables
@@ -214,7 +208,6 @@ public class TransactionCacheImpl implements TransactionCache {
             final TransactionId transactionId,
             final PartitionSet partitionSet,
             final CacheName cacheName,
-            final Set<Filter> filters,
             final TransactionProcStatus transactionStatus,
             final Set<InvocationObserver> outstanding,
             final BlockingQueue<InvocationObserverStatus> observerResultQueue) {
@@ -230,10 +223,10 @@ public class TransactionCacheImpl implements TransactionCache {
                 memberPartitions.retain(partitionSet);
                 if (!memberPartitions.isEmpty()) {
                     partitionSet.remove(memberPartitions);
-                    Invocable invocable = new FilterTransactionInvocable(
-                            transactionId, cacheName, filters, memberPartitions, transactionStatus);
-                    FilterInvocationObserver observer = new FilterInvocationObserver(
-                            memberPartitions, cacheName, filters, observerResultQueue);
+                    Invocable invocable = new PartitionTransactionInvocable(
+                            transactionId, cacheName, memberPartitions, transactionStatus);
+                    PartitionInvocationObserver observer = new PartitionInvocationObserver(
+                            memberPartitions, cacheName, observerResultQueue);
                     outstanding.add(observer);
                     invocationService.execute(invocable, Collections.singleton(member), observer);
                 }
