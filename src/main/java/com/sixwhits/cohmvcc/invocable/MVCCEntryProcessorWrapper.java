@@ -94,7 +94,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
                 if (isolationLevel != IsolationLevel.readUncommitted) {
                     boolean committed = Utils.isCommitted(priorEntry);
                     if (!committed) {
-                        return new ProcessorResult<K, R>(null, (VersionedKey<K>) priorEntry.getKey());
+                        return new ProcessorResult<K, R>((VersionedKey<K>) priorEntry.getKey());
                     }
                 }
             }
@@ -113,7 +113,9 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
                     + entry.getKey());
         }
 
+        boolean changed = false;
         if (childEntry.isRemove() || childEntry.getNewBinaryValue() != null) {
+            changed = true;
 
             TransactionId nextRead = getNextRead(entry);
             if (nextRead != null) {
@@ -146,7 +148,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
             setReadTimestamp(entry);
         }
 
-        return new ProcessorResult<K, R>(result, null);
+        return new ProcessorResult<K, R>(result, changed, true);
     }
 
 }

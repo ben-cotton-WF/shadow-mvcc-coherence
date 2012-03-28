@@ -83,7 +83,7 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K, VersionedK
         if (isolationLevel != readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
             if (!committed) {
-                return new ProcessorResult<K, VersionedKey<K>>(null, (VersionedKey<K>) priorEntry.getKey());
+                return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey());
             }
         }
 
@@ -97,6 +97,6 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K, VersionedK
         }
 
         return returnMatchingKeys
-                ? new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), null) : null;
+                ? new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), false, true) : null;
     }
 }

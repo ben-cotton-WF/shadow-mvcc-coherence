@@ -16,12 +16,10 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 @Portable
 public class ProcessorResult<K, R> {
 
-    public static final int POF_RESULT = 0;
-    @PortableProperty(POF_RESULT)
-    private R result;
-    public static final int POF_WAITKEY = 1;
-    @PortableProperty(POF_WAITKEY)
-    private VersionedKey<K> waitKey;
+    @PortableProperty(0) private R result;
+    @PortableProperty(1) private VersionedKey<K> waitKey;
+    @PortableProperty(1) private boolean changed;
+    @PortableProperty(2) private boolean returnResult;
 
     /**
      *  Default constructor for POF use only.
@@ -31,14 +29,29 @@ public class ProcessorResult<K, R> {
     }
 
     /**
-     * Constructor. Only one of the parameters should be non-null.
-     * @param result the {@code EntryProcessor} result
+     * Constructor for a result indicating a wait is required for an uncommitted entry.
      * @param waitKey the version cache key of an uncommitted entry
      */
-    public ProcessorResult(final R result, final VersionedKey<K> waitKey) {
+    public ProcessorResult(final VersionedKey<K> waitKey) {
+        super();
+        this.result = null;
+        this.waitKey = waitKey;
+        this.changed = false;
+        this.returnResult = false;
+    }
+    /**
+     * Constructor for a successful invocation.
+     * @param result the {@code EntryProcessor} result
+     * @param changed true if the processor invocation created a new version
+     * @param returnResult false if this entry was not included in the result map from {@code processAll}
+     */
+    public ProcessorResult(final R result,
+            final boolean changed, final boolean returnResult) {
         super();
         this.result = result;
-        this.waitKey = waitKey;
+        this.waitKey = null;
+        this.changed = changed;
+        this.returnResult = returnResult;
     }
 
     /**
@@ -50,6 +63,7 @@ public class ProcessorResult<K, R> {
     }
 
     /**
+     * Does this result represent a wait for an uncommitted entry?
      * @return true if this result represents an uncommitted entry
      */
     public boolean isUncommitted() {
@@ -57,10 +71,27 @@ public class ProcessorResult<K, R> {
     }
 
     /**
+     * Return the uncommitted entry key that we must wait for.
      * @return the version cache key that prevented execution or null
      */
     public VersionedKey<K> getWaitKey() {
         return waitKey;
+    }
+
+    /**
+     * Did invocation create a new version.
+     * @return true if a new version was created
+     */
+    public boolean isChanged() {
+        return changed;
+    }
+
+    /**
+     * Should the result be returned to the caller?
+     * @return true if the result should be returned to the caller
+     */
+    public boolean isReturnResult() {
+        return returnResult;
     }
 
 }

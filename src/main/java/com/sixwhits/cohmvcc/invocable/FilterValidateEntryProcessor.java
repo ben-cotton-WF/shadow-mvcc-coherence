@@ -67,7 +67,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
         if (isolationLevel != readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
             if (!committed) {
-                return new ProcessorResult<K, VersionedKey<K>>(null, (VersionedKey<K>) priorEntry.getKey());
+                return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey());
             }
         }
 
@@ -77,7 +77,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
             return null;
         }
 
-        return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), null);
+        return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), false, true);
     }
 
 }

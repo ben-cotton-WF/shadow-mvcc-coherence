@@ -80,14 +80,14 @@ public class DomainSerialisationTest {
     public void testProcessorResult1() {
         TransactionId ts = new TransactionId(BASETIME + 17, 124, 457);
         ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(
-                null, new VersionedKey<String>("ABC", ts));
+                new VersionedKey<String>("ABC", ts));
         assertPofFidelityByReflection(pr);
     }
     /**
      * Processor result with return value.
      */
     public void testProcessorResult2() {
-        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, null);
+        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, true, false);
         assertPofFidelityByReflection(pr);
     }
 

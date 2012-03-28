@@ -88,7 +88,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
         if (isolationLevel != IsolationLevel.readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
             if (!committed) {
-                return new ProcessorResult<K, R>(null, (VersionedKey<K>) priorEntry.getKey());
+                return new ProcessorResult<K, R>((VersionedKey<K>) priorEntry.getKey());
             }
         }
 
@@ -115,7 +115,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
             setReadTimestamp(entry);
         }
 
-        return new ProcessorResult<K, R>(result, null);
+        return new ProcessorResult<K, R>(result, false, true);
     }
 
 }
