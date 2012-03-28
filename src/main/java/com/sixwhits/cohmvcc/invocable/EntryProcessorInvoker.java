@@ -48,6 +48,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
     private transient PartitionSet memberParts;
     private transient Map<K, R> resultMap;
     private transient Map<K, VersionedKey<K>> retryMap;
+    private transient Set<K> changedKeys;
 
     /**
      * Default constructor for POF use only.
@@ -120,20 +121,27 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
         retryMap = new HashMap<K, VersionedKey<K>>();
         resultMap = new HashMap<K, R>();
+        changedKeys = new HashSet<K>();
 
         for (Map.Entry<K, ProcessorResult<K, R>> entry
                 : ((Map<K, ProcessorResult<K, R>>) keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
-            if (entry.getValue().isUncommitted()) {
-                retryMap.put(entry.getKey(), entry.getValue().getWaitKey());
+            ProcessorResult<K, R> result = entry.getValue();
+            if (result.isUncommitted()) {
+                retryMap.put(entry.getKey(), result.getWaitKey());
             } else {
-                resultMap.put(entry.getKey(), entry.getValue().getResult());
+                if (result.isReturnResult()) {
+                    resultMap.put(entry.getKey(), result.getResult());
+                }
+                if (result.isChanged()) {
+                    changedKeys.add(entry.getKey());
+                }
             }
         }
     }
 
     @Override
     public EntryProcessorInvokerResult<K, R> getResult() {
-        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap);
+        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeys);
     }
 
 }

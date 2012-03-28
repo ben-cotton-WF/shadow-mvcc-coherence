@@ -3,6 +3,7 @@ package com.sixwhits.cohmvcc.invocable;
 import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
@@ -87,7 +88,8 @@ public class InvocableSerialisationTest {
     public void testEntryProcessorInvokerResult() {
 
         Object obj = new EntryProcessorInvokerResult<String, Object>(
-                new PartitionSet(5), new HashMap<String, Object>(), new HashMap<String, VersionedKey<String>>());
+                new PartitionSet(5), new HashMap<String, Object>(), new HashMap<String, VersionedKey<String>>(),
+                new HashSet<String>());
 
         assertPofFidelity(obj);
     }

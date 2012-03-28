@@ -269,7 +269,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
         EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_STRV), "seventy-eight");
 
-        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, filter, ep).keySet();
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, filter, ep).getResultMap().keySet();
 
         Set<Integer> expected = new HashSet<Integer>(5);
         expected.add(1);

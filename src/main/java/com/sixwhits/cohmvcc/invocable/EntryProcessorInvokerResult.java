@@ -1,8 +1,10 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import java.util.Map;
+import java.util.Set;
 
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.pof.SetCodec;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.partition.PartitionSet;
@@ -24,6 +26,7 @@ public class EntryProcessorInvokerResult<K, R> {
     @PortableProperty(0) private PartitionSet partitions;
     @PortableProperty(1) private Map<K, R> resultMap;
     @PortableProperty(2) private Map<K, VersionedKey<K>> retryMap;
+    @PortableProperty(value = 3, codec = SetCodec.class) private Set<K> changedKeys;
 
     /**
      *  Default constructor for POF use only.
@@ -37,13 +40,16 @@ public class EntryProcessorInvokerResult<K, R> {
      * @param partitions the set of partitions processed
      * @param resultMap the entry processor results
      * @param retryMap the uncommitted entries
+     * @param changedKeys the set of keys changed by this invocation
      */
     public EntryProcessorInvokerResult(final PartitionSet partitions, 
-            final Map<K, R> resultMap, final Map<K, VersionedKey<K>> retryMap) {
+            final Map<K, R> resultMap, final Map<K, VersionedKey<K>> retryMap,
+            final Set<K> changedKeys) {
         super();
         this.partitions = partitions;
         this.resultMap = resultMap;
         this.retryMap = retryMap;
+        this.changedKeys = changedKeys;
     }
 
     /**
@@ -69,6 +75,14 @@ public class EntryProcessorInvokerResult<K, R> {
      */
     public Map<K, VersionedKey<K>> getRetryMap() {
         return retryMap;
+    }
+
+    /**
+     * Get the set of keys for entries that were changed by this invocation.
+     * @return the set of keys for changed entries
+     */
+    public Set<K> getChangedKeys() {
+        return changedKeys;
     }
 
 }

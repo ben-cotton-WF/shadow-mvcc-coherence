@@ -278,9 +278,10 @@ public class MVCCNamedCache implements NamedCache {
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
         try {
-            Map result = mvccCache.invokeAll(context.getTransactionId(),
+            InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
-            context.addKeySetAffected(mvccCache.getMVCCCacheName(), result.keySet());
+            Map result = fr.getResultMap();
+            context.addKeySetAffected(mvccCache.getMVCCCacheName(), fr.getChangedKeys());
             return result;
         } catch (RuntimeException t) {
             context.setRollbackOnly();

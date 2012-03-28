@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
+import com.sixwhits.cohmvcc.cache.internal.InvocationFinalResult;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.tangosol.net.CacheService;
@@ -310,10 +311,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param autoCommit implicit commit if true
      * @param filter the filter
      * @param agent the EntryProcessor
-     * @return a map of key, result pairs
+     * @return a map of key, result pairs, with the set of keys changed
      * @param <R> result type of the entryprocessor
      */
-    <R> Map<K, R> invokeAll(TransactionId tid, 
+    <R> InvocationFinalResult<K, R> invokeAll(TransactionId tid, 
             IsolationLevel isolationLevel, boolean autoCommit, Filter filter, EntryProcessor agent);
 
     /**
