@@ -26,16 +26,11 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
  * @param <R> Return value type
  */
 @Portable
-public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R> {
+public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrapper<K, R> {
 
     private static final long serialVersionUID = -7158130705920331999L;
 
-    public static final int POF_EP = 10;
-    @PortableProperty(POF_EP)
-    private EntryProcessor delegate;
-    public static final int POF_AUTOCOMMIT = 11;
-    @PortableProperty(POF_AUTOCOMMIT)
-    private boolean autoCommit = false;
+    @PortableProperty(11) private boolean autoCommit = false;
 
     /**
      * Default constructor for POF use only.
@@ -54,8 +49,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
     public MVCCEntryProcessorWrapper(final TransactionId transactionId, 
             final EntryProcessor delegate, final IsolationLevel isolationLevel,
             final boolean autoCommit, final CacheName cacheName) {
-        super(transactionId, isolationLevel, cacheName);
-        this.delegate = delegate;
+        super(transactionId, isolationLevel, cacheName, delegate);
         this.autoCommit = autoCommit;
     }
 
@@ -71,8 +65,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R>
     public MVCCEntryProcessorWrapper(final TransactionId transactionId, 
             final EntryProcessor delegate, final IsolationLevel isolationLevel,
             final boolean autoCommit, final CacheName cacheName, final Filter filter) {
-        super(transactionId, isolationLevel, cacheName, filter);
-        this.delegate = delegate;
+        super(transactionId, isolationLevel, cacheName, filter, delegate);
         this.autoCommit = autoCommit;
     }
 

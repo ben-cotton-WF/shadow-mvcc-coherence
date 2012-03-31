@@ -37,22 +37,10 @@ public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
 
     private static final long serialVersionUID = -8977457529050193716L;
 
-    public static final int POF_TID = 1;
-    @PortableProperty(POF_TID)
-    protected TransactionId transactionId;
-
-    public static final int POF_ISOLATION = 2;
-    @PortableProperty(POF_ISOLATION)
-    protected IsolationLevel isolationLevel;
-
-    public static final int POF_VCACHENAME = 3;
-    @PortableProperty(POF_VCACHENAME)
-    protected CacheName cacheName;
-
-    public static final int POF_FILTER = 4;
-    @PortableProperty(POF_FILTER)
-    protected Filter validationFilter = null;
-
+    @PortableProperty(0) protected TransactionId transactionId;
+    @PortableProperty(1) protected IsolationLevel isolationLevel;
+    @PortableProperty(2) protected CacheName cacheName;
+    @PortableProperty(3) protected Filter validationFilter = null;
     /**
      * Constructor.
      * @param transactionId the transaction Id
@@ -179,7 +167,8 @@ public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public Map processAll(final Set set) {
-        // TODO consider a delegate EntryProcessor that implements processAll()
+        // TODO delegate EntryProcessor that implement processAll() cannot be safely supported. Instead
+        // provide an alternate interface to postprocess the resultmap.
         Map<K, ProcessorResult<K, R>> result = new HashMap<K, ProcessorResult<K, R>>();
 
         for (Entry entry : (Set<Entry>) set) {
@@ -188,7 +177,7 @@ public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
                 result.put((K) entry.getKey(), epr);
             }
         }
-
+        
         return result;
     }
 

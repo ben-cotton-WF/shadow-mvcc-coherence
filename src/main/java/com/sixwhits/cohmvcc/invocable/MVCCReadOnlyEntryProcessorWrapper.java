@@ -7,7 +7,6 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
-import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.Filter;
@@ -29,14 +28,10 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
  * @param <R> EntryProcessor return type
  */
 @Portable
-public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R> {
+public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrapper<K, R> {
 
     private static final long serialVersionUID = -7158130705920331999L;
 
-    public static final int POF_EP = 10;
-    @PortableProperty(POF_EP)
-    private EntryProcessor delegate;
-    
     /**
      *  Default constructor for POF use only.
      */
@@ -53,8 +48,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
      */
     public MVCCReadOnlyEntryProcessorWrapper(final TransactionId transactionId, 
             final EntryProcessor delegate, final IsolationLevel isolationLevel, final CacheName cacheName) {
-        super(transactionId, isolationLevel, cacheName);
-        this.delegate = delegate;
+        super(transactionId, isolationLevel, cacheName, delegate);
     }
 
     /**
@@ -68,8 +62,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
     public MVCCReadOnlyEntryProcessorWrapper(final TransactionId transactionId, 
             final EntryProcessor delegate, final IsolationLevel isolationLevel, final CacheName cacheName,
             final Filter filter) {
-        super(transactionId, isolationLevel, cacheName, filter);
-        this.delegate = delegate;
+        super(transactionId, isolationLevel, cacheName, filter, delegate);
     }
 
     @SuppressWarnings("unchecked")

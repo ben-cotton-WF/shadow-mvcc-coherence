@@ -16,6 +16,7 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.InvocableMap.Entry;
+import com.tangosol.util.InvocableMap.EntryProcessor;
 
 /**
  * Entry processor to create a read marker in the key cache at a given timestamp.
@@ -35,6 +36,9 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K, VersionedK
     public static final int POF_RETURNKEYS = 0;
     @PortableProperty(POF_RETURNKEYS)
     private boolean returnMatchingKeys = false;
+
+    @PortableProperty(4)
+    protected EntryProcessor delegate;
     
     /**
      * Default constructor for POF use only.

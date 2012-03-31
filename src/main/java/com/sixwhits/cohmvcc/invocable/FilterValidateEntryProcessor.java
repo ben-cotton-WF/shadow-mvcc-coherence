@@ -9,10 +9,12 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
+import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.Entry;
+import com.tangosol.util.InvocableMap.EntryProcessor;
 
 
 /**
@@ -28,6 +30,8 @@ import com.tangosol.util.InvocableMap.Entry;
 public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, VersionedKey<K>> {
 
     private static final long serialVersionUID = -954213053828163546L;
+    @PortableProperty(4)
+    protected EntryProcessor delegate;
 
     /**
      * Default constructor for POF use only.
