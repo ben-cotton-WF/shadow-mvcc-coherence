@@ -6,6 +6,7 @@ import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
+import com.sixwhits.cohmvcc.processor.NoResult;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
@@ -108,7 +109,11 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
             setReadTimestamp(entry);
         }
 
-        return new ProcessorResult<K, R>(result, false, true);
+        if (result == NoResult.INSTANCE) {
+            return new ProcessorResult<K, R>(null, false, false);
+        } else {
+            return new ProcessorResult<K, R>(result, false, true);
+        }
     }
 
 }

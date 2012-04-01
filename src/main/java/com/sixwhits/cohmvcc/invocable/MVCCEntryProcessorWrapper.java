@@ -8,6 +8,7 @@ import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.Utils;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.exception.FutureReadException;
+import com.sixwhits.cohmvcc.processor.NoResult;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.Binary;
@@ -140,8 +141,12 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrappe
                 || isolationLevel == IsolationLevel.serializable) && childEntry.isPriorRead()) {
             setReadTimestamp(entry);
         }
-
-        return new ProcessorResult<K, R>(result, changed, true);
+        
+        if (result == NoResult.INSTANCE) {
+            return new ProcessorResult<K, R>(null, changed, false);
+        } else {
+            return new ProcessorResult<K, R>(result, changed, true);
+        }
     }
 
 }

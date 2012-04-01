@@ -10,6 +10,7 @@ import com.sixwhits.cohmvcc.domain.ProcessorResult;
 import com.sixwhits.cohmvcc.domain.TransactionId;
 import com.sixwhits.cohmvcc.domain.VersionedKey;
 import com.sixwhits.cohmvcc.index.MVCCSurfaceFilter;
+import com.sixwhits.cohmvcc.processor.Reducer;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.CacheFactory;
@@ -136,6 +137,10 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
                     changedKeys.add(entry.getKey());
                 }
             }
+        }
+        
+        if (entryProcessor instanceof Reducer) {
+            resultMap = ((Reducer) entryProcessor).reduce(resultMap);
         }
     }
 

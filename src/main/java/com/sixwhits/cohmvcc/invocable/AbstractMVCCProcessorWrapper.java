@@ -1,7 +1,6 @@
 package com.sixwhits.cohmvcc.invocable;
 
 import java.util.Map;
-import java.util.Set;
 
 import com.sixwhits.cohmvcc.cache.CacheName;
 import com.sixwhits.cohmvcc.domain.IsolationLevel;
@@ -23,7 +22,7 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
  * @param <R> processor result type
  */
 @Portable
-public abstract class AbstractMVCCProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R> {
+public abstract class AbstractMVCCProcessorWrapper<K, R> extends AbstractMVCCProcessor<K, R> implements Reducer {
 
     private static final long serialVersionUID = 8572836706068655491L;
     
@@ -67,17 +66,17 @@ public abstract class AbstractMVCCProcessorWrapper<K, R> extends AbstractMVCCPro
 
     @SuppressWarnings("rawtypes")
     @Override
-    public Map processAll(final Set set) {
-
-        Map result = super.processAll(set);
+    public Map reduce(final Map processorResults) {
+        
+        Map result;
         
         if (delegate instanceof Reducer) {
-            result = ((Reducer) delegate).reduce(result);
+            result = ((Reducer) delegate).reduce(processorResults);
+        } else {
+            result = processorResults;
         }
         
         return result;
-
     }
-
 
 }
