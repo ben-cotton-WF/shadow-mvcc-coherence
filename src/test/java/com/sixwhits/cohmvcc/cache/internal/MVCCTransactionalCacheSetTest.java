@@ -269,7 +269,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         Filter filter = new EqualsFilter(new PofExtractor(null, SampleDomainObject.POF_INTV), 77);
         EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_STRV), "seventy-eight");
 
-        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, filter, ep).getResultMap().keySet();
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, filter, ep).getResultMap().keySet();
 
         Set<Integer> expected = new HashSet<Integer>(5);
         expected.add(1);
@@ -284,7 +284,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         SampleDomainObject expectedObject = new SampleDomainObject(77, "seventy-eight");
 
         for (Integer key : expected) {
-            assertEquals(expectedObject, cache.get(ts2, repeatableRead, key));
+            assertEquals(expectedObject, cache.get(ts2, readUncommitted, key));
         }
 
     }
@@ -319,7 +319,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         expected.add(7);
         expected.add(9);
 
-        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, true, expected, ep).keySet();
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, expected, ep).keySet();
 
 
         assertEquals(5, keySet.size());
@@ -328,7 +328,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         SampleDomainObject expectedObject = new SampleDomainObject(77, "seventy-eight");
 
         for (Integer key : expected) {
-            assertEquals(expectedObject, cache.get(ts2, repeatableRead, key));
+            assertEquals(expectedObject, cache.get(ts2, readUncommitted, key));
         }
 
     }

@@ -741,17 +741,39 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         return resultMap;
     }
 
+    /**
+     * {@inheritDoc}.
+     * 
+     * throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
+     * atomic completion of invocation against all keys
+     */
     @Override
     public <R> Map<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
             final boolean autoCommit, final Collection<K> collKeys, final EntryProcessor agent) {
+        
+        if (autoCommit) {
+            throw new IllegalArgumentException("autocommit not permitted for invokeAll");
+        }
+        
         EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
                 tid, agent, isolationLevel, autoCommit, cacheName);
         return invokeAllUntilCommitted(collKeys, tid, wrappedProcessor);
     }
 
+    /**
+     * {@inheritDoc}.
+     * 
+     * throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
+     * atomic completion of invocation against all keys
+     */
     @Override
     public <R> InvocationFinalResult<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
             final boolean autoCommit, final Filter filter, final EntryProcessor agent) {
+
+        if (autoCommit) {
+            throw new IllegalArgumentException("autocommit not permitted for invokeAll");
+        }
+        
         EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
                 tid, agent, isolationLevel, autoCommit, cacheName, filter);
         return invokeAllUntilCommitted(filter, tid, wrappedProcessor);

@@ -131,8 +131,6 @@ public class SessionTransactionManager implements TransactionManager,
                 currentTransaction = new AutoCommitTransaction(getNextId(), isolationLevel, this);
             } else if (readOnly) {
                 currentTransaction = new ReadOnlyTransaction(getNextId(), isolationLevel, this);
-
-            // TODO What about read-only & autocommit together?
             } else {
                 currentTransaction = new TransactionImpl(getNextId(), isolationLevel, this, transactionCache);
             }
