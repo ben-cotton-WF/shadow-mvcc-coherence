@@ -189,7 +189,7 @@ public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public Map processAll(final Set set) {
-        // TODO delegate EntryProcessor that implement processAll() cannot be safely supported. Instead
+        // delegate EntryProcessor that implement processAll() cannot be safely supported. Instead
         // provide an alternate interface to postprocess the resultmap.
         Map<K, ProcessorResult<K, R>> result = new HashMap<K, ProcessorResult<K, R>>();
 
