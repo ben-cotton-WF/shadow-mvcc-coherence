@@ -744,7 +744,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     /**
      * {@inheritDoc}.
      * 
-     * throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
+     * @throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
      * atomic completion of invocation against all keys
      */
     @Override
@@ -763,7 +763,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     /**
      * {@inheritDoc}.
      * 
-     * throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
+     * @throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
      * atomic completion of invocation against all keys
      */
     @Override

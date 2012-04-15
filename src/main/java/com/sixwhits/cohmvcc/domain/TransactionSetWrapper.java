@@ -8,7 +8,7 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 
 /**
  * Wrapper for the set of read timestamps that are the
- * value object of a key cache.
+ * value object of a key cache, and the snapshot cache.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
