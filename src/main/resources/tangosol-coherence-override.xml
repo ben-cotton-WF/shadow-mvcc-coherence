@@ -12,7 +12,7 @@
   </cluster-config>
   
   <cache-factory-builder-config>
-    <class-name system-property="tangosol.coherence.cachefactorybuilder">com.sixwhits.cohmvcc.monitor.CacheFactoryBuilder</class-name>
+    <class-name system-property="tangosol.coherence.cachefactorybuilder">com.shadowmvcc.coherence.monitor.CacheFactoryBuilder</class-name>
     <init-params>
       <init-param>
         <param-type>int</param-type>

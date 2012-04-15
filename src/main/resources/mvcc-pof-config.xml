@@ -10,170 +10,170 @@
     
     <user-type>
       <type-id>1001</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.DecorationExtractorProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.DecorationExtractorProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1002</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionId</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.TransactionId</class-name>
     </user-type>
     <user-type>
       <type-id>1003</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.VersionedKey</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.VersionedKey</class-name>
     </user-type>
     <user-type>
       <type-id>1004</type-id>
-      <class-name>com.sixwhits.cohmvcc.index.MVCCExtractor</class-name>
+      <class-name>com.shadowmvcc.coherence.index.MVCCExtractor</class-name>
     </user-type>
     <user-type>
       <type-id>1005</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionStatus</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.TransactionStatus</class-name>
       <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
     </user-type>
     <user-type>
       <type-id>1006</type-id>
-      <class-name>com.sixwhits.cohmvcc.index.MVCCSurfaceFilter</class-name>
+      <class-name>com.shadowmvcc.coherence.index.MVCCSurfaceFilter</class-name>
     </user-type>
     <user-type>
       <type-id>1007</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.IsolationLevel</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.IsolationLevel</class-name>
       <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
     </user-type>
     <user-type>
       <type-id>1008</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.MVCCEntryProcessorWrapper</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.MVCCEntryProcessorWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1009</type-id>
-      <class-name>com.sixwhits.cohmvcc.exception.FutureReadException</class-name>
+      <class-name>com.shadowmvcc.coherence.exception.FutureReadException</class-name>
     </user-type>
     <user-type>
       <type-id>1010</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.CacheRegistration</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.CacheRegistration</class-name>
     </user-type>
     <user-type>
       <type-id>1011</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionSetWrapper</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.TransactionSetWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1012</type-id>
-      <class-name>com.sixwhits.cohmvcc.cache.internal.UnconditionalPutProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.cache.internal.UnconditionalPutProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1013</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.EntryCommitProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.EntryCommitProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1014</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.EntryRollbackProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.EntryRollbackProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1015</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.ReadMarkingProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.ReadMarkingProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1016</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.AggregatorWrapper</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.AggregatorWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1017</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAwareAggregatorWrapper</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.ParallelAwareAggregatorWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1018</type-id>
-      <class-name>com.sixwhits.cohmvcc.cache.internal.UnconditionalRemoveProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.cache.internal.UnconditionalRemoveProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1019</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.MVCCReadOnlyEntryProcessorWrapper</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.MVCCReadOnlyEntryProcessorWrapper</class-name>
     </user-type>
     <user-type>
       <type-id>1020</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.ProcessorResult</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.ProcessorResult</class-name>
     </user-type>
     <user-type>
       <type-id>1021</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.ExistenceCheckProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.ExistenceCheckProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1022</type-id>
-      <class-name>com.sixwhits.cohmvcc.cache.internal.PutAllProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.cache.internal.PutAllProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1023</type-id>
-      <class-name>com.sixwhits.cohmvcc.cache.CacheName</class-name>
+      <class-name>com.shadowmvcc.coherence.cache.CacheName</class-name>
     </user-type>
     <user-type>
       <type-id>1024</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.EntryProcessorInvoker</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.EntryProcessorInvoker</class-name>
     </user-type>
     <user-type>
       <type-id>1025</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.EntryProcessorInvokerResult</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.EntryProcessorInvokerResult</class-name>
     </user-type>
     <user-type>
       <type-id>1026</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAggregationInvoker</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.ParallelAggregationInvoker</class-name>
     </user-type>
     <user-type>
       <type-id>1027</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.ParallelAggregationInvokerResult</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.ParallelAggregationInvokerResult</class-name>
     </user-type>
     <user-type>
       <type-id>1028</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.FilterValidateEntryProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.FilterValidateEntryProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1029</type-id>
-      <class-name>com.sixwhits.cohmvcc.invocable.ParallelKeyAggregationInvoker</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.ParallelKeyAggregationInvoker</class-name>
     </user-type>
     <user-type>
       <type-id>1030</type-id>
-      <class-name>com.sixwhits.cohmvcc.event.MVCCEventTransformer</class-name>
+      <class-name>com.shadowmvcc.coherence.event.MVCCEventTransformer</class-name>
     </user-type>
     <user-type>
       <type-id>1031</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.DeletedObject</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.DeletedObject</class-name>
     </user-type>
     <user-type>
       <type-id>1032</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.EventValue</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.EventValue</class-name>
     </user-type>
     <user-type>
       <type-id>1033</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionCacheValue</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.TransactionCacheValue</class-name>
     </user-type>
     <user-type>
       <type-id>1034</type-id>
-      <class-name>com.sixwhits.cohmvcc.pof.IdentityPofPath</class-name>
+      <class-name>com.shadowmvcc.coherence.pof.IdentityPofPath</class-name>
     </user-type>
     <user-type>
       <type-id>1035</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.PartitionTransactionInvocable</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.PartitionTransactionInvocable</class-name>
     </user-type>
     <user-type>
       <type-id>1036</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.KeyTransactionInvocable</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.KeyTransactionInvocable</class-name>
     </user-type>
     <user-type>
       <type-id>1037</type-id>
-      <class-name>com.sixwhits.cohmvcc.domain.TransactionProcStatus</class-name>
+      <class-name>com.shadowmvcc.coherence.domain.TransactionProcStatus</class-name>
       <serializer><class-name>com.tangosol.io.pof.EnumPofSerializer</class-name></serializer>
     </user-type>
     <user-type>
       <type-id>1038</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.TransactionStateUpdater</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.TransactionStateUpdater</class-name>
     </user-type>
     <user-type>
       <type-id>1039</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.TransactionException</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.TransactionException</class-name>
     </user-type>
     <user-type>
       <type-id>1040</type-id>
-      <class-name>com.sixwhits.cohmvcc.transaction.internal.CounterProcessor</class-name>
+      <class-name>com.shadowmvcc.coherence.transaction.internal.CounterProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1041</type-id>
-      <class-name>com.sixwhits.cohmvcc.event.MVCCEventFilter</class-name>
+      <class-name>com.shadowmvcc.coherence.event.MVCCEventFilter</class-name>
     </user-type>
 
   </user-type-list>
