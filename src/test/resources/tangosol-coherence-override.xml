@@ -36,15 +36,15 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
     <init-params>
       <init-param>
         <param-type>int</param-type>
-        <param-value system-property="sixwhits.cohmvcc.opentransactiontimeout">60000</param-value>
+        <param-value system-property="shadowmvcc.opentransactiontimeout">60000</param-value>
       </init-param>
       <init-param>
         <param-type>int</param-type>
-        <param-value system-property="sixwhits.cohmvcc.transactioncompletiontimeout">10000</param-value>
+        <param-value system-property="shadowmvcc.transactioncompletiontimeout">10000</param-value>
       </init-param>
       <init-param>
         <param-type>int</param-type>
-        <param-value system-property="sixwhits.cohmvcc.pollinterval">5000</param-value>
+        <param-value system-property="shadowmvcc.pollinterval">5000</param-value>
       </init-param>
     </init-params>
   </cache-factory-builder-config>

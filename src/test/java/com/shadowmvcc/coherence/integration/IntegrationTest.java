@@ -58,9 +58,9 @@ public class IntegrationTest extends AbstractLittlegridTest {
      */
     @BeforeClass
     public static void setMonitorProperties() {
-        System.setProperty("sixwhits.cohmvcc.opentransactiontimeout", "1000");
-        System.setProperty("sixwhits.cohmvcc.transactioncompletiontimeout", "1000");
-        System.setProperty("sixwhits.cohmvcc.pollinterval", "100");
+        System.setProperty("shadowmvcc.opentransactiontimeout", "1000");
+        System.setProperty("shadowmvcc.transactioncompletiontimeout", "1000");
+        System.setProperty("shadowmvcc.pollinterval", "100");
     }
     /**
      * Set up the tm.
