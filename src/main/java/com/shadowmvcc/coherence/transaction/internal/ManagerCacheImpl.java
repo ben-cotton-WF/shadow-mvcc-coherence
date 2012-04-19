@@ -25,11 +25,16 @@ package com.shadowmvcc.coherence.transaction.internal;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.index.MVCCSnapshotPurgeFilter;
 import com.shadowmvcc.coherence.invocable.SortedSetAppender;
 import com.shadowmvcc.coherence.transaction.ManagerCache;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.Filter;
+import com.tangosol.util.filter.AlwaysFilter;
+import com.tangosol.util.processor.ConditionalRemove;
 
 /**
  * Implementation of {@link ManagerCache} that obtains ids from
@@ -47,7 +52,7 @@ public class ManagerCacheImpl implements ManagerCache {
     
     static {
         INITIAL_SNAPSHOTS = new TreeSet<TransactionId>();
-        INITIAL_SNAPSHOTS.add(BIG_BANG);
+        INITIAL_SNAPSHOTS.add(TransactionId.BIG_BANG);
     }
 
     @Override
@@ -68,18 +73,27 @@ public class ManagerCacheImpl implements ManagerCache {
     }
 
     @Override
-    public TransactionId createSnapshot(final String cacheName, final TransactionId snapshotId) {
+    public TransactionId createSnapshot(final CacheName cacheName, final TransactionId snapshotId) {
         NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
-        if (!(Boolean) snapshotCache.invoke(snapshotCache,
-                new SortedSetAppender<TransactionId>(INITIAL_SNAPSHOTS, snapshotId))) {
+        TransactionId rangeStart = (TransactionId) snapshotCache.invoke(snapshotCache,
+                new SortedSetAppender<TransactionId>(INITIAL_SNAPSHOTS, snapshotId));
+        if (rangeStart == null) {
             //TODO more informative error
             throw new IllegalArgumentException("illegal snapshot timestamp " + snapshotId);
         }
-        throw new UnsupportedOperationException("not yet implemented");
+        
+        NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
+        
+        Filter purgeFilter = new MVCCSnapshotPurgeFilter<Object>(rangeStart, snapshotId);
+        
+        versionCache.invokeAll(purgeFilter, new ConditionalRemove(AlwaysFilter.INSTANCE));
+        
+        return rangeStart;
+        
     }
     
     @Override
-    public void coalesceSnapshots(final String cacheName,
+    public void coalesceSnapshots(final CacheName cacheName,
             final TransactionId precedingSnapshotId, final TransactionId snapshotId) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("not yet implemented");

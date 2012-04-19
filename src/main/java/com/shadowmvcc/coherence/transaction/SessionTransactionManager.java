@@ -24,6 +24,7 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
@@ -171,6 +172,7 @@ public class SessionTransactionManager implements TransactionManager,
             offset = 0;
         }
         lastTimestamp = timestamp;
+        // TODO verify later than most recent snapshot 
         return new TransactionId(timestamp, managerId, offset);
     }
 
@@ -207,6 +209,19 @@ public class SessionTransactionManager implements TransactionManager,
     @Override
     public void setIsolationLevel(final IsolationLevel isolationLevel) {
         this.isolationLevel = isolationLevel;
+    }
+
+    @Override
+    public TransactionId createSnapshot(final CacheName cacheName,
+            final TransactionId snapshotId) {
+        // TODO verify no open transactions at or earlier than snapshotId
+        return managerCache.createSnapshot(cacheName, snapshotId);
+    }
+
+    @Override
+    public void coalesceSnapshots(final CacheName cacheName,
+            final TransactionId fromSnapshotId, final TransactionId toSnapshotId) {
+        managerCache.coalesceSnapshots(cacheName, fromSnapshotId, toSnapshotId);
     }
 
 

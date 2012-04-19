@@ -22,6 +22,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
 
 
@@ -37,12 +38,6 @@ public interface ManagerCache {
 
     String MGRCACHENAME = "mvcc-transaction-manager";
     
-    /**
-     * Transaction id representing the dawn of time. Implicitly exists as a
-     * snapshot id.
-     */
-    TransactionId BIG_BANG = new TransactionId(0L, 0, 0);
-
     /**
      * @return a new, unique transaction manager id
      */
@@ -67,7 +62,7 @@ public interface ManagerCache {
      * @throws IllegalArgumentException if there are open transactions with
      * timestamp earlier than the requested snapshot.
      */
-    TransactionId createSnapshot(String cacheName, TransactionId snapshotId);
+    TransactionId createSnapshot(CacheName cacheName, TransactionId snapshotId);
     
     /**
      * Coalesce snapshots, removing intermediate snapshots so that only the most
@@ -78,6 +73,6 @@ public interface ManagerCache {
      * @throws IllegalArgumentException if either snapshot does not exist
      * or if the to snapshot is not later than the from snapshot
      */
-    void coalesceSnapshots(final String cacheName,
-            final TransactionId fromSnapshotId, final TransactionId toSnapshotId);
+    void coalesceSnapshots(CacheName cacheName,
+            TransactionId fromSnapshotId, TransactionId toSnapshotId);
 }

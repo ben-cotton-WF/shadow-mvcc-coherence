@@ -161,7 +161,7 @@ public class MVCCMapListener<K, V> implements MapListener {
     private TransactionId extractTransactionId(final MapEvent rawEvent) {
         @SuppressWarnings("unchecked")
         VersionedKey<K> vk = (VersionedKey<K>) rawEvent.getKey();
-        return vk.getTxTimeStamp();
+        return vk.getTimeStamp();
     }
 
 }

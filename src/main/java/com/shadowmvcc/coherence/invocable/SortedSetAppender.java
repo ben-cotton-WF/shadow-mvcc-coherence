@@ -78,18 +78,20 @@ public class SortedSetAppender<T extends Comparable<T>> extends AbstractProcesso
         }
         
         if (theSet.contains(value)) {
-            return false;
+            return null;
         }
         
-        if (theSet.last().compareTo(value) > 0) {
-            return false;
+        T oldLast = theSet.last();
+        
+        if (oldLast.compareTo(value) > 0) {
+            return null;
         }
         
         theSet.add(value);
         
         entry.setValue(theSet);
         
-        return true;
+        return oldLast;
         
     }
 

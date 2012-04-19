@@ -207,7 +207,7 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
         if (!expiredCommits.isEmpty()) {
             for (String cacheName : getCachesForTransactions(expiredCommits)) {
                 NamedCache cache = CacheFactory.getCache(cacheName);
-                Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredCommits);
+                Filter inTransactionsFilter = new InFilter(Constants.TIMESTAMPEXTRACTOR, expiredCommits);
                 cache.invokeAll(inTransactionsFilter, EntryCommitProcessor.INSTANCE);
             }
 
@@ -218,7 +218,7 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
         if (!expiredRollBacks.isEmpty()) {
             for (String cacheName : getCachesForTransactions(expiredRollBacks)) {
                 NamedCache cache = CacheFactory.getCache(new CacheName(cacheName).getVersionCacheName());
-                Filter inTransactionsFilter = new InFilter(Constants.TXEXTRACTOR, expiredRollBacks);
+                Filter inTransactionsFilter = new InFilter(Constants.TIMESTAMPEXTRACTOR, expiredRollBacks);
                 cache.invokeAll(inTransactionsFilter, EntryRollbackProcessor.INSTANCE);
             }
 

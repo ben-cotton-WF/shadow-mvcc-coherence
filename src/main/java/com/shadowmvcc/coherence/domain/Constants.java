@@ -51,8 +51,8 @@ public final class Constants {
      * An instance of {@code PofExtractor} that may be used to obtain the {@code TransactionId}
      * from the {@link VersionedKey} in the version cache.
      */
-    public static final PofExtractor TXEXTRACTOR = new PofExtractor(
-            null, new SimplePofPath(VersionedKey.POF_TX), AbstractExtractor.KEY);
+    public static final PofExtractor TIMESTAMPEXTRACTOR = new PofExtractor(
+            null, new SimplePofPath(VersionedKey.POF_TIMESTAMP), AbstractExtractor.KEY);
     /**
      * The decoration id used to store the commit status of a version cache entry.
      */

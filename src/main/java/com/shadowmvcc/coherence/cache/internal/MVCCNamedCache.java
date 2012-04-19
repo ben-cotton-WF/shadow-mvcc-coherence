@@ -313,7 +313,6 @@ public class MVCCNamedCache implements NamedCache {
 
     @Override
     public void destroy() {
-        // TODO - force a rollback first?
         mvccCache.destroy();
     }
 

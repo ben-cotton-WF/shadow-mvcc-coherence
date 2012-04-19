@@ -66,6 +66,11 @@ public class TransactionId implements Comparable<TransactionId>, Serializable {
     public static final int POF_SUBSEQ = 2;
     @PortableProperty(POF_SUBSEQ)
     private int subSequence;
+    /**
+     * Transaction id representing the dawn of time. Implicitly exists as a
+     * snapshot id.
+     */
+    public static final TransactionId BIG_BANG = new TransactionId(0L, 0, 0);
 
     /**
      * Default constructor for POF use only.

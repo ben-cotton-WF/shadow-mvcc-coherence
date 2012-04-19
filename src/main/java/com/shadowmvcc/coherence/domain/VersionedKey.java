@@ -49,9 +49,9 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     @PortableProperty(POF_KEY)
     private K nativeKey;
 
-    public static final int POF_TX = 1;
-    @PortableProperty(POF_TX)
-    private TransactionId txTimeStamp;
+    public static final int POF_TIMESTAMP = 1;
+    @PortableProperty(POF_TIMESTAMP)
+    private TransactionId timeStamp;
 
     /**
      * Default constructor for POF use only.
@@ -62,12 +62,12 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     /**
      * Constructor.
      * @param nativeKey the logical key
-     * @param txTimeStamp the transaction id
+     * @param timeStamp the transaction id
      */
     public VersionedKey(final K nativeKey, final TransactionId txTimeStamp) {
         super();
         this.nativeKey = nativeKey;
-        this.txTimeStamp = txTimeStamp;
+        this.timeStamp = txTimeStamp;
     }
 
     /**
@@ -80,8 +80,8 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     /**
      * @return the transaction id
      */
-    public TransactionId getTxTimeStamp() {
-        return txTimeStamp;
+    public TransactionId getTimeStamp() {
+        return timeStamp;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         result = prime * result
                 + ((nativeKey == null) ? 0 : nativeKey.hashCode());
         result = prime * result
-                + ((txTimeStamp == null) ? 0 : txTimeStamp.hashCode());
+                + ((timeStamp == null) ? 0 : timeStamp.hashCode());
         return result;
     }
 
@@ -124,11 +124,11 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         } else if (!nativeKey.equals(other.nativeKey)) {
             return false;
         }
-        if (txTimeStamp == null) {
-            if (other.txTimeStamp != null) {
+        if (timeStamp == null) {
+            if (other.timeStamp != null) {
                 return false;
             }
-        } else if (!txTimeStamp.equals(other.txTimeStamp)) {
+        } else if (!timeStamp.equals(other.timeStamp)) {
             return false;
         }
         return true;
@@ -136,7 +136,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     @Override
     public String toString() {
-        return nativeKey + " ...@" + txTimeStamp;
+        return nativeKey + " ...@" + timeStamp;
     }
 
 

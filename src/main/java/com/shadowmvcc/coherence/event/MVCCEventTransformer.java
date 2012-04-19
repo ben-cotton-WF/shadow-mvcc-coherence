@@ -142,7 +142,7 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
 
         if (latestOnly) {
             Entry<TransactionId, IndexEntry> ixe =
-                    index.higherEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
+                    index.higherEntry(currentVersion.getNativeKey(), currentVersion.getTimeStamp());
             while (ixe != null) {
                 if (ixe.getValue().isCommitted() || isolationLevel == readUncommitted) {
                     return null;
@@ -164,7 +164,7 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
         } else {
 
             Entry<TransactionId, IndexEntry> ixe = 
-                    index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTxTimeStamp());
+                    index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTimeStamp());
             while (ixe != null
                     && !ixe.getValue().isCommitted()
                     && isolationLevel != readUncommitted) {
@@ -201,7 +201,7 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
     private TransactionId extractTransactionId(final MapEvent rawEvent) {
         @SuppressWarnings("unchecked")
         VersionedKey<K> vk = (VersionedKey<K>) rawEvent.getKey();
-        return vk.getTxTimeStamp();
+        return vk.getTimeStamp();
     }
 
     /**

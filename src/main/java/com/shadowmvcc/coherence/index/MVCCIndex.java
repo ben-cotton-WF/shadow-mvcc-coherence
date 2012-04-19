@@ -147,6 +147,29 @@ public class MVCCIndex<K> implements MapIndex {
     }
     
     /**
+     * Get all the cache keys that fall within the transaction id range
+     * except for the most recent for each logical key. Used to support purge
+     * of redundant versions when creating or coalescing snapshots.
+     * @param rangeStart the exclusive start transaction id of the range
+     * @param rangeEnd the inclusive start transaction id of the range
+     * @return the set of binary cache keys that should be removed
+     * to create the snapshot.
+     */
+    public Set<Binary> snapshotPurgeSet(final TransactionId rangeStart, final TransactionId rangeEnd) {
+        Set<Binary> result = new HashSet<Binary>();
+        for (NavigableMap<TransactionId, IndexEntry> entryMap : index.values()) {
+            TransactionId current = entryMap.floorKey(rangeEnd);
+            while (current != null && current.compareTo(rangeStart) > 0) {
+                current = entryMap.lowerKey(current);
+                if (current != null && current.compareTo(rangeStart) > 0) {
+                    result.add(entryMap.get(current).getBinaryKey());
+                }
+            }
+        }
+        return result;
+    }
+    
+    /**
      * Get the current version of a key at the given timestamp. Keys
      * with the same or lower transaction id.
      * @param sKey the key
@@ -265,7 +288,7 @@ public class MVCCIndex<K> implements MapIndex {
             throw new UnsupportedOperationException("only binary entry supported");
         }
         sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
-        ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
+        ts = (TransactionId) Constants.TIMESTAMPEXTRACTOR.extractFromEntry(entry);
         boolean committed = Utils.isCommitted((BinaryEntry) entry);
         boolean deleted = Utils.isDeleted((BinaryEntry) entry);
         Binary binaryKey = ((BinaryEntry) entry).getBinaryKey();
@@ -279,11 +302,11 @@ public class MVCCIndex<K> implements MapIndex {
         TransactionId ts;
         if (entry instanceof BinaryEntry) {
             sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
-            ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
+            ts = (TransactionId) Constants.TIMESTAMPEXTRACTOR.extractFromEntry(entry);
         } else {
             VersionedKey<K> key = (VersionedKey<K>) entry.getKey();        
             sKey = key.getNativeKey();        
-            ts = key.getTxTimeStamp();
+            ts = key.getTimeStamp();
         }
         removeFromIndex(sKey, ts);
     }
@@ -403,7 +426,7 @@ public class MVCCIndex<K> implements MapIndex {
             throw new UnsupportedOperationException("only binary entry supported");
         }
         K sKey = (K) Constants.KEYEXTRACTOR.extractFromEntry(entry);
-        TransactionId ts = (TransactionId) Constants.TXEXTRACTOR.extractFromEntry(entry);
+        TransactionId ts = (TransactionId) Constants.TIMESTAMPEXTRACTOR.extractFromEntry(entry);
         Boolean committed = Utils.isCommitted((BinaryEntry) entry);
         updateIndex(sKey, ts, committed);
     }
