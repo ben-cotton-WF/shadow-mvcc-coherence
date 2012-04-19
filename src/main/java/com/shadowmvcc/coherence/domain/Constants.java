@@ -45,8 +45,8 @@ public final class Constants {
      * An instance of {@code PofExtractor} that may be used to obtain the logical key
      * from the {@link VersionedKey} in the version cache.
      */
-    public static final PofExtractor KEYEXTRACTOR = new PofExtractor(
-            null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY);
+    public static final PofExtractor LOGICALKEYEXTRACTOR = new PofExtractor(
+            null, new SimplePofPath(VersionedKey.POF_LOGICALKEY), AbstractExtractor.KEY);
     /**
      * An instance of {@code PofExtractor} that may be used to obtain the {@code TransactionId}
      * from the {@link VersionedKey} in the version cache.

@@ -22,7 +22,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.cache.internal;
 
-import static com.shadowmvcc.coherence.domain.Constants.KEYEXTRACTOR;
+import static com.shadowmvcc.coherence.domain.Constants.LOGICALKEYEXTRACTOR;
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readProhibited;
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readUncommitted;
 import static com.shadowmvcc.coherence.domain.IsolationLevel.repeatableRead;
@@ -266,7 +266,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     @Override
     public void addMapListener(final MapListener listener, final TransactionId tid,
             final IsolationLevel isolationLevel, final Object oKey, final boolean fLite) {
-        Filter keyFilter = new EqualsFilter(KEYEXTRACTOR, oKey);
+        Filter keyFilter = new EqualsFilter(LOGICALKEYEXTRACTOR, oKey);
         MVCCMapListener<K, V> mvccml = new MVCCMapListener<K, V>(listener);
         if (listenerMap.putIfAbsent(new ListenerMapKey(listener, oKey), mvccml) == null) {
             versionCache.addMapListener(mvccml, 

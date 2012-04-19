@@ -139,7 +139,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
         Set<VersionedKey<K>> vkeys = versionCache.keySet(filterPart);
         Set<K> keys = new HashSet<K>();
         for (VersionedKey<K> vk: vkeys) {
-            keys.add(vk.getNativeKey());
+            keys.add(vk.getLogicalKey());
         }
 
         retryMap = new HashMap<K, VersionedKey<K>>();

@@ -151,7 +151,7 @@ public class MVCCMapListener<K, V> implements MapListener {
     private K extractKey(final MapEvent rawEvent) {
         @SuppressWarnings("unchecked")
         VersionedKey<K> vk = (VersionedKey<K>) rawEvent.getKey();
-        return vk.getNativeKey();
+        return vk.getLogicalKey();
     }
 
     /**

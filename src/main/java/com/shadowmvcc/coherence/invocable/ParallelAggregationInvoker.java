@@ -161,7 +161,7 @@ public class ParallelAggregationInvoker<K, R> implements Invocable {
         Set<VersionedKey<K>> candidateVkeys = versionCache.keySet(filterPart);
         Set<K> candidateKeys = new HashSet<K>();
         for (VersionedKey<K> vkey : candidateVkeys) {
-            candidateKeys.add(vkey.getNativeKey());
+            candidateKeys.add(vkey.getLogicalKey());
         }
         Map<K, ProcessorResult<K, VersionedKey<K>>> markMap =
                 (Map<K, ProcessorResult<K, VersionedKey<K>>>) keyCache.invokeAll(

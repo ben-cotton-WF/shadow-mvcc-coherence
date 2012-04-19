@@ -142,12 +142,12 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
 
         if (latestOnly) {
             Entry<TransactionId, IndexEntry> ixe =
-                    index.higherEntry(currentVersion.getNativeKey(), currentVersion.getTimeStamp());
+                    index.higherEntry(currentVersion.getLogicalKey(), currentVersion.getTimeStamp());
             while (ixe != null) {
                 if (ixe.getValue().isCommitted() || isolationLevel == readUncommitted) {
                     return null;
                 }
-                ixe = index.higherEntry(currentVersion.getNativeKey(), ixe.getKey());
+                ixe = index.higherEntry(currentVersion.getLogicalKey(), ixe.getKey());
             }
         }
 
@@ -164,11 +164,11 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
         } else {
 
             Entry<TransactionId, IndexEntry> ixe = 
-                    index.lowerEntry(currentVersion.getNativeKey(), currentVersion.getTimeStamp());
+                    index.lowerEntry(currentVersion.getLogicalKey(), currentVersion.getTimeStamp());
             while (ixe != null
                     && !ixe.getValue().isCommitted()
                     && isolationLevel != readUncommitted) {
-                ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
+                ixe = index.lowerEntry(currentVersion.getLogicalKey(), ixe.getKey());
             }
 
             if (ixe != null) {

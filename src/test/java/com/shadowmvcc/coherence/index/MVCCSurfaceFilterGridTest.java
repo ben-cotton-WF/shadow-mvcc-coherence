@@ -69,7 +69,7 @@ public class MVCCSurfaceFilterGridTest extends AbstractLittlegridTest {
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
         testCache.addIndex(new PofExtractor(null,
-                new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), false, null);
+                new SimplePofPath(VersionedKey.POF_LOGICALKEY), AbstractExtractor.KEY), false, null);
         putTestValue(testCache, 100, BASETIME, "oldest version");
         putTestValue(testCache, 100, BASETIME + 1000, "medium version");
         putTestValue(testCache, 100, BASETIME + 2000, "newest version");
@@ -137,7 +137,8 @@ public class MVCCSurfaceFilterGridTest extends AbstractLittlegridTest {
         Filter filter = new AndFilter(
                 new MVCCSurfaceFilter<Integer>(tid), 
                 new EqualsFilter(
-                        new PofExtractor(null, new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), 100)
+                        new PofExtractor(null,
+                                new SimplePofPath(VersionedKey.POF_LOGICALKEY), AbstractExtractor.KEY), 100)
                 );
 
         Object resultsExplain = testCache.aggregate(filter, new QueryRecorder(RecordType.EXPLAIN));

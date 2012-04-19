@@ -53,7 +53,7 @@ public class VersionCacheEntryWrapper<K, V> implements Entry {
     @SuppressWarnings("unchecked")
     @Override
     public K getKey() {
-        return ((VersionedKey<K>) underlying.getKey()).getNativeKey();
+        return ((VersionedKey<K>) underlying.getKey()).getLogicalKey();
     }
 
     @SuppressWarnings("unchecked")

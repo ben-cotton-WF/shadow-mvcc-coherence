@@ -39,15 +39,14 @@ import com.tangosol.net.cache.KeyAssociation;
  *
  * @param <K> the logical key class
  */
-//TODO clean up nomenclature logical/native key, transaction id/timestamp
 @Portable
 public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     private static final long serialVersionUID = 8459004703379236862L;
 
-    public static final int POF_KEY = 0;
-    @PortableProperty(POF_KEY)
-    private K nativeKey;
+    public static final int POF_LOGICALKEY = 0;
+    @PortableProperty(POF_LOGICALKEY)
+    private K logicalKey;
 
     public static final int POF_TIMESTAMP = 1;
     @PortableProperty(POF_TIMESTAMP)
@@ -61,20 +60,20 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     /**
      * Constructor.
-     * @param nativeKey the logical key
+     * @param logicalKey the logical key
      * @param timeStamp the transaction id
      */
-    public VersionedKey(final K nativeKey, final TransactionId txTimeStamp) {
+    public VersionedKey(final K logicalKey, final TransactionId timeStamp) {
         super();
-        this.nativeKey = nativeKey;
-        this.timeStamp = txTimeStamp;
+        this.logicalKey = logicalKey;
+        this.timeStamp = timeStamp;
     }
 
     /**
      * @return the logical key
      */
-    public K getNativeKey() {
-        return nativeKey;
+    public K getLogicalKey() {
+        return logicalKey;
     }
 
     /**
@@ -86,10 +85,10 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     @Override
     public Object getAssociatedKey() {
-        if (nativeKey instanceof KeyAssociation) {
-            return ((KeyAssociation) nativeKey).getAssociatedKey();
+        if (logicalKey instanceof KeyAssociation) {
+            return ((KeyAssociation) logicalKey).getAssociatedKey();
         } else {
-            return nativeKey.hashCode();
+            return logicalKey.hashCode();
         }
     }
 
@@ -98,7 +97,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         final int prime = 31;
         int result = 1;
         result = prime * result
-                + ((nativeKey == null) ? 0 : nativeKey.hashCode());
+                + ((logicalKey == null) ? 0 : logicalKey.hashCode());
         result = prime * result
                 + ((timeStamp == null) ? 0 : timeStamp.hashCode());
         return result;
@@ -117,11 +116,11 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         }
         @SuppressWarnings({"rawtypes" })
         VersionedKey other = (VersionedKey) obj;
-        if (nativeKey == null) {
-            if (other.nativeKey != null) {
+        if (logicalKey == null) {
+            if (other.logicalKey != null) {
                 return false;
             }
-        } else if (!nativeKey.equals(other.nativeKey)) {
+        } else if (!logicalKey.equals(other.logicalKey)) {
             return false;
         }
         if (timeStamp == null) {
@@ -136,7 +135,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     @Override
     public String toString() {
-        return nativeKey + " ...@" + timeStamp;
+        return logicalKey + " ...@" + timeStamp;
     }
 
 

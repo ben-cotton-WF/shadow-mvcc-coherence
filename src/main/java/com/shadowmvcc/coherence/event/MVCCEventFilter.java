@@ -110,9 +110,9 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
         VersionedKey<K> currentVersion = (VersionedKey<K>) entry.getKey();
 
         Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(
-                currentVersion.getNativeKey(), currentVersion.getTimeStamp());
+                currentVersion.getLogicalKey(), currentVersion.getTimeStamp());
         while (ixe != null && !(isolationLevel == readUncommitted || ixe.getValue().isCommitted())) {
-            ixe = index.lowerEntry(currentVersion.getNativeKey(), ixe.getKey());
+            ixe = index.lowerEntry(currentVersion.getLogicalKey(), ixe.getKey());
         }
 
         if (ixe != null) {
@@ -122,7 +122,7 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
             @SuppressWarnings("unchecked")
             VersionedKey<K> priorKey = (VersionedKey<K>) ExternalizableHelper.fromBinary(
                     priorBinaryKey, entry.getSerializer());
-            Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getNativeKey());
+            Binary logicalBinaryKey = ExternalizableHelper.toBinary(priorKey.getLogicalKey());
 
             @SuppressWarnings("rawtypes")
             BinaryEntry priorEntry = new SyntheticBinaryEntry(logicalBinaryKey, priorBinaryValue, 

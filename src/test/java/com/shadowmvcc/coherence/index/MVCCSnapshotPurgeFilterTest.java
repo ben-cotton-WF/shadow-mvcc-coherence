@@ -65,7 +65,7 @@ public class MVCCSnapshotPurgeFilterTest extends AbstractLittlegridTest {
         testCache = CacheFactory.getCache(TESTCACHENAME);
         testCache.addIndex(new MVCCExtractor(), false, null);
         testCache.addIndex(new PofExtractor(null,
-                new SimplePofPath(VersionedKey.POF_KEY), AbstractExtractor.KEY), false, null);
+                new SimplePofPath(VersionedKey.POF_LOGICALKEY), AbstractExtractor.KEY), false, null);
     }
 
     /**
