@@ -97,4 +97,51 @@ public class SnapshotTest extends AbstractLittlegridTest {
         
     }
 
+    /**
+     * Populate a cache over a set of transactions, then reduce it to
+     * two consecutive snapshots, finally coalesce from big bang to the second
+     * snapshot to remove the intermediate.
+     */
+    @Test
+    public void testCoalesceSnapshots() {
+        
+        NamedCache testCache = transactionManager.getCache(TESTCACHENAME.getLogicalName());
+        List<TransactionId> ids = new ArrayList<TransactionId>(COUNTI);
+        
+        for (int i = 0; i < COUNTI; i++) {
+            for (int j = i; j < i + COUNTJ; j++) {
+                testCache.put(j, "testValue");
+            }
+            Transaction transaction = transactionManager.getTransaction();
+            ids.add(transaction.getTransactionId());
+            transaction.commit();
+        }
+        
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4));
+        
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9));
+        
+        transactionManager.coalesceSnapshots(TESTCACHENAME, TransactionId.BIG_BANG, ids.get(9));
+        
+        Set<VersionedKey<Integer>> expected = new HashSet<VersionedKey<Integer>>();
+        
+        for (int i = 0; i < 5; i++) {
+            expected.add(new VersionedKey<Integer>(i, ids.get(i)));
+        }
+        
+        for (int i = 5; i < COUNTI + COUNTJ - 1; i++) {
+            expected.add(new VersionedKey<Integer>(i, ids.get(i <= 9 ? i : 9)));
+        }
+        
+        NamedCache versionCache = CacheFactory.getCache(TESTCACHENAME.getVersionCacheName());
+        
+        @SuppressWarnings("unchecked")
+        Set<VersionedKey<Integer>> result = versionCache.keySet();
+        
+        Assert.assertEquals(expected.size(), result.size());
+        Assert.assertTrue(result.containsAll(expected));
+        Assert.assertTrue(expected.containsAll(result));
+        
+    }
+
 }

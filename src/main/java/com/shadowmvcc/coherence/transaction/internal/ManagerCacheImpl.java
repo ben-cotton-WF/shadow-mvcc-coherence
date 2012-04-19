@@ -29,6 +29,7 @@ import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.index.MVCCSnapshotPurgeFilter;
 import com.shadowmvcc.coherence.invocable.SortedSetAppender;
+import com.shadowmvcc.coherence.invocable.SortedSetRemoveRange;
 import com.shadowmvcc.coherence.transaction.ManagerCache;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
@@ -95,7 +96,25 @@ public class ManagerCacheImpl implements ManagerCache {
     @Override
     public void coalesceSnapshots(final CacheName cacheName,
             final TransactionId precedingSnapshotId, final TransactionId snapshotId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("not yet implemented");
+        
+        NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
+        
+        Boolean changed = (Boolean) snapshotCache.invoke(cacheName.getLogicalName(),
+                new SortedSetRemoveRange<TransactionId>(precedingSnapshotId, snapshotId));
+        
+        if (changed == null) {
+            //TODO more informative error
+            throw new IllegalArgumentException("Snapshot range invalid: " + precedingSnapshotId + "-" + snapshotId);
+        }
+        
+        if (changed) {
+            
+            NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
+
+            Filter purgeFilter = new MVCCSnapshotPurgeFilter<Object>(precedingSnapshotId, snapshotId);
+
+            versionCache.invokeAll(purgeFilter, new ConditionalRemove(AlwaysFilter.INSTANCE));
+            
+        }
     }
 }
