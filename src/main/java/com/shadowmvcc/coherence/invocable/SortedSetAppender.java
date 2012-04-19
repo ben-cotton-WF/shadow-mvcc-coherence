@@ -22,7 +22,9 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
+import java.util.Collection;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 import com.shadowmvcc.coherence.pof.SortedSetCodec;
 import com.tangosol.io.pof.annotation.Portable;
@@ -72,7 +74,7 @@ public class SortedSetAppender<T extends Comparable<T>> extends AbstractProcesso
         SortedSet<T> theSet;
         
         if (entry.isPresent()) {
-            theSet = (SortedSet<T>) entry.getValue();
+            theSet = new TreeSet<T>((Collection<T>) entry.getValue());
         } else {
             theSet = defaultInitialSet;
         }

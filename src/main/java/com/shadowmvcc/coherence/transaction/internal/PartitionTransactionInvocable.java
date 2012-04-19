@@ -99,7 +99,7 @@ public class PartitionTransactionInvocable implements Invocable {
         }
         
 
-        Filter versionFilter = new EqualsFilter(Constants.TIMESTAMPEXTRACTOR, transactionId);
+        Filter versionFilter = new EqualsFilter(Constants.TRANSACTIONIDEXTRACTOR, transactionId);
         NamedCache vcache = CacheFactory.getCache(cacheName.getVersionCacheName());
         Filter partFilter = new PartitionedFilter(versionFilter, partitionSet);
         vcache.invokeAll(partFilter, agent);

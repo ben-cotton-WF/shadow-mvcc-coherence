@@ -75,7 +75,7 @@ public class ManagerCacheImpl implements ManagerCache {
     @Override
     public TransactionId createSnapshot(final CacheName cacheName, final TransactionId snapshotId) {
         NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
-        TransactionId rangeStart = (TransactionId) snapshotCache.invoke(snapshotCache,
+        TransactionId rangeStart = (TransactionId) snapshotCache.invoke(cacheName.getLogicalName(),
                 new SortedSetAppender<TransactionId>(INITIAL_SNAPSHOTS, snapshotId));
         if (rangeStart == null) {
             //TODO more informative error

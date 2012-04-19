@@ -110,7 +110,7 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
         VersionedKey<K> currentVersion = (VersionedKey<K>) entry.getKey();
 
         Entry<TransactionId, IndexEntry> ixe = index.lowerEntry(
-                currentVersion.getLogicalKey(), currentVersion.getTimeStamp());
+                currentVersion.getLogicalKey(), currentVersion.getTransactionId());
         while (ixe != null && !(isolationLevel == readUncommitted || ixe.getValue().isCommitted())) {
             ixe = index.lowerEntry(currentVersion.getLogicalKey(), ixe.getKey());
         }

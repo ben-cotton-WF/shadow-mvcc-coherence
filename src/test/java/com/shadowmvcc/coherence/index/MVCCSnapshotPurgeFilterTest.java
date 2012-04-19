@@ -53,8 +53,8 @@ public class MVCCSnapshotPurgeFilterTest extends AbstractLittlegridTest {
     
     private static final int COUNTI = 20;
     private static final int COUNTJ = 20;
-    public static final int IOFFSET = 1000;
-    public static final int JOFFSET = 500;
+    private static final int IOFFSET = 1000;
+    private static final int JOFFSET = 500;
 
     /**
      * initialise cache.

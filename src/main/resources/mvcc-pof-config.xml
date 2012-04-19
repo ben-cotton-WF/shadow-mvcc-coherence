@@ -201,6 +201,10 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
       <type-id>1042</type-id>
       <class-name>com.shadowmvcc.coherence.index.MVCCSnapshotPurgeFilter</class-name>
     </user-type>
+    <user-type>
+      <type-id>1043</type-id>
+      <class-name>com.shadowmvcc.coherence.invocable.SortedSetAppender</class-name>
+    </user-type>
 
   </user-type-list>
 

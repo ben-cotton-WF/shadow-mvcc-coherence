@@ -48,9 +48,9 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     @PortableProperty(POF_LOGICALKEY)
     private K logicalKey;
 
-    public static final int POF_TIMESTAMP = 1;
-    @PortableProperty(POF_TIMESTAMP)
-    private TransactionId timeStamp;
+    public static final int POF_TRANSACTIONID = 1;
+    @PortableProperty(POF_TRANSACTIONID)
+    private TransactionId transactionId;
 
     /**
      * Default constructor for POF use only.
@@ -61,12 +61,12 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     /**
      * Constructor.
      * @param logicalKey the logical key
-     * @param timeStamp the transaction id
+     * @param transactionId the transaction id
      */
-    public VersionedKey(final K logicalKey, final TransactionId timeStamp) {
+    public VersionedKey(final K logicalKey, final TransactionId transactionId) {
         super();
         this.logicalKey = logicalKey;
-        this.timeStamp = timeStamp;
+        this.transactionId = transactionId;
     }
 
     /**
@@ -79,8 +79,8 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
     /**
      * @return the transaction id
      */
-    public TransactionId getTimeStamp() {
-        return timeStamp;
+    public TransactionId getTransactionId() {
+        return transactionId;
     }
 
     @Override
@@ -99,7 +99,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         result = prime * result
                 + ((logicalKey == null) ? 0 : logicalKey.hashCode());
         result = prime * result
-                + ((timeStamp == null) ? 0 : timeStamp.hashCode());
+                + ((transactionId == null) ? 0 : transactionId.hashCode());
         return result;
     }
 
@@ -123,11 +123,11 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         } else if (!logicalKey.equals(other.logicalKey)) {
             return false;
         }
-        if (timeStamp == null) {
-            if (other.timeStamp != null) {
+        if (transactionId == null) {
+            if (other.transactionId != null) {
                 return false;
             }
-        } else if (!timeStamp.equals(other.timeStamp)) {
+        } else if (!transactionId.equals(other.transactionId)) {
             return false;
         }
         return true;
@@ -135,7 +135,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
 
     @Override
     public String toString() {
-        return logicalKey + " ...@" + timeStamp;
+        return logicalKey + " ...@" + transactionId;
     }
 
 
