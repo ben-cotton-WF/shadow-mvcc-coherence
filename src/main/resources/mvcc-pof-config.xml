@@ -203,11 +203,15 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
     </user-type>
     <user-type>
       <type-id>1043</type-id>
-      <class-name>com.shadowmvcc.coherence.invocable.SortedSetAppender</class-name>
+      <class-name>com.shadowmvcc.coherence.invocable.SnapShotCreateProcessor</class-name>
     </user-type>
     <user-type>
       <type-id>1044</type-id>
       <class-name>com.shadowmvcc.coherence.invocable.SortedSetRemoveRange</class-name>
+    </user-type>
+    <user-type>
+      <type-id>1045</type-id>
+      <class-name>com.shadowmvcc.coherence.exception.SnapshotCreationException</class-name>
     </user-type>
 
   </user-type-list>

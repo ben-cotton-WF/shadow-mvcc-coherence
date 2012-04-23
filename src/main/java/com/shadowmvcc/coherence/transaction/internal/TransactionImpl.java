@@ -173,4 +173,9 @@ public class TransactionImpl implements Transaction {
         transactionStatus = rolledback;
     }
 
+    @Override
+    public boolean isReadOnly() {
+        return false;
+    }
+
 }

@@ -50,6 +50,12 @@ public interface Transaction {
      * @return true if this is an autocommit context.
      */
     boolean isAutoCommit();
+    
+    /**
+     * Is this a read only transaction?
+     * @return true if this is a read only transaction
+     */
+    boolean isReadOnly();
 
     /**
      * Add a cache name and key that may have been changed in this transaction.

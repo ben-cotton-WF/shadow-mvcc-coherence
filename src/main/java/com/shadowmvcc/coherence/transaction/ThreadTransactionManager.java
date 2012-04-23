@@ -105,50 +105,26 @@ public class ThreadTransactionManager implements TransactionManager {
     }
 
     @Override
-    public boolean isTransactionOpen() {
-        return getThreadTransactionManager().isTransactionOpen();
-    }
-
-    @Override
-    public void setIsolationLevel(final IsolationLevel isolationLevel) {
-        getThreadTransactionManager().setIsolationLevel(isolationLevel);
-    }
-
-    @Override
-    public IsolationLevel getIsolationLevel() {
-        return getThreadTransactionManager().getIsolationLevel();
-    }
-
-    @Override
-    public void setAutoCommit(final boolean autoCommit) {
-        getThreadTransactionManager().setAutoCommit(autoCommit);
-    }
-
-    @Override
-    public boolean isAutoCommit() {
-        return getThreadTransactionManager().isAutoCommit();
-    }
-
-    @Override
-    public void setReadOnly(final boolean readOnly) {
-        getThreadTransactionManager().setReadOnly(readOnly);
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return getThreadTransactionManager().isReadOnly();
-    }
-
-    @Override
     public TransactionId createSnapshot(final CacheName cacheName,
-            final TransactionId snapshotId) {
-        return getThreadTransactionManager().createSnapshot(cacheName, snapshotId);
+            final long snapshotTime) {
+        return getThreadTransactionManager().createSnapshot(cacheName, snapshotTime);
     }
 
     @Override
     public void coalesceSnapshots(final CacheName cacheName,
-            final TransactionId fromSnapshotId, final TransactionId toSnapshotId) {
-        getThreadTransactionManager().coalesceSnapshots(cacheName, fromSnapshotId, toSnapshotId);
+            final long fromSnapshotTime, final long toSnapshotTime) {
+        getThreadTransactionManager().coalesceSnapshots(cacheName, fromSnapshotTime, toSnapshotTime);
+    }
+    
+    @Override
+    public void coalesceSnapshots(final CacheName cacheName,
+            final long toSnapshotTime) {
+        getThreadTransactionManager().coalesceSnapshots(cacheName, toSnapshotTime);
+    }
+
+    @Override
+    public MVCCNamedCache getTemporalCacheView(final String cacheName, final long timestamp) {
+        return getThreadTransactionManager().getTemporalCacheView(cacheName, timestamp);
     }
 
 }

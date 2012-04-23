@@ -27,7 +27,6 @@ import static com.shadowmvcc.coherence.domain.TransactionProcStatus.open;
 import static com.shadowmvcc.coherence.domain.TransactionProcStatus.rollingback;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -112,8 +111,9 @@ public class TransactionCacheImpl implements TransactionCache {
         
         NamedCache transactionCache = getCache(CACHENAME);
 
-        //TODO consider using cluster time here.
-        TransactionCacheValue openTransaction = new TransactionCacheValue(open, new Date().getTime());
+        long now = transactionCache.getCacheService().getCluster().getTimeMillis();
+        
+        TransactionCacheValue openTransaction = new TransactionCacheValue(open, now);
         
         if (transactionCache.invoke(transactionId, new ConditionalPut(NOTPRESENT, openTransaction, true)) != null) {
             throw new TransactionException("Transaction already exists: " + transactionId);

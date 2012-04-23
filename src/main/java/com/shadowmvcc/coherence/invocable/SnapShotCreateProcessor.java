@@ -26,7 +26,10 @@ import java.util.Collection;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import com.shadowmvcc.coherence.pof.SortedSetCodec;
+import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.exception.SnapshotCreationException;
+import com.shadowmvcc.coherence.transaction.internal.SystemPropertyTimestampValidator;
+import com.shadowmvcc.coherence.transaction.internal.TimestampValidator;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.util.InvocableMap.Entry;
@@ -39,31 +42,36 @@ import com.tangosol.util.processor.AbstractProcessor;
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
- * @param <T> type of the entry being added and of the set
  */
 @Portable
-public class SortedSetAppender<T extends Comparable<T>> extends AbstractProcessor {
+public class SnapShotCreateProcessor extends AbstractProcessor {
 
     private static final long serialVersionUID = 8348665851594399438L;
 
-    @PortableProperty (value = 0, codec = SortedSetCodec.class) private SortedSet<T> defaultInitialSet;
-    @PortableProperty (1) private T value;
+    private static final SortedSet<TransactionId> INITIAL_SNAPSHOTS;
+    private static final TimestampValidator TIMESTAMPVALIDATOR =
+            new SystemPropertyTimestampValidator();
+    
+    static {
+        INITIAL_SNAPSHOTS = new TreeSet<TransactionId>();
+        INITIAL_SNAPSHOTS.add(TransactionId.BIG_BANG);
+    }
+    
+    @PortableProperty (0) private TransactionId value;
     
     /**
      *  Default constructor for POF use only.
      */
-    public SortedSetAppender() {
+    public SnapShotCreateProcessor() {
         super();
     }
 
     /**
      * Constructor.
-     * @param defaultInitialSet initial set if not already present.
      * @param value value to add to the end of the set
      */
-    public SortedSetAppender(final SortedSet<T> defaultInitialSet, final T value) {
+    public SnapShotCreateProcessor(final TransactionId value) {
         super();
-        this.defaultInitialSet = defaultInitialSet;
         this.value = value;
     }
 
@@ -71,22 +79,27 @@ public class SortedSetAppender<T extends Comparable<T>> extends AbstractProcesso
     @Override
     public Object process(final Entry entry) {
         
-        SortedSet<T> theSet;
+        SortedSet<TransactionId> theSet;
+        
+        if (!TIMESTAMPVALIDATOR.isSnapshotAgeValid(value.getTimeStampMillis())) {
+            throw new SnapshotCreationException("Snapshot too recent.");
+        }
         
         if (entry.isPresent()) {
-            theSet = new TreeSet<T>((Collection<T>) entry.getValue());
+            theSet = new TreeSet<TransactionId>((Collection<TransactionId>) entry.getValue());
         } else {
-            theSet = defaultInitialSet;
+            theSet = INITIAL_SNAPSHOTS;
         }
         
         if (theSet.contains(value)) {
-            return null;
+            throw new SnapshotCreationException("Snapshot already exists: " + value);
         }
         
-        T oldLast = theSet.last();
+        TransactionId oldLast = theSet.last();
         
         if (oldLast.compareTo(value) > 0) {
-            return null;
+            throw new SnapshotCreationException("Requested snapshot " + value
+                    + " older than most recent extant snapshot " + oldLast);
         }
         
         theSet.add(value);

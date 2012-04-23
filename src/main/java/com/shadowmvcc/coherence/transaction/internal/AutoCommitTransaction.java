@@ -102,4 +102,9 @@ public class AutoCommitTransaction implements Transaction {
             final PartitionSet partitionSet) {
     }
 
+    @Override
+    public boolean isReadOnly() {
+        return false;
+    }
+
 }

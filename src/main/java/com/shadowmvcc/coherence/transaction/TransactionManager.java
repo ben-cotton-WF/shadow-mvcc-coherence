@@ -24,13 +24,14 @@ package com.shadowmvcc.coherence.transaction;
 
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
-import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
 
 /**
  * {@code TransactionManager} implementations are responsible for creating {@link Transaction}
  * objects. Instances of {@link MVCCNamedCache} must be obtained from a {@code TransactionManager}
- * so that cache operations are performed withing the correct transaction.
+ * so that cache operations are performed within the correct transaction.
+ * 
+ * TODO this is getting cluttered with non-transaction related stuff - consider splitting it.
  *
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
@@ -48,6 +49,17 @@ public interface TransactionManager {
      * @return the cache
      */
     MVCCNamedCache getCache(String cacheName);
+    
+    /**
+     * Get a NamedCache that will provide a view as at a given timestamp.
+     * If the time is not later than the most recent snapshot, then it must be
+     * a valid snapshot time. If the timestamp is a snapshot view, then the
+     * results are immutable without setting read markers.
+     * @param cacheName the name of the cache
+     * @param timestamp the view timestamp
+     * @return the cache
+     */
+    MVCCNamedCache getTemporalCacheView(String cacheName, long timestamp);
 
     /**
      * Return the current transaction, constructs a new transaction if required.
@@ -56,70 +68,39 @@ public interface TransactionManager {
     Transaction getTransaction();
 
     /**
-     * Return true if a transaction has been started. Transactions are implicitly started by the
-     * first cache operation, and removed after commit or rollback.
-     * @return true if a transaction has been started.
-     */
-    boolean isTransactionOpen();
-
-    /**
-     * Set the isolation level for new transactions. Does not affect any transaction in progress.
-     * @param isolationLevel the new isolation level.
-     */
-    void setIsolationLevel(IsolationLevel isolationLevel);
-
-    /**
-     * @return the current isolation level
-     */
-    IsolationLevel getIsolationLevel();
-
-    /**
-     * Set the  transaction manager in autocommit mode? If true, each cache operation creates
-     * a new transaction, which is implicitly committed, Does not affect any currently open transaction
-     * @param autoCommit true to set autocommit mode, false to clear
-     */
-    void setAutoCommit(boolean autoCommit);
-
-    /**
-     * @return true if in autommit mode
-     */
-    boolean isAutoCommit();
-
-    /**
-     * Set transactions to read-only mode. Any update operation will fail. Does not affect
-     * currently active transaction.
-     * @param readOnly true to set read-only mode. False to clear
-     */
-    void setReadOnly(boolean readOnly);
-
-    /**
-     * @return true if the manager is in read only mode
-     */
-    boolean isReadOnly();
-
-    /**
      * Establish a snapshot, removing old versions up to the specified snapshot timestamp.
      * Only the most recent version of each entry newer than the previous snapshot and before the
      * given snapshot id are retained, all other versions in the interval are deleted and all
      * read markers up to the snapshot time are deleted. No updates will be accepted henceforth
      * with a transaction id earlier than the most recent snapshot
      * @param cacheName cache to apply the snapshot to
-     * @param snapshotId the transactionId to establish the new snapshot
+     * @param snapshotTime the time in millis to establish the new snapshot
      * @return the next earlier snapshot timestamp.
      * @throws IllegalArgumentException if there are open transactions with
      * timestamp earlier than the requested snapshot.
      */
-    TransactionId createSnapshot(CacheName cacheName, TransactionId snapshotId);
+    TransactionId createSnapshot(CacheName cacheName, long snapshotTime);
     
     /**
      * Coalesce snapshots, removing intermediate snapshots so that only the most
      * recent cache entry within the interval is retained.
      * @param cacheName cache to apply the snapshot coalescence to
-     * @param fromSnapshotId the earliest snapshot to retain
-     * @param toSnapshotId the latest snapshot to retain
+     * @param fromSnapshotTime the earliest snapshot to retain
+     * @param toSnapshotTime the latest snapshot to retain
      * @throws IllegalArgumentException if either snapshot does not exist
      * or if the to snapshot is not later than the from snapshot
      */
     void coalesceSnapshots(CacheName cacheName,
-            TransactionId fromSnapshotId, TransactionId toSnapshotId);
+            long fromSnapshotTime, long toSnapshotTime);
+    
+    /**
+     * Coalesce snapshots, removing all earlier snapshots so that only the most
+     * recent cache entry is retained.
+     * @param cacheName cache to apply the snapshot coalescence to
+     * @param toSnapshotTime the latest snapshot to retain
+     * @throws IllegalArgumentException if either snapshot does not exist
+     * or if the to snapshot is not later than the from snapshot
+     */
+    void coalesceSnapshots(CacheName cacheName, long toSnapshotTime);
+    
 }

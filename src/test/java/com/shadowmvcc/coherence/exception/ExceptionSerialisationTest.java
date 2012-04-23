@@ -56,12 +56,21 @@ public class ExceptionSerialisationTest {
      * Future read.
      */
     @Test
-    public void testTFutureReadException() {
+    public void testFutureReadException() {
 
         FutureReadException vo = new FutureReadException(
                 new VersionedKey<Integer>(99, new TransactionId(BASETIME, 0, 0)));
         assertPofFidelity(vo);
     }
+    /**
+     * Snapshot.
+     */
+//    @Test
+//    public void testSnapshotCreationException() {
+//
+//        SnapshotCreationException vo = new SnapshotCreationException("blah blah blah");
+//        assertPofFidelity(vo);
+//    }
 
     /**
      * @param expected value to check

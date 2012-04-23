@@ -22,13 +22,11 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction.internal;
 
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.exception.SnapshotCreationException;
 import com.shadowmvcc.coherence.index.MVCCSnapshotPurgeFilter;
-import com.shadowmvcc.coherence.invocable.SortedSetAppender;
+import com.shadowmvcc.coherence.invocable.SnapShotCreateProcessor;
 import com.shadowmvcc.coherence.invocable.SortedSetRemoveRange;
 import com.shadowmvcc.coherence.transaction.ManagerCache;
 import com.tangosol.net.CacheFactory;
@@ -49,12 +47,6 @@ public class ManagerCacheImpl implements ManagerCache {
     private static final String IDCACHENAME = "mvcc-transaction-manager-id";
     private static final String SNAPSHOTCACHENAME = "mvcc-snapshot";
     private static final int KEY = 0;
-    private static final SortedSet<TransactionId> INITIAL_SNAPSHOTS;
-    
-    static {
-        INITIAL_SNAPSHOTS = new TreeSet<TransactionId>();
-        INITIAL_SNAPSHOTS.add(TransactionId.BIG_BANG);
-    }
 
     @Override
     public int getManagerId() {
@@ -76,12 +68,19 @@ public class ManagerCacheImpl implements ManagerCache {
     @Override
     public TransactionId createSnapshot(final CacheName cacheName, final TransactionId snapshotId) {
         NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
-        TransactionId rangeStart = (TransactionId) snapshotCache.invoke(cacheName.getLogicalName(),
-                new SortedSetAppender<TransactionId>(INITIAL_SNAPSHOTS, snapshotId));
-        if (rangeStart == null) {
-            //TODO more informative error
-            throw new IllegalArgumentException("illegal snapshot timestamp " + snapshotId);
+        
+        TransactionId rangeStart;
+        try {
+            rangeStart = (TransactionId) snapshotCache.invoke(cacheName.getLogicalName(),
+                new SnapShotCreateProcessor(snapshotId));
+        } catch (RuntimeException ex) {
+            if (ex.getCause() instanceof SnapshotCreationException) {
+                throw (SnapshotCreationException) ex.getCause();
+            } else {
+                throw ex;
+            }
         }
+        
         
         NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
         
@@ -97,21 +96,23 @@ public class ManagerCacheImpl implements ManagerCache {
     public void coalesceSnapshots(final CacheName cacheName,
             final TransactionId precedingSnapshotId, final TransactionId snapshotId) {
         
+        TransactionId rangeStart = precedingSnapshotId == null ? TransactionId.BIG_BANG : precedingSnapshotId;
+        
         NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
         
         Boolean changed = (Boolean) snapshotCache.invoke(cacheName.getLogicalName(),
-                new SortedSetRemoveRange<TransactionId>(precedingSnapshotId, snapshotId));
+                new SortedSetRemoveRange<TransactionId>(rangeStart, snapshotId));
         
         if (changed == null) {
             //TODO more informative error
-            throw new IllegalArgumentException("Snapshot range invalid: " + precedingSnapshotId + "-" + snapshotId);
+            throw new IllegalArgumentException("Snapshot range invalid: " + rangeStart + "-" + snapshotId);
         }
         
         if (changed) {
             
             NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
 
-            Filter purgeFilter = new MVCCSnapshotPurgeFilter<Object>(precedingSnapshotId, snapshotId);
+            Filter purgeFilter = new MVCCSnapshotPurgeFilter<Object>(rangeStart, snapshotId);
 
             versionCache.invokeAll(purgeFilter, new ConditionalRemove(AlwaysFilter.INSTANCE));
             

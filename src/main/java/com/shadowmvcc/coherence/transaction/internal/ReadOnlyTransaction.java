@@ -102,4 +102,9 @@ public class ReadOnlyTransaction implements Transaction {
     public void addPartitionSetAffected(final CacheName cacheName,
             final PartitionSet partitionSet) {
     }
+
+    @Override
+    public boolean isReadOnly() {
+        return true;
+    }
 }

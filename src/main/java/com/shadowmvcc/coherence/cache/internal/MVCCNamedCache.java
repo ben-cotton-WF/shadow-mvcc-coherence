@@ -29,6 +29,7 @@ import java.util.Set;
 
 import com.shadowmvcc.coherence.cache.MVCCTransactionalCache;
 import com.shadowmvcc.coherence.transaction.Transaction;
+import com.shadowmvcc.coherence.transaction.TransactionException;
 import com.shadowmvcc.coherence.transaction.TransactionManager;
 import com.tangosol.coherence.component.util.daemon.queueProcessor.service.grid.partitionedService.PartitionedCache;
 import com.tangosol.net.CacheFactory;
@@ -133,6 +134,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object put(final Object key, final Object value) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            throw new TransactionException("read-only transaction");
+        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.put(context.getTransactionId(), context.getIsolationLevel(),
                 context.isAutoCommit(), key, value);
@@ -142,6 +146,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object remove(final Object key) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            throw new TransactionException("read-only transaction");
+        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.remove(context.getTransactionId(), context.getIsolationLevel(), context.isAutoCommit(), key);
     }
@@ -150,6 +157,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void putAll(final Map m) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            throw new TransactionException("read-only transaction");
+        }
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), m.keySet());
         try {
             mvccCache.putAll(context.getTransactionId(), context.isAutoCommit(), m);
@@ -162,6 +172,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public void clear() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            throw new TransactionException("read-only transaction");
+        }
         try {
             mvccCache.clear(context.getTransactionId(), context.isAutoCommit());
             context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), getFullPartitionSet());
@@ -276,6 +289,10 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object invoke(final Object key, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            // TODO pass on read only so we can use read only wrapper
+            throw new TransactionException("read-only transaction");
+        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.invoke(context.getTransactionId(),
                 context.getIsolationLevel(), context.isAutoCommit(), key, agent);
@@ -285,6 +302,10 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            // TODO pass on read only so we can use read only wrapper
+            throw new TransactionException("read-only transaction");
+        }
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
         try {
             return mvccCache.invokeAll(context.getTransactionId(),
@@ -299,6 +320,10 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isReadOnly()) {
+            // TODO pass on read only so we can use read only wrapper
+            throw new TransactionException("read-only transaction");
+        }
         try {
             InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), filter, agent);

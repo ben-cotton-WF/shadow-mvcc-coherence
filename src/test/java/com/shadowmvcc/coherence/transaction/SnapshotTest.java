@@ -39,6 +39,7 @@ public class SnapshotTest extends AbstractLittlegridTest {
         System.setProperty("shadowmvcc.opentransactiontimeout", "1000");
         System.setProperty("shadowmvcc.transactioncompletiontimeout", "1000");
         System.setProperty("shadowmvcc.pollinterval", "100");
+        System.setProperty("shadowmvcc.minsnapshotage", "100");
     }
     /**
      * Set up the tm.
@@ -56,9 +57,10 @@ public class SnapshotTest extends AbstractLittlegridTest {
     /**
      * Populate a cache over a set of transactions, then reduce it to
      * two consecutive snapshots.
+     * @throws InterruptedException never
      */
     @Test
-    public void testCreateSnapshots() {
+    public void testCreateSnapshots() throws InterruptedException {
         
         NamedCache testCache = transactionManager.getCache(TESTCACHENAME.getLogicalName());
         List<TransactionId> ids = new ArrayList<TransactionId>(COUNTI);
@@ -72,9 +74,11 @@ public class SnapshotTest extends AbstractLittlegridTest {
             transaction.commit();
         }
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4));
+        Thread.sleep(200);
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9));
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
+        
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
         Set<VersionedKey<Integer>> expected = new HashSet<VersionedKey<Integer>>();
         
@@ -117,11 +121,11 @@ public class SnapshotTest extends AbstractLittlegridTest {
             transaction.commit();
         }
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4));
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9));
+        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
-        transactionManager.coalesceSnapshots(TESTCACHENAME, TransactionId.BIG_BANG, ids.get(9));
+        transactionManager.coalesceSnapshots(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
         Set<VersionedKey<Integer>> expected = new HashSet<VersionedKey<Integer>>();
         

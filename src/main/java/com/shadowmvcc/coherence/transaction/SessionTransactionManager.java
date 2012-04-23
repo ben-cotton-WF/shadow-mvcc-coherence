@@ -32,6 +32,8 @@ import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.transaction.internal.AutoCommitTransaction;
 import com.shadowmvcc.coherence.transaction.internal.ManagerCacheImpl;
 import com.shadowmvcc.coherence.transaction.internal.ReadOnlyTransaction;
+import com.shadowmvcc.coherence.transaction.internal.SystemPropertyTimestampValidator;
+import com.shadowmvcc.coherence.transaction.internal.TimestampValidator;
 import com.shadowmvcc.coherence.transaction.internal.TransactionCache;
 import com.shadowmvcc.coherence.transaction.internal.TransactionCacheImpl;
 import com.shadowmvcc.coherence.transaction.internal.TransactionImpl;
@@ -53,6 +55,7 @@ public class SessionTransactionManager implements TransactionManager,
         TransactionNotificationListener {
 
     private final TimestampSource timestampSource;
+    private final TimestampValidator timestampValidator;
     private final int managerId;
     private final TransactionCache transactionCache;
     private final ManagerCache managerCache;
@@ -73,6 +76,15 @@ public class SessionTransactionManager implements TransactionManager,
         this.managerCache = getManagerCache();
         this.managerId = managerCache.getManagerId();
         this.transactionCache = getTransactionCache();
+        this.timestampValidator = getTimestampValidator();
+    }
+
+    /**
+     * Get the timestamp validator.
+     * @return an instance of a TimestampValidator
+     */
+    protected TimestampValidator getTimestampValidator() {
+        return new SystemPropertyTimestampValidator();
     }
 
     /**
@@ -92,6 +104,7 @@ public class SessionTransactionManager implements TransactionManager,
         this.readOnly = readOnly;
         this.autoCommit = autoCommit;
         this.isolationLevel = isolationLevel;
+        this.timestampValidator = getTimestampValidator();
     }
     
     /**
@@ -131,7 +144,7 @@ public class SessionTransactionManager implements TransactionManager,
     
     /**
      * Register a cache with this transaction manager.
-     * Used to ensure correct transaction completeion if this client
+     * Used to ensure correct transaction completion if this client
      * should fail with incomplete transactions.
      * @param cacheName name of the cache to register
      */
@@ -145,17 +158,73 @@ public class SessionTransactionManager implements TransactionManager,
         registerCache(cacheName);
         return new MVCCNamedCache(this, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
+    
+    @SuppressWarnings("rawtypes")
+    @Override
+    public MVCCNamedCache getTemporalCacheView(final String cacheName, final long timestamp) {
+        TransactionNotificationListener tnl = new TransactionNotificationListener() {
+            @Override
+            public void transactionComplete(final Transaction transaction) {
+                throw new UnsupportedOperationException("Snapshot transaction");
+            }
+        };
+        final Transaction viewTransaction = new ReadOnlyTransaction(
+                new TransactionId(timestamp, Integer.MAX_VALUE, Integer.MAX_VALUE), isolationLevel, tnl);
+        
+        return new MVCCNamedCache(new TransactionManager() {
+            @Override
+            public MVCCNamedCache getCache(final String cacheName) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public MVCCNamedCache getTemporalCacheView(final String cacheName,
+                    final long timestamp) {
+                throw new UnsupportedOperationException();
+            }
+            @Override
+            public Transaction getTransaction() {
+                return viewTransaction;
+            }
+
+            @Override
+            public TransactionId createSnapshot(final CacheName cacheName,
+                    final long snapshotTime) {
+                throw new UnsupportedOperationException("not yet implemented");
+            }
+
+            @Override
+            public void coalesceSnapshots(final CacheName cacheName,
+                    final long fromSnapshotTime, final long toSnapshotTime) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void coalesceSnapshots(final CacheName cacheName,
+                    final long toSnapshotTime) {
+                throw new UnsupportedOperationException();
+            }
+            
+        }, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
+    }
 
     @Override
     public synchronized Transaction getTransaction() {
         if (currentTransaction == null) {
 
+            TransactionId id = getNextId();
             if (autoCommit) {
-                currentTransaction = new AutoCommitTransaction(getNextId(), isolationLevel, this);
+                if (!timestampValidator.isTransactionTimestampValid(id.getTimeStampMillis())) {
+                    throw new TransactionException("Cannot create transaction, timestamp too old");
+                }
+                currentTransaction = new AutoCommitTransaction(id, isolationLevel, this);
             } else if (readOnly) {
-                currentTransaction = new ReadOnlyTransaction(getNextId(), isolationLevel, this);
+                // Not a problem if read-only transactions are old.
+                currentTransaction = new ReadOnlyTransaction(id, isolationLevel, this);
             } else {
-                currentTransaction = new TransactionImpl(getNextId(), isolationLevel, this, transactionCache);
+                if (!timestampValidator.isTransactionTimestampValid(id.getTimeStampMillis())) {
+                    throw new TransactionException("Cannot create transaction, timestamp too old");
+                }
+                currentTransaction = new TransactionImpl(id, isolationLevel, this, transactionCache);
             }
         }
         return currentTransaction;
@@ -177,51 +246,26 @@ public class SessionTransactionManager implements TransactionManager,
     }
 
     @Override
-    public boolean isTransactionOpen() {
-        return currentTransaction != null;
-    }
-
-    @Override
-    public boolean isReadOnly() {
-        return readOnly;
-    }
-
-    @Override
-    public void setReadOnly(final boolean readOnly) {
-        this.readOnly = readOnly;
-    }
-
-    @Override
-    public boolean isAutoCommit() {
-        return autoCommit;
-    }
-
-    @Override
-    public void setAutoCommit(final boolean autoCommit) {
-        this.autoCommit = autoCommit;
-    }
-
-    @Override
-    public IsolationLevel getIsolationLevel() {
-        return isolationLevel;
-    }
-
-    @Override
-    public void setIsolationLevel(final IsolationLevel isolationLevel) {
-        this.isolationLevel = isolationLevel;
-    }
-
-    @Override
     public TransactionId createSnapshot(final CacheName cacheName,
-            final TransactionId snapshotId) {
+            final long snapshotTime) {
         // TODO verify no open transactions at or earlier than snapshotId
+        TransactionId snapshotId = new TransactionId(snapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
         return managerCache.createSnapshot(cacheName, snapshotId);
     }
 
     @Override
     public void coalesceSnapshots(final CacheName cacheName,
-            final TransactionId fromSnapshotId, final TransactionId toSnapshotId) {
+            final long fromSnapshotTime, final long toSnapshotTime) {
+        TransactionId fromSnapshotId = new TransactionId(fromSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        TransactionId toSnapshotId = new TransactionId(toSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
         managerCache.coalesceSnapshots(cacheName, fromSnapshotId, toSnapshotId);
+    }
+
+    @Override
+    public void coalesceSnapshots(final CacheName cacheName,
+            final long toSnapshotTime) {
+        TransactionId toSnapshotId = new TransactionId(toSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        managerCache.coalesceSnapshots(cacheName, null, toSnapshotId);
     }
 
 
