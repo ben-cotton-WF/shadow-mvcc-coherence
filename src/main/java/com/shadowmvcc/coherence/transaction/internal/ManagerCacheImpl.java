@@ -22,6 +22,10 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction.internal;
 
+import java.util.Collection;
+import java.util.NavigableSet;
+import java.util.TreeSet;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.exception.SnapshotCreationException;
@@ -117,5 +121,18 @@ public class ManagerCacheImpl implements ManagerCache {
             versionCache.invokeAll(purgeFilter, new ConditionalRemove(AlwaysFilter.INSTANCE));
             
         }
+    }
+
+    @Override
+    public NavigableSet<TransactionId> getValidSnapshots(final CacheName cacheName) {
+        
+        NamedCache snapshotCache = CacheFactory.getCache(SNAPSHOTCACHENAME);
+        
+        @SuppressWarnings("unchecked")
+        Collection<TransactionId> collection = (Collection<TransactionId>) snapshotCache.get(
+                cacheName.getLogicalName()); 
+        
+        return collection == null ? null : new TreeSet<TransactionId>(collection);
+        
     }
 }

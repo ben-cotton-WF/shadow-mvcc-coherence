@@ -22,6 +22,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction;
 
+import java.util.NavigableSet;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
 
@@ -75,4 +77,11 @@ public interface ManagerCache {
      */
     void coalesceSnapshots(CacheName cacheName,
             TransactionId fromSnapshotId, TransactionId toSnapshotId);
+    
+    /**
+     * Get the list of snapshot ids for a cache.
+     * @param cacheName the cache bane
+     * @return and ordered set of snapshot transaction ids
+     */
+    NavigableSet<TransactionId> getValidSnapshots(CacheName cacheName);
 }

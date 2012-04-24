@@ -1,6 +1,7 @@
 package com.shadowmvcc.coherence.transaction.internal;
 
 import java.util.NavigableSet;
+import java.util.TreeSet;
 
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -59,8 +60,19 @@ public class SnapshotManagerImpl implements SnapshotManager {
 
     @Override
     public NavigableSet<Long> getValidSnapshots(final CacheName cacheName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("not yet implemented");
+        
+        NavigableSet<TransactionId> tidset = managerCache.getValidSnapshots(cacheName);
+        
+        NavigableSet<Long> result = null;
+        
+        if (tidset != null) {
+            result = new TreeSet<Long>();
+            for (TransactionId tid : tidset) {
+                result.add(tid.getTimeStampMillis());
+            }
+        }
+        
+        return result;
     }
 
 }
