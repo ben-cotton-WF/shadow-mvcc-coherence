@@ -205,8 +205,13 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     @Override
     public <R> R invoke(final TransactionId tid, final IsolationLevel isolationLevel,
-            final boolean autoCommit, final K key, final EntryProcessor agent) {
-        EntryProcessor ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
+            final boolean autoCommit, final boolean readonly, final K key, final EntryProcessor agent) {
+        EntryProcessor ep;
+        if (readonly) {
+            ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
+        } else {
+            ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
+        }
         return invokeUntilCommitted(key, tid, ep);
     }
 
@@ -771,14 +776,20 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      */
     @Override
     public <R> Map<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
-            final boolean autoCommit, final Collection<K> collKeys, final EntryProcessor agent) {
+            final boolean autoCommit, final boolean readOnly,
+            final Collection<K> collKeys, final EntryProcessor agent) {
         
         if (autoCommit) {
             throw new IllegalArgumentException("autocommit not permitted for invokeAll");
         }
         
-        EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
+        EntryProcessor wrappedProcessor;
+        if (readOnly) {
+            wrappedProcessor = new MVCCReadOnlyEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, cacheName);
+        } else {
+            wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
                 tid, agent, isolationLevel, autoCommit, cacheName);
+        }
         return invokeAllUntilCommitted(collKeys, tid, wrappedProcessor);
     }
 
@@ -790,14 +801,21 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      */
     @Override
     public <R> InvocationFinalResult<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
-            final boolean autoCommit, final Filter filter, final EntryProcessor agent) {
+            final boolean autoCommit, final boolean readOnly, final Filter filter, final EntryProcessor agent) {
 
         if (autoCommit) {
             throw new IllegalArgumentException("autocommit not permitted for invokeAll");
         }
         
-        EntryProcessor wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
-                tid, agent, isolationLevel, autoCommit, cacheName, filter);
+        EntryProcessor wrappedProcessor;
+        if (readOnly) {
+            wrappedProcessor = new MVCCReadOnlyEntryProcessorWrapper<K, R>(
+                    tid, agent, isolationLevel, cacheName, filter);
+            
+        } else {
+            wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
+                    tid, agent, isolationLevel, autoCommit, cacheName, filter);
+        }
         return invokeAllUntilCommitted(filter, tid, wrappedProcessor);
     }
 

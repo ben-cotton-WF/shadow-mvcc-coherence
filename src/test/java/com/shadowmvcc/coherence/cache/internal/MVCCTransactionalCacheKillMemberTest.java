@@ -85,7 +85,7 @@ public class MVCCTransactionalCacheKillMemberTest extends AbstractLittlegridTest
 
         asynchMemberKill(1);
 
-        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, filter, ep).getResultMap().keySet();
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, true, filter, ep).getResultMap().keySet();
 
         Set<Integer> expected = new HashSet<Integer>(5);
         expected.add(1);

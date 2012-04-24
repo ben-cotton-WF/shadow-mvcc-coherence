@@ -289,27 +289,19 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object invoke(final Object key, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        if (context.isReadOnly()) {
-            // TODO pass on read only so we can use read only wrapper
-            throw new TransactionException("read-only transaction");
-        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.invoke(context.getTransactionId(),
-                context.getIsolationLevel(), context.isAutoCommit(), key, agent);
+                context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), key, agent);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        if (context.isReadOnly()) {
-            // TODO pass on read only so we can use read only wrapper
-            throw new TransactionException("read-only transaction");
-        }
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
         try {
             return mvccCache.invokeAll(context.getTransactionId(),
-                    context.getIsolationLevel(), context.isAutoCommit(), collKeys, agent);
+                    context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), collKeys, agent);
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;
@@ -320,13 +312,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        if (context.isReadOnly()) {
-            // TODO pass on read only so we can use read only wrapper
-            throw new TransactionException("read-only transaction");
-        }
         try {
             InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
-                    context.getIsolationLevel(), context.isAutoCommit(), filter, agent);
+                    context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), filter, agent);
             Map result = fr.getResultMap();
             context.addKeySetAffected(mvccCache.getMVCCCacheName(), fr.getChangedKeys());
             return result;
