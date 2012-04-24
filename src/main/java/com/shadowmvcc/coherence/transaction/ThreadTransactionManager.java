@@ -24,11 +24,9 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
-import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
-import com.shadowmvcc.coherence.domain.TransactionId;
 
 /**
  * Implementation of {@TransactionManager} to provide a separate transaction context per thread.
@@ -102,24 +100,6 @@ public class ThreadTransactionManager implements TransactionManager {
     @Override
     public Transaction getTransaction() {
         return getThreadTransactionManager().getTransaction();
-    }
-
-    @Override
-    public TransactionId createSnapshot(final CacheName cacheName,
-            final long snapshotTime) {
-        return getThreadTransactionManager().createSnapshot(cacheName, snapshotTime);
-    }
-
-    @Override
-    public void coalesceSnapshots(final CacheName cacheName,
-            final long fromSnapshotTime, final long toSnapshotTime) {
-        getThreadTransactionManager().coalesceSnapshots(cacheName, fromSnapshotTime, toSnapshotTime);
-    }
-    
-    @Override
-    public void coalesceSnapshots(final CacheName cacheName,
-            final long toSnapshotTime) {
-        getThreadTransactionManager().coalesceSnapshots(cacheName, toSnapshotTime);
     }
 
     @Override

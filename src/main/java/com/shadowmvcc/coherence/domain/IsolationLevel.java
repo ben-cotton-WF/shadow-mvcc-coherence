@@ -47,10 +47,8 @@ public enum IsolationLevel {
      */
     serializable, 
     /**
-     * Update only operation with out reading. Allows the optimisation of not having to check
+     * Update only operation without reading. Allows the optimisation of not having to check
      * for uncommitted changes
      */
-    readProhibited, 
-//    readCommittedNoWait, 
-//    eternal
+    readProhibited
 }

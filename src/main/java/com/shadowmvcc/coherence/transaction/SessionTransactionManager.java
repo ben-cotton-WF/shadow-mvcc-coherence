@@ -24,7 +24,6 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
-import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
@@ -186,24 +185,6 @@ public class SessionTransactionManager implements TransactionManager,
                 return viewTransaction;
             }
 
-            @Override
-            public TransactionId createSnapshot(final CacheName cacheName,
-                    final long snapshotTime) {
-                throw new UnsupportedOperationException("not yet implemented");
-            }
-
-            @Override
-            public void coalesceSnapshots(final CacheName cacheName,
-                    final long fromSnapshotTime, final long toSnapshotTime) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void coalesceSnapshots(final CacheName cacheName,
-                    final long toSnapshotTime) {
-                throw new UnsupportedOperationException();
-            }
-            
         }, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
 
@@ -241,31 +222,8 @@ public class SessionTransactionManager implements TransactionManager,
             offset = 0;
         }
         lastTimestamp = timestamp;
-        // TODO verify later than most recent snapshot 
+
         return new TransactionId(timestamp, managerId, offset);
-    }
-
-    @Override
-    public TransactionId createSnapshot(final CacheName cacheName,
-            final long snapshotTime) {
-        // TODO verify no open transactions at or earlier than snapshotId
-        TransactionId snapshotId = new TransactionId(snapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
-        return managerCache.createSnapshot(cacheName, snapshotId);
-    }
-
-    @Override
-    public void coalesceSnapshots(final CacheName cacheName,
-            final long fromSnapshotTime, final long toSnapshotTime) {
-        TransactionId fromSnapshotId = new TransactionId(fromSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
-        TransactionId toSnapshotId = new TransactionId(toSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
-        managerCache.coalesceSnapshots(cacheName, fromSnapshotId, toSnapshotId);
-    }
-
-    @Override
-    public void coalesceSnapshots(final CacheName cacheName,
-            final long toSnapshotTime) {
-        TransactionId toSnapshotId = new TransactionId(toSnapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
-        managerCache.coalesceSnapshots(cacheName, null, toSnapshotId);
     }
 
 

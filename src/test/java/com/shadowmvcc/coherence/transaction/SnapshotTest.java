@@ -16,6 +16,7 @@ import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.testsupport.AbstractLittlegridTest;
+import com.shadowmvcc.coherence.transaction.internal.SnapshotManagerImpl;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 
@@ -27,6 +28,7 @@ import com.tangosol.net.NamedCache;
 public class SnapshotTest extends AbstractLittlegridTest {
 
     private TransactionManager transactionManager;
+    private SnapshotManager snapshotManager;
     private static final CacheName TESTCACHENAME = new CacheName("testcache");
     private static final int COUNTI = 10;
     private static final int COUNTJ = 10;
@@ -52,6 +54,8 @@ public class SnapshotTest extends AbstractLittlegridTest {
         transactionManager = new ThreadTransactionManager(
                 timestampSource, false, false, readCommitted);
         
+        snapshotManager = new SnapshotManagerImpl();
+        
     }
     
     /**
@@ -76,9 +80,9 @@ public class SnapshotTest extends AbstractLittlegridTest {
         
         Thread.sleep(200);
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
+        snapshotManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
+        snapshotManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
         Set<VersionedKey<Integer>> expected = new HashSet<VersionedKey<Integer>>();
         
@@ -121,11 +125,11 @@ public class SnapshotTest extends AbstractLittlegridTest {
             transaction.commit();
         }
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
+        snapshotManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
         
-        transactionManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
+        snapshotManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
-        transactionManager.coalesceSnapshots(TESTCACHENAME, ids.get(9).getTimeStampMillis());
+        snapshotManager.coalesceSnapshots(TESTCACHENAME, ids.get(9).getTimeStampMillis());
         
         Set<VersionedKey<Integer>> expected = new HashSet<VersionedKey<Integer>>();
         

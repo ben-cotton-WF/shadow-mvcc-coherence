@@ -46,12 +46,12 @@ public class DecorationExtractorProcessor extends AbstractProcessor {
     private int decoId;
 
     /**
-     * Instance to extract the commit status {code Boolean} value.
+     * Instance to extract the commit status {@code Boolean} value.
      */
     public static final DecorationExtractorProcessor COMMITTED_INSTANCE =
             new DecorationExtractorProcessor(Constants.DECO_COMMIT);
     /**
-     * Instance to extract the deleted status {code Boolean} value.
+     * Instance to extract the deleted status {@code Boolean} value.
      */
     public static final DecorationExtractorProcessor DELETED_INSTANCE =
             new DecorationExtractorProcessor(Constants.DECO_DELETED);
