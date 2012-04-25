@@ -29,8 +29,6 @@ import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
  * objects. Instances of {@link MVCCNamedCache} must be obtained from a {@code TransactionManager}
  * so that cache operations are performed within the correct transaction.
  * 
- * TODO this is getting cluttered with non-transaction related stuff - consider splitting it.
- *
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
