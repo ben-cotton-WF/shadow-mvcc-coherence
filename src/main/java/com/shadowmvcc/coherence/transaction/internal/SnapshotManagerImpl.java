@@ -37,7 +37,6 @@ public class SnapshotManagerImpl implements SnapshotManager {
     @Override
     public long createSnapshot(final CacheName cacheName,
             final long snapshotTime) {
-        // TODO verify no open transactions at or earlier than snapshotId
         TransactionId snapshotId = new TransactionId(snapshotTime, Integer.MAX_VALUE, Integer.MAX_VALUE);
         return managerCache.createSnapshot(cacheName, snapshotId).getTimeStampMillis();
     }
