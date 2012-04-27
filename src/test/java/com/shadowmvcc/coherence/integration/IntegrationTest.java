@@ -60,7 +60,7 @@ public class IntegrationTest extends AbstractLittlegridTest {
     public static void setMonitorProperties() {
         System.setProperty("shadowmvcc.opentransactiontimeout", "1000");
         System.setProperty("shadowmvcc.transactioncompletiontimeout", "1000");
-        System.setProperty("shadowmvcc.pollinterval", "100");
+        System.setProperty("shadowmvcc.transactionpollinterval", "100");
     }
     /**
      * Set up the tm.

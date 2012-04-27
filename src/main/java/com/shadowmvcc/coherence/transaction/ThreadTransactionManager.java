@@ -26,6 +26,7 @@ import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
+import com.shadowmvcc.coherence.config.ConfigurationFactory;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 
 /**
@@ -84,10 +85,9 @@ public class ThreadTransactionManager implements TransactionManager {
     /**
      * Get the invocation service name. Override to provide an alternate
      * @return the invocation service name.
-     * TODO configuration option
      */
     protected String getInvocationServiceName() {
-        return DEFAULT_INVOCATION_SERVICE_NAME;
+        return ConfigurationFactory.getConfiguraration().getInvocationServiceName();
     }
     
     @SuppressWarnings("rawtypes")

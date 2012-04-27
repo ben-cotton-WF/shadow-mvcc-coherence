@@ -47,21 +47,6 @@ public class CacheFactoryBuilder extends DefaultCacheFactoryBuilder {
     }
     
     /**
-     * Constructor with configured monitor timeouts.
-     * @param openTransactionTimeoutMillis timeout before an open transaction is rolled back
-     * @param transactionCompletionTimeoutMillis timeout before a committing or rolling back transaction is completed
-     * @param pollInterval how often to poll the transaction cache
-     */
-    public CacheFactoryBuilder(final int openTransactionTimeoutMillis,
-            final int transactionCompletionTimeoutMillis, final int pollInterval) {
-        super();
-        
-        monitor = new MemberTransactionMonitor(
-                openTransactionTimeoutMillis, transactionCompletionTimeoutMillis, pollInterval);
-        startMonitorThread(monitor);
-    }
-
-    /**
      * Start the monitor thread.
      * @param monitor the monitor object
      */

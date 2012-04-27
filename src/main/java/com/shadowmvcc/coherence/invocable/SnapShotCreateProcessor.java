@@ -28,7 +28,7 @@ import java.util.TreeSet;
 
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.exception.SnapshotCreationException;
-import com.shadowmvcc.coherence.transaction.internal.SystemPropertyTimestampValidator;
+import com.shadowmvcc.coherence.transaction.internal.TimestampValidatorImpl;
 import com.shadowmvcc.coherence.transaction.internal.TimestampValidator;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
@@ -50,7 +50,7 @@ public class SnapShotCreateProcessor extends AbstractProcessor {
 
     private static final SortedSet<TransactionId> INITIAL_SNAPSHOTS;
     private static final TimestampValidator TIMESTAMPVALIDATOR =
-            new SystemPropertyTimestampValidator();
+            new TimestampValidatorImpl();
     
     static {
         INITIAL_SNAPSHOTS = new TreeSet<TransactionId>();

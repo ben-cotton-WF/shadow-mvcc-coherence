@@ -29,6 +29,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.config.Configuration;
+import com.shadowmvcc.coherence.config.ConfigurationFactory;
 import com.shadowmvcc.coherence.domain.Constants;
 import com.shadowmvcc.coherence.domain.TransactionCacheValue;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -76,22 +78,10 @@ import com.tangosol.util.processor.ConditionalRemove;
  */
 public class MemberTransactionMonitor implements Runnable, Disposable {
 
-    private final int openTransactionTimeoutMillis;
-    private final int transactionCompletionTimeoutMillis;
-    private final int pollInterval;
+    private final long openTransactionTimeoutMillis;
+    private final long transactionCompletionTimeoutMillis;
+    private final long pollInterval;
     private final Semaphore shutdownFlag = new Semaphore(0);
-    /**
-     * Default maximum time between beginning a transaction and commit or rollback.
-     */
-    public static final int DEFAULT_OPEN_TRANSACTION_TIMEOUT_MILLIS = 60000;
-    /**
-     * Default maximum time from starting a commit or rollback before the monitor takes over to force completion.
-     */
-    public static final int DEFAULT_TRANSACTION_COMPLETION_TIMEOUT_MILLIS = 10000;
-    /**
-     * Default interval between polls of the transaction cache.
-     */
-    public static final int DEFAULT_POLL_INTERVAL_MILLIS = 5000;
 
     private static final PofExtractor TIMEEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_REALTIME);
     private static final PofExtractor STATUSEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_STATUS);
@@ -100,28 +90,16 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
     private static final Filter COMMITFILTER = new EqualsFilter(STATUSEXTRACTOR, TransactionProcStatus.committing);
     private static final EntryProcessor REMOVEPROCESSOR = new ConditionalRemove(AlwaysFilter.INSTANCE, false);
     
-    /**
-     * Constructor using user provided timeout values.
-     * @param openTransactionTimeoutMillis timeout before an open transaction is rolled back
-     * @param transactionCompletionTimeoutMillis timeout before a committing or rolling back transaction is completed
-     * @param pollInterval how often to poll the transaction cache
-     */
-    public MemberTransactionMonitor(final int openTransactionTimeoutMillis,
-            final int transactionCompletionTimeoutMillis, final int pollInterval) {
-        super();
-        this.openTransactionTimeoutMillis = openTransactionTimeoutMillis;
-        this.transactionCompletionTimeoutMillis = transactionCompletionTimeoutMillis;
-        this.pollInterval = pollInterval;
-    }
-    
+  
     /**
      * Default constructor using the default timeout values. 
      */
     public MemberTransactionMonitor() {
         super();
-        this.openTransactionTimeoutMillis = DEFAULT_OPEN_TRANSACTION_TIMEOUT_MILLIS;
-        this.transactionCompletionTimeoutMillis = DEFAULT_TRANSACTION_COMPLETION_TIMEOUT_MILLIS;
-        this.pollInterval = DEFAULT_POLL_INTERVAL_MILLIS;
+        Configuration config = ConfigurationFactory.getConfiguraration();
+        this.openTransactionTimeoutMillis = config.getOpenTransactionTimeout();
+        this.transactionCompletionTimeoutMillis = config.getTransactionCompletionTimeout();
+        this.pollInterval = config.getTransactionPollInterval();
     }
 
     @Override

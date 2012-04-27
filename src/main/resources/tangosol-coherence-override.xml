@@ -35,20 +35,6 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
   
   <cache-factory-builder-config>
     <class-name system-property="tangosol.coherence.cachefactorybuilder">com.shadowmvcc.coherence.monitor.CacheFactoryBuilder</class-name>
-    <init-params>
-      <init-param>
-        <param-type>int</param-type>
-        <param-value system-property="shadowmvcc.opentransactiontimeout">60000</param-value>
-      </init-param>
-      <init-param>
-        <param-type>int</param-type>
-        <param-value system-property="shadowmvcc.transactioncompletiontimeout">10000</param-value>
-      </init-param>
-      <init-param>
-        <param-type>int</param-type>
-        <param-value system-property="shadowmvcc.pollinterval">5000</param-value>
-      </init-param>
-    </init-params>
   </cache-factory-builder-config>
 
 </coherence>

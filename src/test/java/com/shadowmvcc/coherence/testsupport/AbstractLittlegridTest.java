@@ -28,6 +28,8 @@ import org.junit.BeforeClass;
 import org.littlegrid.ClusterMemberGroup;
 import org.littlegrid.impl.DefaultClusterMemberGroupBuilder;
 
+import com.tangosol.net.CacheFactory;
+
 /**
  * Base class for unit tests using littlegrid. Responsible for setup and teardown
  * of the cluster, and ensuring required system properties are set.
@@ -77,7 +79,7 @@ public class AbstractLittlegridTest {
     @After
     public void tearDown() {
         System.out.println("******tearDown");
-//        CacheFactory.shutdown();
+        CacheFactory.shutdown();
         cmg.stopAll();
     }
 

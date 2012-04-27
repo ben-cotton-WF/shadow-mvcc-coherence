@@ -26,12 +26,13 @@ import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
+import com.shadowmvcc.coherence.config.ConfigurationFactory;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.transaction.internal.AutoCommitTransaction;
 import com.shadowmvcc.coherence.transaction.internal.ManagerCacheImpl;
 import com.shadowmvcc.coherence.transaction.internal.ReadOnlyTransaction;
-import com.shadowmvcc.coherence.transaction.internal.SystemPropertyTimestampValidator;
+import com.shadowmvcc.coherence.transaction.internal.TimestampValidatorImpl;
 import com.shadowmvcc.coherence.transaction.internal.TimestampValidator;
 import com.shadowmvcc.coherence.transaction.internal.TransactionCache;
 import com.shadowmvcc.coherence.transaction.internal.TransactionCacheImpl;
@@ -83,7 +84,7 @@ public class SessionTransactionManager implements TransactionManager,
      * @return an instance of a TimestampValidator
      */
     protected TimestampValidator getTimestampValidator() {
-        return new SystemPropertyTimestampValidator();
+        return new TimestampValidatorImpl();
     }
 
     /**
@@ -118,10 +119,9 @@ public class SessionTransactionManager implements TransactionManager,
     /**
      * Get the invocation service name. Override to provide an alternate
      * @return the invocation service name.
-     * TODO configuration option
      */
     protected String getInvocationServiceName() {
-        return DEFAULT_INVOCATION_SERVICE_NAME;
+        return ConfigurationFactory.getConfiguraration().getInvocationServiceName();
     }
     
     /**

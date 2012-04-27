@@ -35,11 +35,6 @@ import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 public interface TransactionManager {
     
     /**
-     * Default name for the invocation service.
-     */
-    String DEFAULT_INVOCATION_SERVICE_NAME = "InvocationService";
-
-    /**
      * Construct and return an {@link MVCCNamedCache}.
      * @param cacheName the cache name
      * @return the cache

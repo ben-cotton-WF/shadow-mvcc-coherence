@@ -22,7 +22,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction;
 
-import com.tangosol.net.CacheFactory;
+import com.shadowmvcc.coherence.config.ClusterTimeProviderFactory;
 
 /**
  * Obtain timestamps using Coherence cluster time.
@@ -34,7 +34,7 @@ public class ClusterTimestampSource implements TimestampSource {
 
     @Override
     public long getTimestamp() {
-        return CacheFactory.getCluster().getTimeMillis();
+        return ClusterTimeProviderFactory.getInstance().getClusterTime();
     }
 
 }

@@ -2,6 +2,7 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,12 +14,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.config.ClusterTimeProviderFactory;
+import com.shadowmvcc.coherence.config.OffsettableClusterTimeProvider;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.testsupport.AbstractLittlegridTest;
 import com.shadowmvcc.coherence.transaction.internal.SnapshotManagerImpl;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.util.ClassHelper;
 
 /**
  * Test creating a snapshot.
@@ -29,6 +33,7 @@ public class SnapshotTest extends AbstractLittlegridTest {
 
     private TransactionManager transactionManager;
     private SnapshotManager snapshotManager;
+    private OffsettableClusterTimeProvider timeProvider;
     private static final CacheName TESTCACHENAME = new CacheName("testcache");
     private static final int COUNTI = 10;
     private static final int COUNTJ = 10;
@@ -37,12 +42,15 @@ public class SnapshotTest extends AbstractLittlegridTest {
      * initialise system properties.
      */
     @BeforeClass
-    public static void setMonitorProperties() {
+    public static void setProperties() {
         System.setProperty("shadowmvcc.opentransactiontimeout", "1000");
         System.setProperty("shadowmvcc.transactioncompletiontimeout", "1000");
-        System.setProperty("shadowmvcc.pollinterval", "100");
-        System.setProperty("shadowmvcc.minsnapshotage", "100");
+        System.setProperty("shadowmvcc.transactionpollinterval", "100");
+        System.setProperty("shadowmvcc.minsnapshotage", "400000");
+        
+        System.setProperty("shadowmvcc.timeproviderclass", OffsettableClusterTimeProvider.class.getName());
     }
+    
     /**
      * Set up the tm.
      */
@@ -56,15 +64,22 @@ public class SnapshotTest extends AbstractLittlegridTest {
         
         snapshotManager = new SnapshotManagerImpl();
         
+        timeProvider = (OffsettableClusterTimeProvider) ClusterTimeProviderFactory.getInstance();
+        
     }
     
     /**
      * Populate a cache over a set of transactions, then reduce it to
      * two consecutive snapshots.
      * @throws InterruptedException never
+     * @throws InvocationTargetException 
+     * @throws IllegalAccessException 
+     * @throws NoSuchMethodException 
+     * @throws ClassNotFoundException 
      */
     @Test
-    public void testCreateSnapshots() throws InterruptedException {
+    public void testCreateSnapshots() throws InterruptedException,
+            NoSuchMethodException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
         
         NamedCache testCache = transactionManager.getCache(TESTCACHENAME.getLogicalName());
         List<TransactionId> ids = new ArrayList<TransactionId>(COUNTI);
@@ -78,7 +93,7 @@ public class SnapshotTest extends AbstractLittlegridTest {
             transaction.commit();
         }
         
-        Thread.sleep(200);
+        setTimeOffset(500000);
         
         snapshotManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
         
@@ -109,9 +124,16 @@ public class SnapshotTest extends AbstractLittlegridTest {
      * Populate a cache over a set of transactions, then reduce it to
      * two consecutive snapshots, finally coalesce from big bang to the second
      * snapshot to remove the intermediate.
+     * @throws InvocationTargetException 
+     * @throws IllegalAccessException 
+     * @throws NoSuchMethodException 
+     * @throws ClassNotFoundException 
      */
     @Test
-    public void testCoalesceSnapshots() {
+    public void testCoalesceSnapshots() throws NoSuchMethodException,
+            IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        
+        setTimeOffset(0);
         
         NamedCache testCache = transactionManager.getCache(TESTCACHENAME.getLogicalName());
         List<TransactionId> ids = new ArrayList<TransactionId>(COUNTI);
@@ -125,6 +147,8 @@ public class SnapshotTest extends AbstractLittlegridTest {
             transaction.commit();
         }
         
+        setTimeOffset(500000);
+
         snapshotManager.createSnapshot(TESTCACHENAME, ids.get(4).getTimeStampMillis());
         
         snapshotManager.createSnapshot(TESTCACHENAME, ids.get(9).getTimeStampMillis());
@@ -149,6 +173,30 @@ public class SnapshotTest extends AbstractLittlegridTest {
         Assert.assertEquals(expected.size(), result.size());
         Assert.assertTrue(result.containsAll(expected));
         Assert.assertTrue(expected.containsAll(result));
+        
+    }
+    
+    /**
+     * Set a time offset in all the members.
+     * @param offset the offset
+     * @throws NoSuchMethodException maybe
+     * @throws IllegalAccessException maybe
+     * @throws InvocationTargetException maybe
+     * @throws ClassNotFoundException maybe
+     */
+    private void setTimeOffset(final long offset) throws NoSuchMethodException,
+            IllegalAccessException, InvocationTargetException, ClassNotFoundException {
+        timeProvider.setOffset(offset);
+        
+        for (int member : this.getClusterMemberGroup().getStartedMemberIds()) {
+            final ClassLoader containingClassLoader = 
+                    getClusterMemberGroup().getClusterMember(member).getActualContainingClassLoader();
+            Class<?> memberFactoryClass = containingClassLoader.loadClass(ClusterTimeProviderFactory.class.getName());
+            Object memberTimeProvider = 
+                    ClassHelper.invokeStatic(
+                    memberFactoryClass, "getInstance", new Object[]{});
+            ClassHelper.invoke(memberTimeProvider, "setOffset", new Object[] { Long.valueOf(offset) });
+        }
         
     }
 

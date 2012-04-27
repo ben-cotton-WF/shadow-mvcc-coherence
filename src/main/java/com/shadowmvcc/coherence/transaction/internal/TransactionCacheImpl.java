@@ -35,6 +35,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.config.ClusterTimeProviderFactory;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionCacheValue;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -111,7 +112,7 @@ public class TransactionCacheImpl implements TransactionCache {
         
         NamedCache transactionCache = getCache(CACHENAME);
 
-        long now = transactionCache.getCacheService().getCluster().getTimeMillis();
+        long now = ClusterTimeProviderFactory.getInstance().getClusterTime();
         
         TransactionCacheValue openTransaction = new TransactionCacheValue(open, now);
         
