@@ -85,7 +85,7 @@ import com.tangosol.util.filter.MapEventTransformerFilter;
 import com.tangosol.util.processor.ExtractorProcessor;
 
 /**
- * Local implementation of {@link MVCCTransactionalCacheImpl}.
+ * Local implementation of {@link MVCCTransactionalCache}.
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
@@ -208,7 +208,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             final boolean autoCommit, final boolean readonly, final K key, final EntryProcessor agent) {
         EntryProcessor ep;
         if (readonly) {
-            ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
+            ep = new MVCCReadOnlyEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, cacheName);
         } else {
             ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
         }

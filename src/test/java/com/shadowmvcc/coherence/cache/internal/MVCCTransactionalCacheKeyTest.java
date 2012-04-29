@@ -38,7 +38,9 @@ import com.shadowmvcc.coherence.domain.SampleDomainObject;
 import com.tangosol.io.pof.PortableException;
 import com.tangosol.util.InvocableMap.EntryProcessor;
 import com.tangosol.util.extractor.PofExtractor;
+import com.tangosol.util.extractor.PofUpdater;
 import com.tangosol.util.processor.ExtractorProcessor;
+import com.tangosol.util.processor.UpdaterProcessor;
 
 /**
  * Test the various methods of MVCCTransactionalCacheImpl. The intent is to provide
@@ -215,7 +217,7 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
     }
 
     /**
-     * Test execution of an EntryProcessor.
+     * Test execution of a read only EntryProcessor.
      */
     @Test
     public void testInvoke() {
@@ -230,6 +232,46 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
         EntryProcessor ep = new ExtractorProcessor(new PofExtractor(null, SampleDomainObject.POF_INTV));
 
         assertEquals(88, cache.invoke(ts2, repeatableRead, true, true, theKey, ep));
+
+    }
+
+    /**
+     * Test execution of a read write EntryProcessor.
+     */
+    @Test
+    public void testInvokeReadWrite() {
+
+        System.out.println("******Invoke");
+
+        Integer theKey = 99;
+        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+
+        cache.insert(ts1, true, theKey, theValue);
+
+        EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_INTV), 42);
+
+        cache.invoke(ts2, repeatableRead, true, false, theKey, ep);
+        
+        assertEquals(42, ((SampleDomainObject) cache.get(ts2, readCommitted, theKey)).getIntValue());
+
+    }
+    
+    /**
+     * Test execution of a read write EntryProcessor executed read-only.
+     */
+    @Test(expected=PortableException.class)
+    public void testInvokeFailReadonly() {
+
+        System.out.println("******Invoke");
+
+        Integer theKey = 99;
+        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+
+        cache.insert(ts1, true, theKey, theValue);
+
+        EntryProcessor ep = new UpdaterProcessor(new PofUpdater(SampleDomainObject.POF_INTV), 42);
+
+        cache.invoke(ts2, repeatableRead, true, true, theKey, ep);
 
     }
 
