@@ -254,10 +254,11 @@ public class MVCCNamedCache implements NamedCache {
         return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Set entrySet(final Filter filter, final Comparator comparator) {
-        throw new UnsupportedOperationException("Locking not enabled in MVCC caches");
+        Transaction context = transactionManager.getTransaction();
+        return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter, comparator);
     }
 
     @SuppressWarnings("rawtypes")

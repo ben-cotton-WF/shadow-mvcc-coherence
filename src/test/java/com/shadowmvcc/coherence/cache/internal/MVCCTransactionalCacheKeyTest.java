@@ -259,7 +259,7 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
     /**
      * Test execution of a read write EntryProcessor executed read-only.
      */
-    @Test(expected=PortableException.class)
+    @Test(expected = PortableException.class)
     public void testInvokeFailReadonly() {
 
         System.out.println("******Invoke");
