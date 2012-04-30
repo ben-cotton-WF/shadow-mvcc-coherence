@@ -97,32 +97,19 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrappe
     public ProcessorResult<K, R> process(final Entry entryarg) {
 
         BinaryEntry entry = (BinaryEntry) entryarg;
-        BinaryEntry priorEntry = null;
-        Binary priorVersionBinaryKey = getPriorVersionBinaryKey(entry);
 
-        if (priorVersionBinaryKey != null) {
-
-            priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
-                    .getBackingMapEntry(priorVersionBinaryKey);
-            
-            if (isolationLevel != IsolationLevel.readUncommitted && isolationLevel != IsolationLevel.readProhibited) {
-
-                if (isolationLevel != IsolationLevel.readUncommitted) {
-                    boolean committed = Utils.isCommitted(priorEntry);
-                    if (!committed) {
-                        return new ProcessorResult<K, R>((VersionedKey<K>) priorEntry.getKey());
-                    }
-                }
-            }
-        }
-
-        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, priorEntry, cacheName);
+        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, cacheName);
 
         if (!confirmFilterMatch(childEntry)) {
             return null;
         }
 
-        R result = (R) delegate.process(childEntry);
+        R result;
+        try {
+            result = (R) delegate.process(childEntry);
+        } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
+            return new ProcessorResult<K, R>((VersionedKey<K>) ex.getUncommittedKey());
+        }
 
         if (childEntry.isPriorRead() && isolationLevel == IsolationLevel.readProhibited) {
             throw new IllegalStateException("Read of prior version with isolation level readProhibited: "

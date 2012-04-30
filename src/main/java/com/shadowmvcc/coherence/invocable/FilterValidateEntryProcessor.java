@@ -22,13 +22,10 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
-import static com.shadowmvcc.coherence.domain.IsolationLevel.readUncommitted;
-
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.ProcessorResult;
 import com.shadowmvcc.coherence.domain.TransactionId;
-import com.shadowmvcc.coherence.domain.Utils;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
@@ -87,21 +84,18 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
             return null;
         }
 
+        ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+
+        try {
+            if (!confirmFilterMatch(childEntry)) {
+                return null;
+            }
+        } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
+            return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) ex.getUncommittedKey());
+        }
+
         BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
                 .getBackingMapEntry(priorVersionBinaryKey);
-
-        if (isolationLevel != readUncommitted) {
-            boolean committed = Utils.isCommitted(priorEntry);
-            if (!committed) {
-                return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey());
-            }
-        }
-
-        ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, priorEntry, cacheName);
-
-        if (!confirmFilterMatch(childEntry)) {
-            return null;
-        }
 
         return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), false, true);
     }

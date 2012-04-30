@@ -23,6 +23,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 package com.shadowmvcc.coherence.invocable;
 
 import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.domain.IsolationLevel;
+import com.shadowmvcc.coherence.domain.TransactionId;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.ValueUpdater;
@@ -42,12 +44,13 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
 
     /**
      * @param parentEntry the version cache entry
-     * @param priorBinaryEntry prior version binary entry
+     * @param transactionId transaction id of the enclosing transaction
+     * @param isolationLevel isolation level of the enclosing transaction
      * @param cacheName the cache name
      */
-    public ReadWriteEntryWrapper(final BinaryEntry parentEntry, final BinaryEntry priorBinaryEntry,
-            final CacheName cacheName) {
-        super(parentEntry, priorBinaryEntry, cacheName);
+    public ReadWriteEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
+            final IsolationLevel isolationLevel, final CacheName cacheName) {
+        super(parentEntry, transactionId, isolationLevel, cacheName);
     }
 
     @Override

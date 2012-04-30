@@ -117,13 +117,18 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
 
         if (delegate != null) {
 
-            ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, priorEntry, cacheName);
+            ReadOnlyEntryWrapper childEntry = new ReadOnlyEntryWrapper(entry, transactionId, isolationLevel, cacheName);
 
             if (!confirmFilterMatch(childEntry)) {
                 return null;
             }
 
-            result = (R) delegate.process(childEntry);
+            try {
+                result = (R) delegate.process(childEntry);
+            } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
+                // Shouldn't happen as we've already explicitly checked before calling
+                return new ProcessorResult<K, R>((VersionedKey<K>) ex.getUncommittedKey());
+            }
 
         }
 

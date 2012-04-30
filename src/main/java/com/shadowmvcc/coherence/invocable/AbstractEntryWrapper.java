@@ -23,6 +23,12 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 package com.shadowmvcc.coherence.invocable;
 
 import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.domain.IsolationLevel;
+import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.Utils;
+import com.shadowmvcc.coherence.domain.VersionedKey;
+import com.shadowmvcc.coherence.index.MVCCExtractor;
+import com.shadowmvcc.coherence.index.MVCCIndex;
 import com.tangosol.io.Serializer;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.BackingMapManagerContext;
@@ -43,21 +49,54 @@ import com.tangosol.util.extractor.PofExtractor;
 public abstract class AbstractEntryWrapper implements EntryWrapper {
 
     private final BinaryEntry parentEntry;
-    private final BinaryEntry priorBinaryEntry;
+    private BinaryEntry priorBinaryEntry = null;
+    private final TransactionId transactionId;
+    private final IsolationLevel isolationLevel;
     private boolean priorRead = false;
     private CacheName cacheName;
+    
+    /**
+     * Exception to throw on finding an uncommitted read.
+     * 
+     * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
+     *
+     */
+    public class ReadUncommittedException extends RuntimeException {
+        private final VersionedKey<?> uncommittedKey;
+        private static final long serialVersionUID = 1L;
+        
+        /**
+         * Constructor.
+         * @param uncommittedKey version cache key of the uncommitted entry
+         */
+        public ReadUncommittedException(final VersionedKey<?> uncommittedKey) {
+            super();
+            this.uncommittedKey = uncommittedKey;
+        }
+
+        /**
+         * Get the key of the uncommitted entry that gave rise to this exception.
+         * @return the key of the uncommitted entry
+         */
+        public VersionedKey<?> getUncommittedKey() {
+            return uncommittedKey;
+        }
+        
+    }
 
     /**
      * Constructor.
      * @param parentEntry parent BinaryEntry from the key cache
-     * @param priorBinaryEntry binary entry for prior version
+     * @param transactionId transaction id of the enclosing transaction
+     * @param isolationLevel isolation level of the enclosing transaction
      * @param cacheName name of the current cache
      */
-    public AbstractEntryWrapper(final BinaryEntry parentEntry, final BinaryEntry priorBinaryEntry,
-            final CacheName cacheName) {
+    public AbstractEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
+            final IsolationLevel isolationLevel, final CacheName cacheName) {
         super();
         this.parentEntry = parentEntry;
-        this.priorBinaryEntry = priorBinaryEntry;
+        this.transactionId = transactionId;
+        this.isolationLevel = isolationLevel;
         this.cacheName = cacheName;
     }
 
@@ -84,9 +123,35 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
     }
 
     /**
+     * @param <K> logical key type
      * @return the binary entry from the version cache for the previous version
      */
-    private BinaryEntry getPriorBinaryEntry() {
+    private <K> BinaryEntry getPriorBinaryEntry() {
+        if (!priorRead) {
+            @SuppressWarnings("unchecked")
+            MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext()
+                    .getIndexMap().get(MVCCExtractor.INSTANCE);
+            @SuppressWarnings("unchecked")
+            Binary priorVersionBinaryKey = index.floor((K) parentEntry.getKey(), transactionId);
+
+            if (priorVersionBinaryKey != null) {
+
+                priorBinaryEntry = (BinaryEntry) getVersionCacheBackingMapContext()
+                        .getBackingMapEntry(priorVersionBinaryKey);
+                
+                if (isolationLevel != IsolationLevel.readUncommitted
+                        && isolationLevel != IsolationLevel.readProhibited) {
+
+                    if (isolationLevel != IsolationLevel.readUncommitted) {
+                        boolean committed = Utils.isCommitted(priorBinaryEntry);
+                        if (!committed) {
+                            throw new ReadUncommittedException((VersionedKey<?>) priorBinaryEntry.getKey());
+                        }
+                    }
+                }
+            }
+            
+        }
         priorRead = true;
         return priorBinaryEntry;
     }
