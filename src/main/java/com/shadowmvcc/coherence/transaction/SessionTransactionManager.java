@@ -24,6 +24,11 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
 import com.shadowmvcc.coherence.config.ConfigurationFactory;
@@ -66,6 +71,7 @@ public class SessionTransactionManager implements TransactionManager,
     private long lastTimestamp = 0L;
 
     private volatile Transaction currentTransaction = null;
+    private final Set<String> referencedCacheNames = new HashSet<String>(); 
 
     /**
      * @param timestampSource source of timestamps
@@ -184,6 +190,11 @@ public class SessionTransactionManager implements TransactionManager,
             public Transaction getTransaction() {
                 return viewTransaction;
             }
+            @Override
+            public void addReferencedCaches(
+                    final Collection<CacheName> referencedCaches) {
+                throw new UnsupportedOperationException();
+            }
 
         }, new MVCCTransactionalCacheImpl(cacheName, getInvocationServiceName()));
     }
@@ -224,6 +235,17 @@ public class SessionTransactionManager implements TransactionManager,
         lastTimestamp = timestamp;
 
         return new TransactionId(timestamp, managerId, offset);
+    }
+
+    @Override
+    public void addReferencedCaches(final Collection<CacheName> referencedCaches) {
+        for (CacheName cacheName : referencedCaches) {
+            String logicalName = cacheName.getLogicalName();
+            if (!referencedCacheNames.contains(logicalName)) {
+                referencedCacheNames.add(logicalName);
+                managerCache.registerCache(managerId, cacheName.getLogicalName());
+            }
+        }
     }
 
 

@@ -22,6 +22,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
+import java.util.Collection;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -54,6 +56,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
     private final IsolationLevel isolationLevel;
     private boolean priorRead = false;
     private CacheName cacheName;
+    private final Collection<CacheName> mvccCacheNames;
     
     /**
      * Exception to throw on finding an uncommitted read.
@@ -62,15 +65,18 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
      *
      */
     public class ReadUncommittedException extends RuntimeException {
+        private final CacheName cacheName;
         private final VersionedKey<?> uncommittedKey;
         private static final long serialVersionUID = 1L;
         
         /**
          * Constructor.
+         * @param cacheName name of the cache containing uncommitted entry
          * @param uncommittedKey version cache key of the uncommitted entry
          */
-        public ReadUncommittedException(final VersionedKey<?> uncommittedKey) {
+        public ReadUncommittedException(final CacheName cacheName, final VersionedKey<?> uncommittedKey) {
             super();
+            this.cacheName = cacheName;
             this.uncommittedKey = uncommittedKey;
         }
 
@@ -80,6 +86,14 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
          */
         public VersionedKey<?> getUncommittedKey() {
             return uncommittedKey;
+        }
+
+        /**
+         * Get the name of the cache in which the uncommitted entry was found.
+         * @return the name of the cache
+         */
+        public CacheName getCacheName() {
+            return cacheName;
         }
         
     }
@@ -98,6 +112,26 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
         this.transactionId = transactionId;
         this.isolationLevel = isolationLevel;
         this.cacheName = cacheName;
+        this.mvccCacheNames = null;
+    }
+    
+    /**
+     * Constructor.
+     * @param parentEntry parent BinaryEntry from the key cache
+     * @param transactionId transaction id of the enclosing transaction
+     * @param isolationLevel isolation level of the enclosing transaction
+     * @param cacheName name of the current cache
+     * @param mvccCacheNames collection of other MVCC cache names that may be referenced
+     */
+    public AbstractEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
+            final IsolationLevel isolationLevel, final CacheName cacheName,
+            final Collection<CacheName> mvccCacheNames) {
+        super();
+        this.parentEntry = parentEntry;
+        this.transactionId = transactionId;
+        this.isolationLevel = isolationLevel;
+        this.cacheName = cacheName;
+        this.mvccCacheNames = null;
     }
 
     /**
@@ -145,7 +179,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
                     if (isolationLevel != IsolationLevel.readUncommitted) {
                         boolean committed = Utils.isCommitted(priorBinaryEntry);
                         if (!committed) {
-                            throw new ReadUncommittedException((VersionedKey<?>) priorBinaryEntry.getKey());
+                            throw new ReadUncommittedException(cacheName, (VersionedKey<?>) priorBinaryEntry.getKey());
                         }
                     }
                 }

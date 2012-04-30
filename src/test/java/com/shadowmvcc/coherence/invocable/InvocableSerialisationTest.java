@@ -25,7 +25,7 @@ package com.shadowmvcc.coherence.invocable;
 import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
@@ -36,7 +36,7 @@ import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.UnconditionalPutProcessor;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
-import com.shadowmvcc.coherence.domain.VersionedKey;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Binary;
@@ -109,9 +109,9 @@ public class InvocableSerialisationTest {
     @Test
     public void testEntryProcessorInvokerResult() {
 
-        Object obj = new EntryProcessorInvokerResult<String, Object>(
-                new PartitionSet(5), new HashMap<String, Object>(), new HashMap<String, VersionedKey<String>>(),
-                new HashSet<String>());
+        Object obj = new EntryProcessorInvokerResult<String, Object>(new PartitionSet(5), 
+                new HashMap<String, Object>(), new HashMap<String, VersionCacheKey<String>>(),
+                new HashMap<CacheName, Set<?>>());
 
         assertPofFidelity(obj);
     }

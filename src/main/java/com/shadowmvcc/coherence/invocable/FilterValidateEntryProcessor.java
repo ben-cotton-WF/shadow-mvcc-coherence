@@ -91,7 +91,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
                 return null;
             }
         } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
-            return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) ex.getUncommittedKey());
+            return new ProcessorResult<K, VersionedKey<K>>(ex.getCacheName(), (VersionedKey<K>) ex.getUncommittedKey());
         }
 
         BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)

@@ -33,6 +33,7 @@ import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.ProcessorResult;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCSurfaceFilter;
 import com.shadowmvcc.coherence.transaction.internal.ReadMarkingProcessor;
@@ -89,7 +90,7 @@ public class ParallelAggregationInvoker<K, R> implements Invocable {
 
     private transient PartitionSet memberParts;
     private transient R aggregationResult;
-    private transient Map<K, VersionedKey<K>> retryMap;
+    private transient Map<K, VersionCacheKey<K>> retryMap;
 
     /**
      *  Default constructor for POF use only.
@@ -169,7 +170,7 @@ public class ParallelAggregationInvoker<K, R> implements Invocable {
 
         Set<VersionedKey<K>> vkeys = new HashSet<VersionedKey<K>>();
 
-        retryMap = new HashMap<K, VersionedKey<K>>();
+        retryMap = new HashMap<K, VersionCacheKey<K>>();
 
         for (Map.Entry<K, ProcessorResult<K, VersionedKey<K>>> entry : markMap.entrySet()) {
             if (isolationLevel != readUncommitted && entry.getValue().isUncommitted()) {

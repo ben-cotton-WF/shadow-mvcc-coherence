@@ -104,7 +104,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
         if (isolationLevel != IsolationLevel.readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
             if (!committed) {
-                return new ProcessorResult<K, R>((VersionedKey<K>) priorEntry.getKey());
+                return new ProcessorResult<K, R>(cacheName, (VersionedKey<K>) priorEntry.getKey());
             }
         }
 
@@ -127,7 +127,7 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
                 result = (R) delegate.process(childEntry);
             } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
                 // Shouldn't happen as we've already explicitly checked before calling
-                return new ProcessorResult<K, R>((VersionedKey<K>) ex.getUncommittedKey());
+                return new ProcessorResult<K, R>(ex.getCacheName(), (VersionedKey<K>) ex.getUncommittedKey());
             }
 
         }

@@ -27,7 +27,9 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.MVCCTransactionalCache;
+import com.shadowmvcc.coherence.invocable.MultiCacheProcessor;
 import com.shadowmvcc.coherence.transaction.Transaction;
 import com.shadowmvcc.coherence.transaction.TransactionException;
 import com.shadowmvcc.coherence.transaction.TransactionManager;
@@ -289,6 +291,9 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings("unchecked")
     @Override
     public Object invoke(final Object key, final EntryProcessor agent) {
+        if (agent instanceof MultiCacheProcessor) {
+            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
+        }
         Transaction context = transactionManager.getTransaction();
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.invoke(context.getTransactionId(),
@@ -298,6 +303,9 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
+        if (agent instanceof MultiCacheProcessor) {
+            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
+        }
         Transaction context = transactionManager.getTransaction();
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
         try {
@@ -312,13 +320,18 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
+        if (agent instanceof MultiCacheProcessor) {
+            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
+        }
         Transaction context = transactionManager.getTransaction();
         try {
             InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), filter, agent);
-            Map result = fr.getResultMap();
-            context.addKeySetAffected(mvccCache.getMVCCCacheName(), fr.getChangedKeys());
-            return result;
+            Set<Map.Entry<CacheName, Set<Object>>> es = fr.getChangedKeys().entrySet();
+            for (Map.Entry<CacheName, Set<Object>> ckEntry : es) {
+                context.addKeySetAffected(ckEntry.getKey(), ckEntry.getValue());
+            }
+            return fr.getResultMap();
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;

@@ -22,6 +22,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
+import java.util.Collection;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.DeletedObject;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
@@ -98,7 +100,12 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrappe
 
         BinaryEntry entry = (BinaryEntry) entryarg;
 
-        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(entry, transactionId, isolationLevel, cacheName);
+        Collection<CacheName> referencedCacheNames = null;
+        if (delegate instanceof MultiCacheProcessor) {
+            referencedCacheNames = ((MultiCacheProcessor) delegate).getReferencedMVCCCacheNames();
+        }
+        ReadWriteEntryWrapper childEntry = new ReadWriteEntryWrapper(
+                entry, transactionId, isolationLevel, cacheName, referencedCacheNames);
 
         if (!confirmFilterMatch(childEntry)) {
             return null;
@@ -108,7 +115,7 @@ public class MVCCEntryProcessorWrapper<K, R> extends AbstractMVCCProcessorWrappe
         try {
             result = (R) delegate.process(childEntry);
         } catch (AbstractEntryWrapper.ReadUncommittedException ex) {
-            return new ProcessorResult<K, R>((VersionedKey<K>) ex.getUncommittedKey());
+            return new ProcessorResult<K, R>(ex.getCacheName(), (VersionedKey<K>) ex.getUncommittedKey());
         }
 
         if (childEntry.isPriorRead() && isolationLevel == IsolationLevel.readProhibited) {

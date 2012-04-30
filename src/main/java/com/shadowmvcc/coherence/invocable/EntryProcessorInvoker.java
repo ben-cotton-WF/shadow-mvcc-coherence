@@ -30,6 +30,7 @@ import java.util.Set;
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.ProcessorResult;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCSurfaceFilter;
 import com.shadowmvcc.coherence.processor.Reducer;
@@ -70,7 +71,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
     private transient PartitionSet memberParts;
     private transient Map<K, R> resultMap;
-    private transient Map<K, VersionedKey<K>> retryMap;
+    private transient Map<K, VersionCacheKey<K>> retryMap;
     private transient Set<K> changedKeys;
 
     /**
@@ -142,7 +143,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
             keys.add(vk.getLogicalKey());
         }
 
-        retryMap = new HashMap<K, VersionedKey<K>>();
+        retryMap = new HashMap<K, VersionCacheKey<K>>();
         resultMap = new HashMap<K, R>();
         changedKeys = new HashSet<K>();
 
@@ -168,7 +169,9 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
     @Override
     public EntryProcessorInvokerResult<K, R> getResult() {
-        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeys);
+        Map<CacheName, Set<?>> changedKeyMap = new HashMap<CacheName, Set<?>>();
+        changedKeyMap.put(cacheName, changedKeys);
+        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeyMap);
     }
 
 }

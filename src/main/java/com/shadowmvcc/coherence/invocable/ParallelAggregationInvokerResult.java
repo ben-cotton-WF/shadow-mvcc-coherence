@@ -24,7 +24,7 @@ package com.shadowmvcc.coherence.invocable;
 
 import java.util.Map;
 
-import com.shadowmvcc.coherence.domain.VersionedKey;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.partition.PartitionSet;
@@ -50,7 +50,7 @@ public class ParallelAggregationInvokerResult<K, R> {
     private R result;
     public static final int POF_RETRY = 2;
     @PortableProperty(POF_RETRY)
-    private Map<K, VersionedKey<K>> retryMap;
+    private Map<K, VersionCacheKey<K>> retryMap;
 
     /**
      *  Default constructor for POF use only.
@@ -65,7 +65,7 @@ public class ParallelAggregationInvokerResult<K, R> {
      * @param retryMap the uncommitted entries
      */
     public ParallelAggregationInvokerResult(final PartitionSet partitions, 
-            final R result, final Map<K, VersionedKey<K>> retryMap) {
+            final R result, final Map<K, VersionCacheKey<K>> retryMap) {
         super();
         this.partitions = partitions;
         this.result = result;
@@ -89,7 +89,7 @@ public class ParallelAggregationInvokerResult<K, R> {
     /**
      * @return the map of uncommitted versions key is logical key, value is version cache key
      */
-    public Map<K, VersionedKey<K>> getRetryMap() {
+    public Map<K, VersionCacheKey<K>> getRetryMap() {
         return retryMap;
     }
 

@@ -43,6 +43,7 @@ import com.shadowmvcc.coherence.cache.MVCCTransactionalCache;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.ProcessorResult;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.event.MVCCEventFilter;
 import com.shadowmvcc.coherence.event.MVCCEventTransformer;
@@ -242,18 +243,19 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * Wait for the specified uncommitted version cache entry to be committed or rolled back.
      * @param awaitedKey the key to wait for
      */
-    private void waitForCommit(final VersionedKey<K> awaitedKey) {
+    private void waitForCommit(final VersionCacheKey<K> awaitedKey) {
+        NamedCache waitCache = CacheFactory.getCache(awaitedKey.getCacheName().getVersionCacheName());
         VersionCommitListener vcl = new VersionCommitListener();
         try {
-            versionCache.addMapListener(vcl, awaitedKey, false);
+            waitCache.addMapListener(vcl, awaitedKey.getKey(), false);
             Boolean committed = (Boolean) versionCache.invoke(
-                    awaitedKey, DecorationExtractorProcessor.COMMITTED_INSTANCE);
+                    awaitedKey.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE);
             if (committed != null && !committed) {
                 vcl.waitForCommit();
             }
             return;
         } finally {
-            versionCache.removeMapListener(vcl, awaitedKey);
+            waitCache.removeMapListener(vcl, awaitedKey.getKey());
         }
     }
 
@@ -546,7 +548,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
         remainingPartitions.fill();
 
-        Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+        Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
 
         do {
@@ -568,7 +570,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
 
             while (retryMap.size() > 0) {
-                for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+                for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
                     waitForCommit(entry.getValue());
                 }
                 Set<K> retryKeys = new HashSet<K>(retryMap.keySet());
@@ -613,7 +615,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
         remainingPartitions.fill();
 
-        Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+        Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
 
         do {
@@ -636,25 +638,21 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         if (retryMap.size() > 0) {
             Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
 
-            for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+            for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
 
-                if (isolationLevel == readUncommitted) {
-                    remnantKeys.add(entry.getValue());
-                } else {
-                    ProcessorResult<K, VersionedKey<K>> pr = null;
-                    ReadMarkingProcessor<K> readMarker =
-                            new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName, true);
-                    VersionedKey<K> waitKey = entry.getValue();
-                    do {
-                        waitForCommit(waitKey);
-                        pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
-                        if (pr != null) {
-                            waitKey = pr.getWaitKey();
-                        }
-                    } while (pr != null && pr.isUncommitted());
+                ProcessorResult<K, VersionedKey<K>> pr = null;
+                ReadMarkingProcessor<K> readMarker =
+                        new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName, true);
+                VersionCacheKey<K> waitKey = entry.getValue();
+                do {
+                    waitForCommit(waitKey);
+                    pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
                     if (pr != null) {
-                        remnantKeys.add(pr.getResult());
+                        waitKey = pr.getWaitKey();
                     }
+                } while (pr != null && pr.isUncommitted());
+                if (pr != null) {
+                    remnantKeys.add(pr.getResult());
                 }
             }
 
@@ -686,9 +684,10 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
         remainingPartitions.fill();
 
-        Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+        Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Map<K, R> resultMap = new HashMap<K, R>();
-        Set<K> changedKeys = new HashSet<K>();
+        @SuppressWarnings("rawtypes")
+        Map<CacheName, Set> changedKeys = new HashMap<CacheName, Set>();
 
         do {
             EntryProcessorInvoker<K, R> invoker = new EntryProcessorInvoker<K, R>(
@@ -700,12 +699,18 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
                 resultMap.putAll(result.getResultMap());
                 retryMap.putAll(result.getRetryMap());
-                changedKeys.addAll(result.getChangedKeys());
+                for (Map.Entry<CacheName, Set<?>> ckEntry : result.getChangedKeys().entrySet()) {
+                    CacheName cacheName = ckEntry.getKey();
+                    if (!changedKeys.containsKey(cacheName)) {
+                        changedKeys.put(cacheName, new HashSet<K>());
+                    }
+                    changedKeys.get(cacheName).addAll(ckEntry.getValue());
+                }
                 remainingPartitions.remove(result.getPartitions());
             }
         } while (!remainingPartitions.isEmpty());
 
-        for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+        for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
             waitForCommit(entry.getValue());
             while (true) {
                 ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);
@@ -722,7 +727,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
         return new InvocationFinalResult<K, R>(resultMap, changedKeys);
     }
-
+    
     /**
      * Invoke an EntryProcessor against a collection of keys, waiting for any commits to complete
      * and retrying as necessary.
@@ -736,7 +741,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     private <R> Map<K, R> invokeAllUntilCommitted(final Collection<K> keys, final TransactionId tid, 
             final EntryProcessor entryProcessor) {
 
-        Map<K, VersionedKey<K>> retryMap = new HashMap<K, VersionedKey<K>>();
+        Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Map<K, R> resultMap = new HashMap<K, R>();
 
         // TODO would it be more efficient to use invocation service for this?
@@ -750,7 +755,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             }
         }
 
-        for (Map.Entry<K, VersionedKey<K>> entry : retryMap.entrySet()) {
+        for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
             waitForCommit(entry.getValue());
             while (true) {
                 ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);

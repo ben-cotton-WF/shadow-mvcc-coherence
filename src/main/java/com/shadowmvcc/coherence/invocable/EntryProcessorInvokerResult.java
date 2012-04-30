@@ -25,8 +25,8 @@ package com.shadowmvcc.coherence.invocable;
 import java.util.Map;
 import java.util.Set;
 
-import com.shadowmvcc.coherence.domain.VersionedKey;
-import com.shadowmvcc.coherence.pof.SetCodec;
+import com.shadowmvcc.coherence.cache.CacheName;
+import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.partition.PartitionSet;
@@ -47,8 +47,8 @@ public class EntryProcessorInvokerResult<K, R> {
 
     @PortableProperty(0) private PartitionSet partitions;
     @PortableProperty(1) private Map<K, R> resultMap;
-    @PortableProperty(2) private Map<K, VersionedKey<K>> retryMap;
-    @PortableProperty(value = 3, codec = SetCodec.class) private Set<K> changedKeys;
+    @PortableProperty(2) private Map<K, VersionCacheKey<K>> retryMap;
+    @PortableProperty(3) private Map<CacheName, Set<?>> changedKeys;
 
     /**
      *  Default constructor for POF use only.
@@ -65,8 +65,8 @@ public class EntryProcessorInvokerResult<K, R> {
      * @param changedKeys the set of keys changed by this invocation
      */
     public EntryProcessorInvokerResult(final PartitionSet partitions, 
-            final Map<K, R> resultMap, final Map<K, VersionedKey<K>> retryMap,
-            final Set<K> changedKeys) {
+            final Map<K, R> resultMap, final Map<K, VersionCacheKey<K>> retryMap,
+            final Map<CacheName, Set<?>> changedKeys) {
         super();
         this.partitions = partitions;
         this.resultMap = resultMap;
@@ -95,7 +95,7 @@ public class EntryProcessorInvokerResult<K, R> {
      * map is the logical key, the value is the version cache key of the uncommitted entry found.
      * @return the map of uncommitted versions
      */
-    public Map<K, VersionedKey<K>> getRetryMap() {
+    public Map<K, VersionCacheKey<K>> getRetryMap() {
         return retryMap;
     }
 
@@ -103,7 +103,7 @@ public class EntryProcessorInvokerResult<K, R> {
      * Get the set of keys for entries that were changed by this invocation.
      * @return the set of keys for changed entries
      */
-    public Set<K> getChangedKeys() {
+    public Map<CacheName, Set<?>> getChangedKeys() {
         return changedKeys;
     }
 

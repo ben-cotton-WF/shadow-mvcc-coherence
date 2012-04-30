@@ -24,6 +24,9 @@ package com.shadowmvcc.coherence.transaction;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
 
+import java.util.Collection;
+
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 import com.shadowmvcc.coherence.cache.internal.MVCCTransactionalCacheImpl;
 import com.shadowmvcc.coherence.config.ConfigurationFactory;
@@ -105,6 +108,11 @@ public class ThreadTransactionManager implements TransactionManager {
     @Override
     public MVCCNamedCache getTemporalCacheView(final String cacheName, final long timestamp) {
         return getThreadTransactionManager().getTemporalCacheView(cacheName, timestamp);
+    }
+
+    @Override
+    public void addReferencedCaches(final Collection<CacheName> referencedCaches) {
+        getThreadTransactionManager().addReferencedCaches(referencedCaches);
     }
 
 }

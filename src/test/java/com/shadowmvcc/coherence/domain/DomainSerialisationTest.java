@@ -32,6 +32,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.tangosol.io.pof.ConfigurablePofContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
@@ -102,7 +103,7 @@ public class DomainSerialisationTest {
     public void testProcessorResult1() {
         TransactionId ts = new TransactionId(BASETIME + 17, 124, 457);
         ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(
-                new VersionedKey<String>("ABC", ts));
+                new CacheName("humpty-dumpty"), new VersionedKey<String>("ABC", ts));
         assertPofFidelityByReflection(pr);
     }
     /**

@@ -25,6 +25,8 @@ package com.shadowmvcc.coherence.cache.internal;
 import java.util.Map;
 import java.util.Set;
 
+import com.shadowmvcc.coherence.cache.CacheName;
+
 /**
  * Result type for filter based ntryProcessor invocations. Encapsulates the
  * map of key/result pairs for the entryprocessor invocations and a set of keys that were
@@ -39,13 +41,15 @@ import java.util.Set;
  */
 public class InvocationFinalResult<K, R> {
     private final Map<K, R> resultMap;
-    private final Set<K> changedKeys;
+    @SuppressWarnings("rawtypes")
+    private final Map<CacheName, Set> changedKeys;
     
     /** Constructor.
      * @param resultMap map of EntryProcessor results
      * @param changedKeys set of keys changed by the invocation
      */
-    public InvocationFinalResult(final Map<K, R> resultMap, final Set<K> changedKeys) {
+    public InvocationFinalResult(final Map<K, R> resultMap,
+            @SuppressWarnings("rawtypes") final Map<CacheName, Set> changedKeys) {
         super();
         this.resultMap = resultMap;
         this.changedKeys = changedKeys;
@@ -61,7 +65,8 @@ public class InvocationFinalResult<K, R> {
      * Get the set of keys changed by the invocation.
      * @return the set of changed keys
      */
-    public Set<K> getChangedKeys() {
+    @SuppressWarnings("rawtypes")
+    public Map<CacheName, Set> getChangedKeys() {
         return changedKeys;
     }
     

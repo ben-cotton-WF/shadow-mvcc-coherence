@@ -22,6 +22,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.domain;
 
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 
@@ -39,9 +40,9 @@ import com.tangosol.io.pof.annotation.PortableProperty;
 public class ProcessorResult<K, R> {
 
     @PortableProperty(0) private R result;
-    @PortableProperty(1) private VersionedKey<K> waitKey;
-    @PortableProperty(1) private boolean changed;
-    @PortableProperty(2) private boolean returnResult;
+    @PortableProperty(1) private VersionCacheKey<K> waitKey;
+    @PortableProperty(2) private boolean changed;
+    @PortableProperty(3) private boolean returnResult;
 
     /**
      *  Default constructor for POF use only.
@@ -52,12 +53,16 @@ public class ProcessorResult<K, R> {
 
     /**
      * Constructor for a result indicating a wait is required for an uncommitted entry.
+     * The cache containing the uncommitted entry may not be the same as the one on which
+     * the original operation was performed in the case of an EntryProcessor that
+     * updates backing maps of other MVCC caches
+     * @param waitCacheName name of the cache containing the uncommitted entry
      * @param waitKey the version cache key of an uncommitted entry
      */
-    public ProcessorResult(final VersionedKey<K> waitKey) {
+    public ProcessorResult(final CacheName waitCacheName, final VersionedKey<K> waitKey) {
         super();
         this.result = null;
-        this.waitKey = waitKey;
+        this.waitKey = new VersionCacheKey<K>(waitCacheName, waitKey);
         this.changed = false;
         this.returnResult = false;
     }
@@ -96,7 +101,7 @@ public class ProcessorResult<K, R> {
      * Return the uncommitted entry key that we must wait for.
      * @return the version cache key that prevented execution or null
      */
-    public VersionedKey<K> getWaitKey() {
+    public VersionCacheKey<K> getWaitKey() {
         return waitKey;
     }
 

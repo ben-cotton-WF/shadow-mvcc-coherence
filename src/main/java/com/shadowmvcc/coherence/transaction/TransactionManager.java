@@ -22,6 +22,9 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction;
 
+import java.util.Collection;
+
+import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.cache.internal.MVCCNamedCache;
 
 /**
@@ -40,6 +43,15 @@ public interface TransactionManager {
      * @return the cache
      */
     MVCCNamedCache getCache(String cacheName);
+    
+    /**
+     * Ensure that the transaction manager is aware of other
+     * caches that may be modified. Used in advance of invocations
+     * of {@EntryProcessor} implementations that modify other caches through
+     * their backing maps. 
+     * @param referencedCaches names of caches that may be affected
+     */
+    void addReferencedCaches(Collection<CacheName> referencedCaches);
     
     /**
      * Get a NamedCache that will provide a view as at a given timestamp.
