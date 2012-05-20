@@ -137,9 +137,9 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
         }
 
         if (result == NoResult.INSTANCE) {
-            return new ProcessorResult<K, R>(null, false, false);
+            return new ProcessorResult<K, R>(null, null, false);
         } else {
-            return new ProcessorResult<K, R>(result, false, true);
+            return new ProcessorResult<K, R>(result, null, true);
         }
     }
 

@@ -230,8 +230,9 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
         cache.insert(ts1, true, theKey, theValue);
 
         EntryProcessor ep = new ExtractorProcessor(new PofExtractor(null, SampleDomainObject.POF_INTV));
+        InvocationFinalResult<Integer, Integer> ifr = cache.invoke(ts2, repeatableRead, true, true, theKey, ep);
 
-        assertEquals(88, cache.invoke(ts2, repeatableRead, true, true, theKey, ep));
+        assertEquals(88, (int) ifr.getResultMap().get(theKey));
 
     }
 

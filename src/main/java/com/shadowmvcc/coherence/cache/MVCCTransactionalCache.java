@@ -92,10 +92,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param readonly invoke as read only
      * @param oKey key
      * @param agent the processor
-     * @return the result of the EntryProcessor
+     * @return a map of key, result pairs, with the set of keys changed
      * @param <R> return type of the EntryProcessor
      */
-    <R> R invoke(TransactionId tid, 
+    <R> InvocationFinalResult<K, R> invoke(TransactionId tid, 
             IsolationLevel isolationLevel, boolean autoCommit, boolean readonly, K oKey, EntryProcessor agent);
 
     /**
@@ -321,10 +321,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param readonly invoke as read only
      * @param collKeys collection of keys
      * @param agent the EntryProcessor
-     * @return a map of key, result pairs
+     * @return a map of key, result pairs, with the set of keys changed
      * @param <R> result type of the entryprocessor
      */
-    <R> Map<K, R> invokeAll(TransactionId tid, 
+    <R> InvocationFinalResult<K, R> invokeAll(TransactionId tid, 
             IsolationLevel isolationLevel, boolean autoCommit, boolean readonly, Collection<K> collKeys, 
             EntryProcessor agent);
 

@@ -41,15 +41,14 @@ import com.shadowmvcc.coherence.cache.CacheName;
  */
 public class InvocationFinalResult<K, R> {
     private final Map<K, R> resultMap;
-    @SuppressWarnings("rawtypes")
-    private final Map<CacheName, Set> changedKeys;
+    private final Map<CacheName, Set<Object>> changedKeys;
     
     /** Constructor.
      * @param resultMap map of EntryProcessor results
      * @param changedKeys set of keys changed by the invocation
      */
     public InvocationFinalResult(final Map<K, R> resultMap,
-            @SuppressWarnings("rawtypes") final Map<CacheName, Set> changedKeys) {
+            final Map<CacheName, Set<Object>> changedKeys) {
         super();
         this.resultMap = resultMap;
         this.changedKeys = changedKeys;
@@ -65,8 +64,7 @@ public class InvocationFinalResult<K, R> {
      * Get the set of keys changed by the invocation.
      * @return the set of changed keys
      */
-    @SuppressWarnings("rawtypes")
-    public Map<CacheName, Set> getChangedKeys() {
+    public Map<CacheName, Set<Object>> getChangedKeys() {
         return changedKeys;
     }
     

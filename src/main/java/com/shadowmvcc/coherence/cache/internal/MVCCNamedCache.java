@@ -291,26 +291,63 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings("unchecked")
     @Override
     public Object invoke(final Object key, final EntryProcessor agent) {
-        if (agent instanceof MultiCacheProcessor) {
-            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
-        }
+        
         Transaction context = transactionManager.getTransaction();
+        
+        Collection<CacheName> potentiallyAffectedCaches = null;
+        if (agent instanceof MultiCacheProcessor) {
+            potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
+            transactionManager.addReferencedCaches(potentiallyAffectedCaches);
+        }
+        
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
-        return mvccCache.invoke(context.getTransactionId(),
+        
+        @SuppressWarnings("rawtypes")
+        InvocationFinalResult result = mvccCache.invoke(context.getTransactionId(),
                 context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), key, agent);
+        
+        Map<CacheName, Set<Object>> changedKeys = result.getChangedKeys();
+        for (Map.Entry<CacheName, Set<Object>> changedEntry : changedKeys.entrySet()) {
+            context.addKeySetAffected(changedEntry.getKey(), changedEntry.getValue());
+        }
+        
+        return result.getResultMap().get(key);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
-        if (agent instanceof MultiCacheProcessor) {
-            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
-        }
+        
         Transaction context = transactionManager.getTransaction();
+        
+        Collection<CacheName> potentiallyAffectedCaches = null;
+        if (agent instanceof MultiCacheProcessor) {
+            potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
+            transactionManager.addReferencedCaches(potentiallyAffectedCaches);
+            for (CacheName pac : potentiallyAffectedCaches) {
+                context.setBlanketRollbackRequired(pac, true);
+            }
+        }
+        
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
+        
         try {
-            return mvccCache.invokeAll(context.getTransactionId(),
+            
+            InvocationFinalResult result = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), collKeys, agent);
+            
+            Map<CacheName, Set<Object>> changedKeys = result.getChangedKeys();
+            for (Map.Entry<CacheName, Set<Object>> changedEntry : changedKeys.entrySet()) {
+                context.addKeySetAffected(changedEntry.getKey(), changedEntry.getValue());
+            }
+            
+            if (potentiallyAffectedCaches != null) {
+                for (CacheName pac : potentiallyAffectedCaches) {
+                    context.setBlanketRollbackRequired(pac, false);
+                }
+            }
+            
+            return result.getResultMap();
         } catch (RuntimeException t) {
             context.setRollbackOnly();
             throw t;
@@ -320,16 +357,28 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
-        if (agent instanceof MultiCacheProcessor) {
-            transactionManager.addReferencedCaches(((MultiCacheProcessor) agent).getReferencedMVCCCacheNames());
-        }
         Transaction context = transactionManager.getTransaction();
+        context.setBlanketRollbackRequired(mvccCache.getMVCCCacheName(), true);
+        Collection<CacheName> potentiallyAffectedCaches = null;
+        if (agent instanceof MultiCacheProcessor) {
+            potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
+            transactionManager.addReferencedCaches(potentiallyAffectedCaches);
+            for (CacheName pac : potentiallyAffectedCaches) {
+                context.setBlanketRollbackRequired(pac, true);
+            }
+        }
         try {
             InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), filter, agent);
             Set<Map.Entry<CacheName, Set<Object>>> es = fr.getChangedKeys().entrySet();
             for (Map.Entry<CacheName, Set<Object>> ckEntry : es) {
                 context.addKeySetAffected(ckEntry.getKey(), ckEntry.getValue());
+            }
+            context.setBlanketRollbackRequired(mvccCache.getMVCCCacheName(), false);
+            if (potentiallyAffectedCaches != null) {
+                for (CacheName pac : potentiallyAffectedCaches) {
+                    context.setBlanketRollbackRequired(pac, false);
+                }
             }
             return fr.getResultMap();
         } catch (RuntimeException t) {

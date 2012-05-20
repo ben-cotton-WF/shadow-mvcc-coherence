@@ -23,6 +23,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 package com.shadowmvcc.coherence.transaction.internal;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
@@ -105,6 +106,16 @@ public class AutoCommitTransaction implements Transaction {
     @Override
     public boolean isReadOnly() {
         return false;
+    }
+
+    @Override
+    public void setBlanketRollbackRequired(final CacheName cacheName,
+            final boolean blanketRollbackRequired) {
+    }
+
+    @Override
+    public Collection<CacheName> isBlanketRollbackRequired() {
+        return Collections.emptyList();
     }
 
 }

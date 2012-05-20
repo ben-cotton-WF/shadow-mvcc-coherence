@@ -97,7 +97,7 @@ public class FilterValidateEntryProcessor<K> extends AbstractMVCCProcessor<K, Ve
         BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
                 .getBackingMapEntry(priorVersionBinaryKey);
 
-        return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), false, true);
+        return new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), null, true);
     }
 
 }

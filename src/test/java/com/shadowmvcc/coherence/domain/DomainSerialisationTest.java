@@ -25,7 +25,11 @@ package com.shadowmvcc.coherence.domain;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
@@ -110,7 +114,13 @@ public class DomainSerialisationTest {
      * Processor result with return value.
      */
     public void testProcessorResult2() {
-        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, true, false);
+        Map<CacheName, Set<Object>> keysChanged = new HashMap<CacheName, Set<Object>>();
+        Set<Object> ck = new HashSet<Object>();
+        ck.add("ABC");
+        keysChanged.put(new CacheName("xxx"), ck);
+        
+        ProcessorResult<String, Integer> pr = new ProcessorResult<String, Integer>(99, keysChanged, false);
+        
         assertPofFidelityByReflection(pr);
     }
 

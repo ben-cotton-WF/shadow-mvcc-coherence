@@ -26,6 +26,7 @@ import static com.shadowmvcc.coherence.domain.TransactionStatus.committed;
 import static com.shadowmvcc.coherence.domain.TransactionStatus.open;
 import static com.shadowmvcc.coherence.domain.TransactionStatus.rolledback;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,7 @@ public class TransactionImpl implements Transaction {
     private final TransactionCache transactionCache;
     private volatile boolean rollbackOnly = false;
     private volatile TransactionStatus transactionStatus = open;
+    private Map<CacheName, Integer> blanketRollbackMap = new HashMap<CacheName, Integer>();
 
     private Map<CacheName, Set<Object>> cacheKeyMap = new HashMap<CacheName, Set<Object>>();
     private Map<CacheName, PartitionSet> cachePartitionMap = new HashMap<CacheName, PartitionSet>();
@@ -168,6 +170,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot rollback, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
+            //TODO implement blanket rollback
             transactionCache.rollbackTransaction(transactionId, cacheKeyMap, cachePartitionMap);
         }
         transactionStatus = rolledback;
@@ -177,5 +180,28 @@ public class TransactionImpl implements Transaction {
     public boolean isReadOnly() {
         return false;
     }
+
+    @Override
+    public void setBlanketRollbackRequired(final CacheName cacheName,
+            final boolean blanketRollbackRequired) {
+        synchronized (blanketRollbackMap) {
+            if (!blanketRollbackMap.containsKey(cacheName)) {
+                blanketRollbackMap.put(cacheName, 0);
+            }
+            blanketRollbackMap.put(cacheName, blanketRollbackMap.get(cacheName) + (blanketRollbackRequired ? 1 : -1));
+        }
+    }
+
+    @Override
+    public Collection<CacheName> isBlanketRollbackRequired() {
+        Collection<CacheName> result = new ArrayList<CacheName>(blanketRollbackMap.size());
+        for (Map.Entry<CacheName, Integer> brmEntry : blanketRollbackMap.entrySet()) {
+            if (brmEntry.getValue() != 0) {
+                result.add(brmEntry.getKey());
+            }
+        }
+        return result;
+    }
+
 
 }

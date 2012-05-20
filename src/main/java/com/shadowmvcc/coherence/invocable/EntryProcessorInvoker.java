@@ -34,6 +34,7 @@ import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCSurfaceFilter;
 import com.shadowmvcc.coherence.processor.Reducer;
+import com.shadowmvcc.coherence.utils.MapUtils;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.CacheFactory;
@@ -72,7 +73,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
     private transient PartitionSet memberParts;
     private transient Map<K, R> resultMap;
     private transient Map<K, VersionCacheKey<K>> retryMap;
-    private transient Set<K> changedKeys;
+    private transient Map<CacheName, Set<Object>> changedKeys;
 
     /**
      * Default constructor for POF use only.
@@ -145,7 +146,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
         retryMap = new HashMap<K, VersionCacheKey<K>>();
         resultMap = new HashMap<K, R>();
-        changedKeys = new HashSet<K>();
+        changedKeys = new HashMap<CacheName, Set<Object>>();
 
         for (Map.Entry<K, ProcessorResult<K, R>> entry
                 : ((Map<K, ProcessorResult<K, R>>) keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
@@ -156,9 +157,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
                 if (result.isReturnResult()) {
                     resultMap.put(entry.getKey(), result.getResult());
                 }
-                if (result.isChanged()) {
-                    changedKeys.add(entry.getKey());
-                }
+                MapUtils.mergeSets(changedKeys, result.getChangedCacheKeys());
             }
         }
         
@@ -166,12 +165,10 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
             resultMap = ((Reducer) entryProcessor).reduce(resultMap);
         }
     }
-
+    
     @Override
     public EntryProcessorInvokerResult<K, R> getResult() {
-        Map<CacheName, Set<?>> changedKeyMap = new HashMap<CacheName, Set<?>>();
-        changedKeyMap.put(cacheName, changedKeys);
-        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeyMap);
+        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeys);
     }
 
 }

@@ -123,6 +123,6 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K, VersionedK
         }
 
         return returnMatchingKeys
-                ? new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), false, true) : null;
+                ? new ProcessorResult<K, VersionedKey<K>>((VersionedKey<K>) priorEntry.getKey(), null, true) : null;
     }
 }

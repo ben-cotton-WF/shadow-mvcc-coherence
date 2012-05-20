@@ -22,11 +22,11 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
-import java.util.Collection;
-
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.VersionedKey;
+import com.tangosol.net.BackingMapManagerContext;
 import com.tangosol.util.Binary;
 import com.tangosol.util.BinaryEntry;
 import com.tangosol.util.ValueUpdater;
@@ -45,27 +45,16 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
     private Binary newBinaryValue;
 
     /**
-     * @param parentEntry the version cache entry
+     * @param parentEntry the key cache entry
      * @param transactionId transaction id of the enclosing transaction
      * @param isolationLevel isolation level of the enclosing transaction
      * @param cacheName the cache name
+     * @param backingMapManagerContext the backing map manager context
      */
     public ReadWriteEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
-            final IsolationLevel isolationLevel, final CacheName cacheName) {
-        super(parentEntry, transactionId, isolationLevel, cacheName);
-    }
-
-    /**
-     * @param parentEntry the version cache entry
-     * @param transactionId transaction id of the enclosing transaction
-     * @param isolationLevel isolation level of the enclosing transaction
-     * @param cacheName the cache name
-     * @param mvccCacheNames collection of other MVCC cache names that may be referenced
-     */
-    public ReadWriteEntryWrapper(final BinaryEntry parentEntry,
-            final TransactionId transactionId, final IsolationLevel isolationLevel,
-            final CacheName cacheName, final Collection<CacheName> mvccCacheNames) {
-        super(parentEntry, transactionId, isolationLevel, cacheName, mvccCacheNames);
+            final IsolationLevel isolationLevel, final CacheName cacheName,
+            final BackingMapManagerContext backingMapManagerContext) {
+        super(parentEntry, transactionId, isolationLevel, cacheName, backingMapManagerContext);
     }
 
     @Override
@@ -128,5 +117,15 @@ public class ReadWriteEntryWrapper extends AbstractEntryWrapper implements Entry
      */
     public Binary getNewBinaryValue() {
         return newBinaryValue;
+    }
+    
+    /**
+     * Get the version cache entry.
+     * @return the version cache entry
+     */
+    public BinaryEntry getVersionCacheEntry() {
+        Binary binaryKey = (Binary) getContext().getKeyToInternalConverter().convert(
+                new VersionedKey<Object>(getKey(), transactionId));
+        return (BinaryEntry) getVersionCacheBackingMapContext().getBackingMapEntry(binaryKey);
     }
 }

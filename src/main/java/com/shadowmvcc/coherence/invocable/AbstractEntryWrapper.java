@@ -22,8 +22,6 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
-import java.util.Collection;
-
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -52,11 +50,11 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 
     private final BinaryEntry parentEntry;
     private BinaryEntry priorBinaryEntry = null;
-    private final TransactionId transactionId;
+    protected final TransactionId transactionId;
     private final IsolationLevel isolationLevel;
     private boolean priorRead = false;
     private CacheName cacheName;
-    private final Collection<CacheName> mvccCacheNames;
+    private final BackingMapManagerContext backingMapManagerContext;
     
     /**
      * Exception to throw on finding an uncommitted read.
@@ -104,41 +102,24 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
      * @param transactionId transaction id of the enclosing transaction
      * @param isolationLevel isolation level of the enclosing transaction
      * @param cacheName name of the current cache
-     */
-    public AbstractEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
-            final IsolationLevel isolationLevel, final CacheName cacheName) {
-        super();
-        this.parentEntry = parentEntry;
-        this.transactionId = transactionId;
-        this.isolationLevel = isolationLevel;
-        this.cacheName = cacheName;
-        this.mvccCacheNames = null;
-    }
-    
-    /**
-     * Constructor.
-     * @param parentEntry parent BinaryEntry from the key cache
-     * @param transactionId transaction id of the enclosing transaction
-     * @param isolationLevel isolation level of the enclosing transaction
-     * @param cacheName name of the current cache
-     * @param mvccCacheNames collection of other MVCC cache names that may be referenced
+     * @param backingMapManagerContext the backing map manager context
      */
     public AbstractEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
             final IsolationLevel isolationLevel, final CacheName cacheName,
-            final Collection<CacheName> mvccCacheNames) {
+            final BackingMapManagerContext backingMapManagerContext) {
         super();
         this.parentEntry = parentEntry;
         this.transactionId = transactionId;
         this.isolationLevel = isolationLevel;
         this.cacheName = cacheName;
-        this.mvccCacheNames = null;
+        this.backingMapManagerContext = backingMapManagerContext;
     }
-
+    
     /**
-     * @return the backing map context for the current caches
+     * @return the backing map context for the current version cache
      */
-    private BackingMapContext getVersionCacheBackingMapContext() {
-        return parentEntry.getBackingMapContext().getManagerContext().getBackingMapContext(
+    protected BackingMapContext getVersionCacheBackingMapContext() {
+        return backingMapManagerContext.getBackingMapContext(
                 cacheName.getVersionCacheName());
     }
 
@@ -221,7 +202,7 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 
     @Override
     public BackingMapManagerContext getContext() {
-        return getBackingMapContext().getManagerContext();
+        return backingMapManagerContext;
     }
 
     @Override
@@ -249,6 +230,22 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
      */
     public boolean isPriorRead() {
         return priorRead;
+    }
+
+    /**
+     * Get the parent key cache entry.
+     * @return the parent key cache entry
+     */
+    public BinaryEntry getParentEntry() {
+        return parentEntry;
+    }
+
+    /**
+     * Get the cache name that this entry belongs to.
+     * @return the cache name
+     */
+    public CacheName getCacheName() {
+        return cacheName;
     }
 
 }

@@ -88,7 +88,7 @@ public class VersionedKey<K> implements KeyAssociation, Serializable {
         if (logicalKey instanceof KeyAssociation) {
             return ((KeyAssociation) logicalKey).getAssociatedKey();
         } else {
-            return logicalKey.hashCode();
+            return logicalKey;
         }
     }
 

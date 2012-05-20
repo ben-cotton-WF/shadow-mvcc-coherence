@@ -341,7 +341,7 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
         expected.add(7);
         expected.add(9);
 
-        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, false, expected, ep).keySet();
+        Set<Integer> keySet = cache.invokeAll(ts2, repeatableRead, false, false, expected, ep).getResultMap().keySet();
 
 
         assertEquals(5, keySet.size());

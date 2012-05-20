@@ -63,6 +63,7 @@ import com.shadowmvcc.coherence.invocable.ParallelAwareAggregatorWrapper;
 import com.shadowmvcc.coherence.invocable.ParallelKeyAggregationInvoker;
 import com.shadowmvcc.coherence.transaction.internal.ExistenceCheckProcessor;
 import com.shadowmvcc.coherence.transaction.internal.ReadMarkingProcessor;
+import com.shadowmvcc.coherence.utils.MapUtils;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.CacheService;
 import com.tangosol.net.DistributedCacheService;
@@ -205,7 +206,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public <R> R invoke(final TransactionId tid, final IsolationLevel isolationLevel,
+    public <R> InvocationFinalResult<K, R> invoke(final TransactionId tid, final IsolationLevel isolationLevel,
             final boolean autoCommit, final boolean readonly, final K key, final EntryProcessor agent) {
         EntryProcessor ep;
         if (readonly) {
@@ -213,9 +214,37 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         } else {
             ep = new MVCCEntryProcessorWrapper<K, R>(tid, agent, isolationLevel, autoCommit, cacheName);
         }
-        return invokeUntilCommitted(key, tid, ep);
+        return invokeProcessorUntilCommitted(key, tid, ep);
     }
 
+    /**
+     * Invoke an EntryProcessor on a key, waiting for a commit if necessary.
+     * @param key the key
+     * @param tid transaction id
+     * @param ep the entry processor
+     * @return the result of the EntryProcessor and changed keys wrapped in an InvocationFinalResult
+     * @param <R> the EntryProcessor return type
+     */
+    private <R> InvocationFinalResult<K, R> invokeProcessorUntilCommitted(
+            final K key, final TransactionId tid, final EntryProcessor ep) {
+        while (true) {
+            @SuppressWarnings("unchecked")
+            ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(key, ep);
+            if (epr == null) {
+                return null;
+            }
+            if (epr.isUncommitted()) {
+                waitForCommit(epr.getWaitKey());
+            } else {
+                Map<K, R> resultMap = new HashMap<K, R>();
+                resultMap.put(key, epr.getResult());
+                InvocationFinalResult<K, R> result = new InvocationFinalResult<K, R>(
+                        resultMap, epr.getChangedCacheKeys());
+                return result;
+            }
+        }
+    }
+    
     /**
      * Invoke an EntryProcessor on a key, waiting for a commit if necessary.
      * @param key the key
@@ -224,7 +253,8 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @return the result of the EntryProcessor
      * @param <R> the EntryProcessor return type
      */
-    private <R> R invokeUntilCommitted(final K key, final TransactionId tid, final EntryProcessor ep) {
+    private <R> R invokeUntilCommitted(
+            final K key, final TransactionId tid, final EntryProcessor ep) {
         while (true) {
             @SuppressWarnings("unchecked")
             ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(key, ep);
@@ -673,7 +703,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @param filter the filter
      * @param tid transaction id
      * @param entryProcessor the entryProcessor
-     * @return the map of EntryProcessor results.
+     * @return an invocation result including results and changed keys.
      * @param <R> EntryProcessor result type
      */
     @SuppressWarnings("unchecked")
@@ -686,8 +716,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
         Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Map<K, R> resultMap = new HashMap<K, R>();
-        @SuppressWarnings("rawtypes")
-        Map<CacheName, Set> changedKeys = new HashMap<CacheName, Set>();
+        Map<CacheName, Set<Object>> changedKeys = new HashMap<CacheName, Set<Object>>();
 
         do {
             EntryProcessorInvoker<K, R> invoker = new EntryProcessorInvoker<K, R>(
@@ -699,10 +728,10 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
                 resultMap.putAll(result.getResultMap());
                 retryMap.putAll(result.getRetryMap());
-                for (Map.Entry<CacheName, Set<?>> ckEntry : result.getChangedKeys().entrySet()) {
+                for (Map.Entry<CacheName, Set<Object>> ckEntry : result.getChangedKeys().entrySet()) {
                     CacheName cacheName = ckEntry.getKey();
                     if (!changedKeys.containsKey(cacheName)) {
-                        changedKeys.put(cacheName, new HashSet<K>());
+                        changedKeys.put(cacheName, new HashSet<Object>());
                     }
                     changedKeys.get(cacheName).addAll(ckEntry.getValue());
                 }
@@ -774,13 +803,62 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     /**
+     * Invoke a wrapped entry processor returning an InvocationFinalResult.
+     * incorporating return values and changed keys
+     * @param keys keys to invoke on
+     * @param tid transaction id
+     * @param entryProcessor entry processor
+     * @return an InvocationFinalResult
+     * @param <R> EntryProcessor return type
+     */
+    @SuppressWarnings("unchecked")
+    private <R> InvocationFinalResult<K, R> invokeAllProcessorUntilCommitted(
+            final Collection<K> keys, final TransactionId tid, 
+            final EntryProcessor entryProcessor) {
+
+        Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
+        Map<K, R> resultMap = new HashMap<K, R>();
+        Map<CacheName, Set<Object>> changedKeys = new HashMap<CacheName, Set<Object>>();
+
+        // TODO would it be more efficient to use invocation service for this?
+        
+        for (Map.Entry<K, ProcessorResult<K, R>> entry
+                : ((Map<K, ProcessorResult<K, R>>) keyCache.invokeAll(keys, entryProcessor)).entrySet()) {
+            if (entry.getValue().isUncommitted()) {
+                retryMap.put(entry.getKey(), entry.getValue().getWaitKey());
+            } else {
+                resultMap.put(entry.getKey(), entry.getValue().getResult());
+                MapUtils.mergeSets(changedKeys, entry.getValue().getChangedCacheKeys());
+            }
+        }
+
+        for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
+            waitForCommit(entry.getValue());
+            while (true) {
+                ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);
+                if (epr == null) {
+                    break;
+                }
+                if (!epr.isUncommitted()) {
+                    resultMap.put(entry.getKey(), epr.getResult());
+                    MapUtils.mergeSets(changedKeys, epr.getChangedCacheKeys());
+                    break;
+                }
+                waitForCommit(epr.getWaitKey());
+            }
+        }
+
+        return new InvocationFinalResult<K, R>(resultMap, changedKeys);
+    }
+
+    /**
      * {@inheritDoc}.
      * 
      * @throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
      * atomic completion of invocation against all keys
      */
     @Override
-    public <R> Map<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
+    public <R> InvocationFinalResult<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
             final boolean autoCommit, final boolean readOnly,
             final Collection<K> collKeys, final EntryProcessor agent) {
         
@@ -795,7 +873,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             wrappedProcessor = new MVCCEntryProcessorWrapper<K, R>(
                 tid, agent, isolationLevel, autoCommit, cacheName);
         }
-        return invokeAllUntilCommitted(collKeys, tid, wrappedProcessor);
+        return invokeAllProcessorUntilCommitted(collKeys, tid, wrappedProcessor);
     }
 
     /**

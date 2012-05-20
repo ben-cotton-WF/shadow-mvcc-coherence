@@ -47,7 +47,8 @@ public class ReadOnlyEntryWrapper extends AbstractEntryWrapper {
      */
     public ReadOnlyEntryWrapper(final BinaryEntry parentEntry, final TransactionId transactionId,
             final IsolationLevel isolationLevel, final CacheName cacheName) {
-        super(parentEntry, transactionId, isolationLevel, cacheName);
+        super(parentEntry, transactionId, isolationLevel, cacheName,
+                parentEntry.getBackingMapContext().getManagerContext());
     }
 
     @Override

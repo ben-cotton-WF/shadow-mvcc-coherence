@@ -95,5 +95,21 @@ public interface Transaction {
      * Roll back the transaction.
      */
     void rollback();
+    
+    /**
+     * set the blanket rollback mode for a cache - if true, we can't know which keys and caches have been affected
+     * so must blanket rollback all caches known to the owning transaction manager. Should be set before
+     * keyset or filter based entryprocessor invocations. Calls to this method should increment and decrement
+     * a counter, so rollback will be required if the number of calls to set exceed number of calls to clear.
+     * @param cacheName name of cache to set blanket rollback mode for.
+     * @param blanketRollbackRequired true if rollback of this cache must be a blanket rollback.
+     */
+    void setBlanketRollbackRequired(CacheName cacheName, boolean blanketRollbackRequired);
+    
+    /**
+     * Get the set of caches requiring a blanket rollback.
+     * @return the set of caches requiring blanket rollback 
+     */
+    Collection<CacheName> isBlanketRollbackRequired();
 
 }

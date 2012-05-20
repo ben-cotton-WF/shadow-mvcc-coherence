@@ -48,7 +48,7 @@ public class EntryProcessorInvokerResult<K, R> {
     @PortableProperty(0) private PartitionSet partitions;
     @PortableProperty(1) private Map<K, R> resultMap;
     @PortableProperty(2) private Map<K, VersionCacheKey<K>> retryMap;
-    @PortableProperty(3) private Map<CacheName, Set<?>> changedKeys;
+    @PortableProperty(3) private Map<CacheName, Set<Object>> changedKeys;
 
     /**
      *  Default constructor for POF use only.
@@ -66,7 +66,7 @@ public class EntryProcessorInvokerResult<K, R> {
      */
     public EntryProcessorInvokerResult(final PartitionSet partitions, 
             final Map<K, R> resultMap, final Map<K, VersionCacheKey<K>> retryMap,
-            final Map<CacheName, Set<?>> changedKeys) {
+            final Map<CacheName, Set<Object>> changedKeys) {
         super();
         this.partitions = partitions;
         this.resultMap = resultMap;
@@ -103,7 +103,7 @@ public class EntryProcessorInvokerResult<K, R> {
      * Get the set of keys for entries that were changed by this invocation.
      * @return the set of keys for changed entries
      */
-    public Map<CacheName, Set<?>> getChangedKeys() {
+    public Map<CacheName, Set<Object>> getChangedKeys() {
         return changedKeys;
     }
 

@@ -22,6 +22,9 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.domain;
 
+import java.util.Map;
+import java.util.Set;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
@@ -41,8 +44,8 @@ public class ProcessorResult<K, R> {
 
     @PortableProperty(0) private R result;
     @PortableProperty(1) private VersionCacheKey<K> waitKey;
-    @PortableProperty(2) private boolean changed;
-    @PortableProperty(3) private boolean returnResult;
+    @PortableProperty(2) private boolean returnResult;
+    @PortableProperty(3) private Map<CacheName, Set<Object>> changedCacheKeys;
 
     /**
      *  Default constructor for POF use only.
@@ -63,21 +66,22 @@ public class ProcessorResult<K, R> {
         super();
         this.result = null;
         this.waitKey = new VersionCacheKey<K>(waitCacheName, waitKey);
-        this.changed = false;
+        this.changedCacheKeys = null;
         this.returnResult = false;
     }
     /**
      * Constructor for a successful invocation.
      * @param result the {@code EntryProcessor} result
-     * @param changed true if the processor invocation created a new version
+     * @param changedCacheKeys the map of cache name to set of keys identifying entries that have been modified.
+     * May be null if no entries were changed
      * @param returnResult false if this entry was not included in the result map from {@code processAll}
      */
     public ProcessorResult(final R result,
-            final boolean changed, final boolean returnResult) {
+            final Map<CacheName, Set<Object>> changedCacheKeys, final boolean returnResult) {
         super();
         this.result = result;
         this.waitKey = null;
-        this.changed = changed;
+        this.changedCacheKeys = changedCacheKeys;
         this.returnResult = returnResult;
     }
 
@@ -106,19 +110,20 @@ public class ProcessorResult<K, R> {
     }
 
     /**
-     * Did invocation create a new version.
-     * @return true if a new version was created
-     */
-    public boolean isChanged() {
-        return changed;
-    }
-
-    /**
      * Should the result be returned to the caller?
      * @return true if the result should be returned to the caller
      */
     public boolean isReturnResult() {
         return returnResult;
+    }
+
+    /**
+     * Get the map of keys that have been changed. The map is keyed by cache name, the value
+     * being the set of keys of entries that have changed in that cache
+     * @return the map of changed entries or null if no entries were changed
+     */
+    public Map<CacheName, Set<Object>> getChangedCacheKeys() {
+        return changedCacheKeys;
     }
 
 }

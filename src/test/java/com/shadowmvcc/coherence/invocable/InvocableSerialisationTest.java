@@ -111,7 +111,7 @@ public class InvocableSerialisationTest {
 
         Object obj = new EntryProcessorInvokerResult<String, Object>(new PartitionSet(5), 
                 new HashMap<String, Object>(), new HashMap<String, VersionCacheKey<String>>(),
-                new HashMap<CacheName, Set<?>>());
+                new HashMap<CacheName, Set<Object>>());
 
         assertPofFidelity(obj);
     }
