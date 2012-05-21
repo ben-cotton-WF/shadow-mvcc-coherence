@@ -22,7 +22,6 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.transaction.internal;
 
-import static com.shadowmvcc.coherence.domain.IsolationLevel.readUncommitted;
 import static com.shadowmvcc.coherence.domain.IsolationLevel.repeatableRead;
 import static com.shadowmvcc.coherence.domain.IsolationLevel.serializable;
 
@@ -106,9 +105,10 @@ public class ReadMarkingProcessor<K> extends AbstractMVCCProcessor<K, VersionedK
         BinaryEntry priorEntry = (BinaryEntry) getVersionCacheBackingMapContext(entry)
                 .getBackingMapEntry(priorVersionBinaryKey);
 
-        if (isolationLevel != readUncommitted) {
+        if (isolationLevel != IsolationLevel.readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
-            if (!committed) {
+            VersionedKey<K> priorKey = (VersionedKey<K>) priorEntry.getKey();
+            if (!committed && !priorKey.getTransactionId().equals(transactionId)) {
                 return new ProcessorResult<K, VersionedKey<K>>(cacheName, (VersionedKey<K>) priorEntry.getKey());
             }
         }

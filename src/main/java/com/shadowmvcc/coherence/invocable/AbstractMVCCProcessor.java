@@ -172,7 +172,7 @@ public abstract class AbstractMVCCProcessor<K, R> extends AbstractProcessor {
         return index.floor((K) parentEntry.getKey(), transactionId);
 
     }
-
+    
     /**
      * Set a read timestamp.
      * @param entry the key cache entry

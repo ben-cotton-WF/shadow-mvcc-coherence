@@ -22,6 +22,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
+import java.util.Map.Entry;
+
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
@@ -29,6 +31,7 @@ import com.shadowmvcc.coherence.domain.Utils;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCExtractor;
 import com.shadowmvcc.coherence.index.MVCCIndex;
+import com.shadowmvcc.coherence.index.MVCCIndex.IndexEntry;
 import com.tangosol.io.Serializer;
 import com.tangosol.net.BackingMapContext;
 import com.tangosol.net.BackingMapManagerContext;
@@ -147,9 +150,14 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
             MVCCIndex<K> index = (MVCCIndex<K>) getVersionCacheBackingMapContext()
                     .getIndexMap().get(MVCCExtractor.INSTANCE);
             @SuppressWarnings("unchecked")
-            Binary priorVersionBinaryKey = index.floor((K) parentEntry.getKey(), transactionId);
+            
+            Entry<TransactionId, IndexEntry> priorIndexEntry = index.floorEntry(
+                    (K) parentEntry.getKey(), transactionId);
 
-            if (priorVersionBinaryKey != null) {
+            if (priorIndexEntry != null) {
+                
+
+                Binary priorVersionBinaryKey = priorIndexEntry.getValue().getBinaryKey();
 
                 priorBinaryEntry = (BinaryEntry) getVersionCacheBackingMapContext()
                         .getBackingMapEntry(priorVersionBinaryKey);
@@ -159,7 +167,8 @@ public abstract class AbstractEntryWrapper implements EntryWrapper {
 
                     if (isolationLevel != IsolationLevel.readUncommitted) {
                         boolean committed = Utils.isCommitted(priorBinaryEntry);
-                        if (!committed) {
+                        
+                        if (!committed && !priorIndexEntry.getKey().equals(transactionId)) {
                             throw new ReadUncommittedException(cacheName, (VersionedKey<?>) priorBinaryEntry.getKey());
                         }
                     }

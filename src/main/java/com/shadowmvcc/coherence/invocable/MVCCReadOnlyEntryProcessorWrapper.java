@@ -103,7 +103,8 @@ public class MVCCReadOnlyEntryProcessorWrapper<K, R> extends AbstractMVCCProcess
 
         if (isolationLevel != IsolationLevel.readUncommitted) {
             boolean committed = Utils.isCommitted(priorEntry);
-            if (!committed) {
+            VersionedKey<K> priorKey = (VersionedKey<K>) priorEntry.getKey();
+            if (!committed && !priorKey.getTransactionId().equals(transactionId)) {
                 return new ProcessorResult<K, R>(cacheName, (VersionedKey<K>) priorEntry.getKey());
             }
         }

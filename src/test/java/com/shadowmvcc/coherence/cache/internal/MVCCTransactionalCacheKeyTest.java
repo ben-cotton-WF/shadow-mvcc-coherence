@@ -140,6 +140,24 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
         assertNull(cache.get(ts3, readCommitted, theKey));
 
     }
+    
+    /**
+     * Test that reading a removed value works correctly if the 
+     * remove is initially uncommitted.
+     */
+    @Test(timeout = 10000)
+    public void testPutReadUncommitedSameTx() {
+
+        System.out.println("******testPutReadUncommitedSameTx");
+
+        Integer theKey = 99;
+        SampleDomainObject theValue = new SampleDomainObject(88, "eighty-eight");
+
+        assertNull(cache.put(ts1, repeatableRead, false, theKey, theValue));
+        
+        assertEquals(theValue, cache.get(ts1, readCommitted, theKey));
+
+    }
 
     /**
      * Test reading a value that is removed, then the remove is rolled back.
