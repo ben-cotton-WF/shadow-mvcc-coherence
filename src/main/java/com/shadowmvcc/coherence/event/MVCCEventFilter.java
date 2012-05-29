@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
+import com.shadowmvcc.coherence.domain.Utils;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCExtractor;
 import com.shadowmvcc.coherence.index.MVCCIndex;
@@ -142,6 +143,9 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
      * @return true if it matches
      */
     private boolean match(final BinaryEntry entry) {
+        if (Utils.isDeleted(entry)) {
+            return false;
+        }
         if (delegate instanceof EntryFilter) {
             return ((EntryFilter) delegate).evaluateEntry(entry);
         } else {

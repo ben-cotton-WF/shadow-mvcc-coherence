@@ -23,6 +23,10 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 package com.shadowmvcc.coherence.integration;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import junit.framework.Assert;
 
 import org.junit.Before;
@@ -37,9 +41,15 @@ import com.shadowmvcc.coherence.transaction.TimestampSource;
 import com.shadowmvcc.coherence.transaction.TransactionManager;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
+import com.tangosol.net.cache.ContinuousQueryCache;
 import com.tangosol.util.Filter;
+import com.tangosol.util.MapEvent;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.MapListener;
 import com.tangosol.util.extractor.IdentityExtractor;
+import com.tangosol.util.filter.AllFilter;
+import com.tangosol.util.filter.AlwaysFilter;
+import com.tangosol.util.filter.AnyFilter;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.processor.ConditionalPut;
 
@@ -146,6 +156,66 @@ public class IntegrationTest extends AbstractLittlegridTest {
         
         // only the original version
         Assert.assertEquals(1, vcache.size());
+    }
+    
+    @Test
+    public void testCQC() throws InterruptedException {
+        
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache = transactionManager.getCache(cachename.getLogicalName());
+        
+        final Map<Integer, MapEvent> capturedEvents = new HashMap<Integer, MapEvent>();
+        
+        MapListener listener = new MapListener() {
+            
+            @Override
+            public void entryUpdated(MapEvent evt) {
+                capturedEvents.put((Integer) evt.getKey(), evt);
+            }
+            
+            @Override
+            public void entryInserted(MapEvent evt) {
+                capturedEvents.put((Integer) evt.getKey(), evt);
+            }
+            
+            @Override
+            public void entryDeleted(MapEvent evt) {
+                capturedEvents.put((Integer) evt.getKey(), evt);
+            }
+        };
+        
+        final String testValue1 = "testValue1";
+        final String testValue2 = "testValue2";
+        
+        for (int i = 0; i < 10; i++) {
+            cache.put(i, testValue1);
+        }
+        
+        transactionManager.getTransaction().commit();
+        
+        ContinuousQueryCache cqc = new ContinuousQueryCache(cache, AlwaysFilter.INSTANCE, listener);
+        
+        Thread.sleep(500);
+        
+        for (int i = 0; i < 10; i++) {
+            Assert.assertEquals(testValue1, capturedEvents.get(i).getNewValue());
+            Assert.assertEquals(MapEvent.ENTRY_INSERTED, capturedEvents.get(i).getId());
+        }
+        
+        cache.remove(1);
+        cache.put(2, testValue2);
+        cache.put(100, testValue2);
+        
+        transactionManager.getTransaction().commit();
+        
+        Thread.sleep(500);
+
+        Assert.assertEquals(MapEvent.ENTRY_DELETED, capturedEvents.get(1).getId());
+        Assert.assertEquals(MapEvent.ENTRY_UPDATED, capturedEvents.get(2).getId());
+        Assert.assertEquals(testValue2, capturedEvents.get(2).getNewValue());
+        Assert.assertEquals(MapEvent.ENTRY_INSERTED, capturedEvents.get(100).getId());
+        Assert.assertEquals(testValue2, capturedEvents.get(100).getNewValue());
+        
     }
 
 }
