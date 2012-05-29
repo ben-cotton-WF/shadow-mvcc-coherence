@@ -29,7 +29,6 @@ import java.util.Map.Entry;
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
-import com.shadowmvcc.coherence.domain.Utils;
 import com.shadowmvcc.coherence.domain.VersionedKey;
 import com.shadowmvcc.coherence.index.MVCCExtractor;
 import com.shadowmvcc.coherence.index.MVCCIndex;
@@ -48,6 +47,7 @@ import com.tangosol.util.MapEvent;
 import com.tangosol.util.MapEventTransformer;
 import com.tangosol.util.ObservableMap;
 import com.tangosol.util.filter.EntryFilter;
+import com.tangosol.util.filter.MapEventFilter;
 
 /**
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
@@ -143,9 +143,6 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
      * @return true if it matches
      */
     private boolean match(final BinaryEntry entry) {
-        if (Utils.isDeleted(entry)) {
-            return false;
-        }
         if (delegate instanceof EntryFilter) {
             return ((EntryFilter) delegate).evaluateEntry(entry);
         } else {
@@ -171,10 +168,19 @@ public class MVCCEventFilter<K> implements EntryFilter, MapEventTransformer {
         @SuppressWarnings("rawtypes")
         SyntheticBinaryEntry entry = new SyntheticBinaryEntry(binaryKey, binaryValue, serializer, bmc);
         
-        if (evaluateEntry(entry)) {
-            return transformer.transform(mapevent);
+        if (delegate instanceof MapEventFilter) {
+            MapEvent newEvent = transformer.transform(mapevent);
+            if (newEvent != null && delegate.evaluate(newEvent)) {
+                return newEvent;
+            } else {
+                return null;
+            }
         } else {
-            return null;
+            if (evaluateEntry(entry)) {
+                return transformer.transform(mapevent);
+            } else {
+                return null;
+            }
         }
     }
 }

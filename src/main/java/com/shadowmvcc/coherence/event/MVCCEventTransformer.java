@@ -154,6 +154,8 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
         Object oldValue = null;
 
         EventValue<V> eventValue = null;
+        
+        int newEventType;
 
         if (mapevent.getId() == MapEvent.ENTRY_DELETED) {
             if (wasCommitted(mapevent)) {
@@ -161,6 +163,10 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
             }
 
             oldValue = mapevent.getOldValue();
+
+            // We'll pass back rollbacks as updates.
+            newEventType = MapEvent.ENTRY_UPDATED;
+            
         } else {
 
             Entry<TransactionId, IndexEntry> ixe = 
@@ -180,15 +186,24 @@ public class MVCCEventTransformer<K, V> implements MapEventTransformer {
             }
             boolean deleted = isDeleted(mapevent);
             eventValue = new EventValue<V>(committed, deleted, deleted ? null : (V) mapevent.getNewValue());
+            
+            if (deleted) {
+                newEventType = MapEvent.ENTRY_DELETED;
+            } else if (ixe == null) {
+                newEventType = MapEvent.ENTRY_INSERTED;
+            } else {
+                newEventType = MapEvent.ENTRY_UPDATED;
+            }
+            
         }
 
         if (mapevent instanceof CacheEvent) {
             return new CacheEvent(
-                    mapevent.getMap(), mapevent.getId(), mapevent.getKey(), 
+                    mapevent.getMap(), newEventType, mapevent.getKey(), 
                     oldValue, eventValue, ((CacheEvent) mapevent).isSynthetic());
         } else {
             return new MapEvent(
-                    mapevent.getMap(), mapevent.getId(), mapevent.getKey(), 
+                    mapevent.getMap(), newEventType, mapevent.getKey(), 
                     oldValue, eventValue);
         }
     }
