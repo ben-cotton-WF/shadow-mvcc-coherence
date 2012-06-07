@@ -31,11 +31,12 @@ import com.shadowmvcc.coherence.cache.internal.InvocationFinalResult;
 import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.tangosol.net.CacheService;
+import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Filter;
-import com.tangosol.util.MapListener;
-import com.tangosol.util.ValueExtractor;
 import com.tangosol.util.InvocableMap.EntryAggregator;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.MapListener;
+import com.tangosol.util.ValueExtractor;
 
 /**
  * Interface defining operations on the logical cache with transaction
@@ -353,11 +354,6 @@ public interface MVCCTransactionalCache<K, V> {
     String getCacheName();
 
     /**
-     * @return the Coherence service implementing the physical caches
-     */
-    CacheService getCacheService();
-
-    /**
      * @return true if this cache is active.
      */
     boolean isActive();
@@ -371,5 +367,17 @@ public interface MVCCTransactionalCache<K, V> {
      * @return the {@link CacheName} object encapsulating logical cache name and physical key and version cache names.
      */
     CacheName getMVCCCacheName();
+    
+    /**
+     * Get the CacheService that this cache is part of.
+     * @return the CacheService
+     */
+    CacheService getCacheService();
+    
+    /**
+     * Get the full PartitionSet for this cache/service.
+     * @return the populated partition set
+     */
+    PartitionSet getPartitionSet();
 
 }

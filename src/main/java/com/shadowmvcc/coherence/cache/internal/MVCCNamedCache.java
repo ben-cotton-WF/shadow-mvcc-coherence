@@ -324,9 +324,6 @@ public class MVCCNamedCache implements NamedCache {
         if (agent instanceof MultiCacheProcessor) {
             potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
             transactionManager.addReferencedCaches(potentiallyAffectedCaches);
-            for (CacheName pac : potentiallyAffectedCaches) {
-                context.setBlanketRollbackRequired(pac, true);
-            }
         }
         
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), collKeys);
@@ -341,15 +338,18 @@ public class MVCCNamedCache implements NamedCache {
                 context.addKeySetAffected(changedEntry.getKey(), changedEntry.getValue());
             }
             
-            if (potentiallyAffectedCaches != null) {
+            return result.getResultMap();
+
+        } catch (RuntimeException t) {
+            
+            context.setRollbackOnly();
+            context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), mvccCache.getPartitionSet());
+            if (agent instanceof MultiCacheProcessor) {
+                transactionManager.addReferencedCaches(potentiallyAffectedCaches);
                 for (CacheName pac : potentiallyAffectedCaches) {
-                    context.setBlanketRollbackRequired(pac, false);
+                    context.addPartitionSetAffected(pac, mvccCache.getPartitionSet());
                 }
             }
-            
-            return result.getResultMap();
-        } catch (RuntimeException t) {
-            context.setRollbackOnly();
             throw t;
         }
     }
@@ -358,31 +358,36 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
         Transaction context = transactionManager.getTransaction();
-        context.setBlanketRollbackRequired(mvccCache.getMVCCCacheName(), true);
+
         Collection<CacheName> potentiallyAffectedCaches = null;
         if (agent instanceof MultiCacheProcessor) {
             potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
             transactionManager.addReferencedCaches(potentiallyAffectedCaches);
-            for (CacheName pac : potentiallyAffectedCaches) {
-                context.setBlanketRollbackRequired(pac, true);
-            }
         }
         try {
+            
             InvocationFinalResult fr = mvccCache.invokeAll(context.getTransactionId(),
                     context.getIsolationLevel(), context.isAutoCommit(), context.isReadOnly(), filter, agent);
             Set<Map.Entry<CacheName, Set<Object>>> es = fr.getChangedKeys().entrySet();
             for (Map.Entry<CacheName, Set<Object>> ckEntry : es) {
                 context.addKeySetAffected(ckEntry.getKey(), ckEntry.getValue());
             }
-            context.setBlanketRollbackRequired(mvccCache.getMVCCCacheName(), false);
-            if (potentiallyAffectedCaches != null) {
+            
+            return fr.getResultMap();
+            
+        } catch (RuntimeException t) {
+            
+            context.setRollbackOnly();
+            context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), mvccCache.getPartitionSet());
+            
+            if (agent instanceof MultiCacheProcessor) {
+                potentiallyAffectedCaches = ((MultiCacheProcessor) agent).getReferencedMVCCCacheNames();
+                transactionManager.addReferencedCaches(potentiallyAffectedCaches);
                 for (CacheName pac : potentiallyAffectedCaches) {
-                    context.setBlanketRollbackRequired(pac, false);
+                    context.addPartitionSetAffected(pac, mvccCache.getPartitionSet());
                 }
             }
-            return fr.getResultMap();
-        } catch (RuntimeException t) {
-            context.setRollbackOnly();
+            
             throw t;
         }
     }

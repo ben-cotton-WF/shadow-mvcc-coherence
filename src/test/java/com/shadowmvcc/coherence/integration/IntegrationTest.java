@@ -43,13 +43,11 @@ import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.cache.ContinuousQueryCache;
 import com.tangosol.util.Filter;
-import com.tangosol.util.MapEvent;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.MapEvent;
 import com.tangosol.util.MapListener;
 import com.tangosol.util.extractor.IdentityExtractor;
-import com.tangosol.util.filter.AllFilter;
 import com.tangosol.util.filter.AlwaysFilter;
-import com.tangosol.util.filter.AnyFilter;
 import com.tangosol.util.filter.EqualsFilter;
 import com.tangosol.util.processor.ConditionalPut;
 
@@ -158,6 +156,10 @@ public class IntegrationTest extends AbstractLittlegridTest {
         Assert.assertEquals(1, vcache.size());
     }
     
+    /**
+     * Test a CQC.
+     * @throws InterruptedException never
+     */
     @Test
     public void testCQC() throws InterruptedException {
         
@@ -169,17 +171,17 @@ public class IntegrationTest extends AbstractLittlegridTest {
         MapListener listener = new MapListener() {
             
             @Override
-            public void entryUpdated(MapEvent evt) {
+            public void entryUpdated(final MapEvent evt) {
                 capturedEvents.put((Integer) evt.getKey(), evt);
             }
             
             @Override
-            public void entryInserted(MapEvent evt) {
+            public void entryInserted(final MapEvent evt) {
                 capturedEvents.put((Integer) evt.getKey(), evt);
             }
             
             @Override
-            public void entryDeleted(MapEvent evt) {
+            public void entryDeleted(final MapEvent evt) {
                 capturedEvents.put((Integer) evt.getKey(), evt);
             }
         };
@@ -193,6 +195,7 @@ public class IntegrationTest extends AbstractLittlegridTest {
         
         transactionManager.getTransaction().commit();
         
+        @SuppressWarnings("unused")
         ContinuousQueryCache cqc = new ContinuousQueryCache(cache, AlwaysFilter.INSTANCE, listener);
         
         Thread.sleep(500);

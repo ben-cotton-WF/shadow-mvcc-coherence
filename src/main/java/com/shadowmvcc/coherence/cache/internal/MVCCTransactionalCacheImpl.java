@@ -912,10 +912,18 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     public String getCacheName() {
         return cacheName.getLogicalName();
     }
-
+    
     @Override
     public CacheService getCacheService() {
         return versionCache.getCacheService();
+    }
+
+    @Override
+    public PartitionSet getPartitionSet() {
+        PartitionSet partitionSet = new PartitionSet(
+                ((DistributedCacheService) versionCache.getCacheService()).getPartitionCount());
+        partitionSet.fill();
+        return partitionSet;
     }
 
     @Override
