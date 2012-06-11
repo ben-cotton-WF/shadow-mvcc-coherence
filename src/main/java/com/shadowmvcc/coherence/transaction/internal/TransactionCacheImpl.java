@@ -26,13 +26,8 @@ import static com.shadowmvcc.coherence.domain.TransactionProcStatus.committing;
 import static com.shadowmvcc.coherence.domain.TransactionProcStatus.open;
 import static com.shadowmvcc.coherence.domain.TransactionProcStatus.rollingback;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.config.ClusterTimeProviderFactory;
@@ -40,16 +35,13 @@ import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionCacheValue;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.domain.TransactionProcStatus;
-import com.shadowmvcc.coherence.invocable.InvocationObserverStatus;
+import com.shadowmvcc.coherence.invocable.InvocationServiceHelper;
+import com.shadowmvcc.coherence.invocable.InvocationServiceHelper.InvocableFactory;
 import com.shadowmvcc.coherence.transaction.TransactionException;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.Cluster;
 import com.tangosol.net.Invocable;
-import com.tangosol.net.InvocationObserver;
-import com.tangosol.net.InvocationService;
-import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
-import com.tangosol.net.PartitionedService;
 import com.tangosol.net.Service;
 import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Filter;
@@ -179,121 +171,48 @@ public class TransactionCacheImpl implements TransactionCache {
             final Map<CacheName, PartitionSet> cachePartitionMap, 
             final TransactionProcStatus transactionStatus) {
 
-        final Set<InvocationObserver> outstanding = new HashSet<InvocationObserver>(); 
-        final BlockingQueue<InvocationObserverStatus> observerResultQueue = 
-                new ArrayBlockingQueue<InvocationObserverStatus>(10);
+        InvocationServiceHelper<Object> invocationHelper = new InvocationServiceHelper<Object>(invocationServiceName);
         
         for (Map.Entry<CacheName, Set<Object>> cacheKeyEntry : cacheKeyMap.entrySet()) {
-            invokeActionForKeyset(transactionId, cacheKeyEntry.getKey(), cacheKeyEntry.getValue(),
-                    transactionStatus, outstanding, observerResultQueue);
+            
+            final CacheName cacheName = cacheKeyEntry.getKey();
+            InvocableFactory<Set<Object>> keyInvocableFactory = new InvocableFactory<Set<Object>>() {
+                @Override
+                public Invocable getInvocable(final Set<Object> invocationTargetSet) {
+                    return new KeyTransactionInvocable(
+                            transactionId, cacheName, invocationTargetSet, transactionStatus);
+                }
+            };
+            
+            invocationHelper.invokeActionForKeyset(cacheName, cacheKeyEntry.getValue(),
+                    keyInvocableFactory);
+            
         }
         
         for (Map.Entry<CacheName, PartitionSet> cachePartitionEntry : cachePartitionMap.entrySet()) {
-            invokeActionForFilterSet(transactionId, cachePartitionEntry.getValue(), cachePartitionEntry.getKey(),
-                    transactionStatus, outstanding, observerResultQueue);
+            
+            final CacheName cacheName = cachePartitionEntry.getKey();
+            
+            InvocableFactory<PartitionSet> partitionInvocableFactory = new InvocableFactory<PartitionSet>() {
+
+                @Override
+                public Invocable getInvocable(final PartitionSet invocationTargetSet) {
+                    return new PartitionTransactionInvocable(
+                            transactionId, cacheName, invocationTargetSet, transactionStatus);
+                }
+                
+            };
+            
+            invocationHelper.invokeActionForPartitionSet(
+                    cachePartitionEntry.getValue(), cacheName, partitionInvocableFactory);
         }
         
-        while (!outstanding.isEmpty()) {
-            InvocationObserverStatus observer;
-            try {
-                observer = observerResultQueue.take();
-            } catch (InterruptedException e) {
-                throw new TransactionException(e);
-            }
-            outstanding.remove(observer);
-            if (observer.isFailed()) {
-                if (observer instanceof KeyInvocationObserver) {
-                    KeyInvocationObserver keyObserver = (KeyInvocationObserver) observer;
-                    invokeActionForKeyset(transactionId, keyObserver.getCachename(), keyObserver.getKeys(),
-                            transactionStatus, outstanding, observerResultQueue);
-                } else if (observer instanceof PartitionInvocationObserver) {
-                    PartitionInvocationObserver filterObserver = (PartitionInvocationObserver) observer;
-                    invokeActionForFilterSet(transactionId, filterObserver.getPartitionSet(),
-                            filterObserver.getCachename(), transactionStatus,
-                            outstanding, observerResultQueue);
-                }
-            }
+        try {
+            invocationHelper.waitForAllInvocations();
+        } catch (Throwable t) {
+            throw new TransactionException(t);
         }
+        
     }
     
-    /**
-     * Invoke the action for a set of filters on a cache. The partitions are split by
-     * member and a separate invocable sent to each member.
-     * @param transactionId transaction id
-     * @param partitionSet partitions to process
-     * @param cacheName cache name
-     * @param transactionStatus insert or rollback
-     * @param outstanding each invocable send is added to this collection
-     * @param observerResultQueue result queue for notifying completion of invocables
-     */
-    @SuppressWarnings("unchecked")
-    private void invokeActionForFilterSet(
-            final TransactionId transactionId,
-            final PartitionSet partitionSet,
-            final CacheName cacheName,
-            final TransactionProcStatus transactionStatus,
-            final Set<InvocationObserver> outstanding,
-            final BlockingQueue<InvocationObserverStatus> observerResultQueue) {
-        
-        InvocationService invocationService = (InvocationService) getService(invocationServiceName);
-        PartitionedService cacheService =
-                (PartitionedService) getCache(
-                        cacheName.getVersionCacheName()).getCacheService();
-
-        while (!partitionSet.isEmpty()) {
-            for (Member member : (Set<Member>) getCluster().getMemberSet()) {
-                PartitionSet memberPartitions = cacheService.getOwnedPartitions(member);
-                memberPartitions.retain(partitionSet);
-                if (!memberPartitions.isEmpty()) {
-                    partitionSet.remove(memberPartitions);
-                    Invocable invocable = new PartitionTransactionInvocable(
-                            transactionId, cacheName, memberPartitions, transactionStatus);
-                    PartitionInvocationObserver observer = new PartitionInvocationObserver(
-                            memberPartitions, cacheName, observerResultQueue);
-                    outstanding.add(observer);
-                    invocationService.execute(invocable, Collections.singleton(member), observer);
-                }
-            }            
-        }
-    }
-
-    /**
-     * Invoke the action for a set of keys on a cache. The keys are split by owning member
-     * and a separate invocable sent to each member that owns any of the keys
-     * @param transactionId transaction id
-     * @param cacheName cach name
-     * @param keyset set of keys to invoke on
-     * @param transactionStatus insert or rollback
-     * @param outstanding each invocable send is added to this collection
-     * @param observerResultQueue result queue for notifying completion of invocables
-     */
-    private void invokeActionForKeyset(final TransactionId transactionId, final CacheName cacheName,
-            final Set<Object> keyset, final TransactionProcStatus transactionStatus,
-            final Set<InvocationObserver> outstanding,
-            final BlockingQueue<InvocationObserverStatus> observerResultQueue) {
-        
-        InvocationService invocationService = (InvocationService) getService(invocationServiceName);
-
-        PartitionedService cacheService =
-                (PartitionedService) getCache(
-                        cacheName.getVersionCacheName()).getCacheService();
-        Map<Member, Set<Object>> memberKeyMap = new HashMap<Member, Set<Object>>();
-
-        for (Object key : keyset) {
-            Member member = cacheService.getKeyOwner(key); 
-            if (!memberKeyMap.containsKey(member)) {
-                memberKeyMap.put(member, new HashSet<Object>());
-            }
-            memberKeyMap.get(member).add(key);
-        }
-        
-        for (Map.Entry<Member, Set<Object>> memberKeyEntry : memberKeyMap.entrySet()) {
-            Invocable invocable = new KeyTransactionInvocable(
-                    transactionId, cacheName, memberKeyEntry.getValue(), transactionStatus);
-            KeyInvocationObserver observer = new KeyInvocationObserver(
-                    memberKeyEntry.getValue(), cacheName, observerResultQueue);
-            outstanding.add(observer);
-            invocationService.execute(invocable, Collections.singleton(memberKeyEntry.getKey()), observer);
-        }
-    }
 }

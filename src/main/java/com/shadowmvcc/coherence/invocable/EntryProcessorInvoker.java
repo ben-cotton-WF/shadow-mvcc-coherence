@@ -38,10 +38,8 @@ import com.shadowmvcc.coherence.utils.MapUtils;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
 import com.tangosol.net.CacheFactory;
-import com.tangosol.net.DistributedCacheService;
 import com.tangosol.net.Invocable;
 import com.tangosol.net.InvocationService;
-import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Filter;
@@ -70,7 +68,6 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
     @PortableProperty(3) private EntryProcessor entryProcessor;
     @PortableProperty(4) private PartitionSet partitions = null;
 
-    private transient PartitionSet memberParts;
     private transient Map<K, R> resultMap;
     private transient Map<K, VersionCacheKey<K>> retryMap;
     private transient Map<CacheName, Set<Object>> changedKeys;
@@ -127,16 +124,9 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
 
         NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
         NamedCache keyCache = CacheFactory.getCache(cacheName.getKeyCacheName());
-        DistributedCacheService cacheService = (DistributedCacheService) versionCache.getCacheService();
-        Member thisMember = CacheFactory.getCluster().getLocalMember();
-
-        memberParts = cacheService.getOwnedPartitions(thisMember);
-        if (partitions != null) {
-            memberParts.retain(partitions);
-        }
 
         MVCCSurfaceFilter<K> surfaceFilter = new MVCCSurfaceFilter<K>(tid, filter);
-        Filter filterPart = new PartitionedFilter(surfaceFilter, memberParts);
+        Filter filterPart = new PartitionedFilter(surfaceFilter, partitions);
 
         Set<VersionedKey<K>> vkeys = versionCache.keySet(filterPart);
         Set<K> keys = new HashSet<K>();
@@ -168,7 +158,7 @@ public class EntryProcessorInvoker<K, R> implements Invocable {
     
     @Override
     public EntryProcessorInvokerResult<K, R> getResult() {
-        return new EntryProcessorInvokerResult<K, R>(memberParts, resultMap, retryMap, changedKeys);
+        return new EntryProcessorInvokerResult<K, R>(resultMap, retryMap, changedKeys);
     }
 
 }

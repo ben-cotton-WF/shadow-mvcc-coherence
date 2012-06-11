@@ -23,6 +23,8 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 package com.shadowmvcc.coherence.integration;
 
 import static com.shadowmvcc.coherence.domain.IsolationLevel.readCommitted;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +40,7 @@ import com.shadowmvcc.coherence.testsupport.AbstractLittlegridTest;
 import com.shadowmvcc.coherence.transaction.SystemTimestampSource;
 import com.shadowmvcc.coherence.transaction.ThreadTransactionManager;
 import com.shadowmvcc.coherence.transaction.TimestampSource;
+import com.shadowmvcc.coherence.transaction.TransactionException;
 import com.shadowmvcc.coherence.transaction.TransactionManager;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.NamedCache;
@@ -213,12 +216,60 @@ public class IntegrationTest extends AbstractLittlegridTest {
         
         Thread.sleep(500);
 
-        Assert.assertEquals(MapEvent.ENTRY_DELETED, capturedEvents.get(1).getId());
-        Assert.assertEquals(MapEvent.ENTRY_UPDATED, capturedEvents.get(2).getId());
-        Assert.assertEquals(testValue2, capturedEvents.get(2).getNewValue());
-        Assert.assertEquals(MapEvent.ENTRY_INSERTED, capturedEvents.get(100).getId());
-        Assert.assertEquals(testValue2, capturedEvents.get(100).getNewValue());
+        assertEquals(MapEvent.ENTRY_DELETED, capturedEvents.get(1).getId());
+        assertEquals(MapEvent.ENTRY_UPDATED, capturedEvents.get(2).getId());
+        assertEquals(testValue2, capturedEvents.get(2).getNewValue());
+        assertEquals(MapEvent.ENTRY_INSERTED, capturedEvents.get(100).getId());
+        assertEquals(testValue2, capturedEvents.get(100).getNewValue());
         
+    }
+    
+    /**
+     * Test an exception thrown by an EntryProcessor leads to a correct rollback.
+     */
+    @Test
+    public void testFailedInvocation() {
+        
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache = transactionManager.getCache(cachename.getLogicalName());
+        
+        for (int i = 0; i < 100; i++) {
+            cache.put(i, "value1");
+        }
+        
+        transactionManager.getTransaction().commit();
+
+        NamedCache vcache = CacheFactory.getCache(cachename.getVersionCacheName());
+
+        assertEquals(100, vcache.size());
+        
+        boolean caught = false;
+        try {
+            cache.invokeAll(AlwaysFilter.INSTANCE, new ExceptionThrowingProcessor("value2"));
+        } catch (RuntimeException ex) {
+            caught = true;
+        }
+        
+        assertTrue(caught);
+        
+        boolean rollbackOnly = false;
+        
+        try {
+            transactionManager.getTransaction().commit();
+        } catch (TransactionException ex) {
+            rollbackOnly = true;
+        }
+        
+        assertTrue(rollbackOnly);
+        
+        int vsize = vcache.size();
+        
+        assertTrue(vsize > 100 && vsize < 200);
+        
+        transactionManager.getTransaction().rollback();
+        
+        assertEquals(100, vcache.size());
+
     }
 
 }

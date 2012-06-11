@@ -43,7 +43,6 @@ import com.tangosol.net.CacheFactory;
 import com.tangosol.net.DistributedCacheService;
 import com.tangosol.net.Invocable;
 import com.tangosol.net.InvocationService;
-import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.partition.KeyPartitioningStrategy;
 import com.tangosol.net.partition.PartitionSet;
@@ -88,7 +87,6 @@ public class ParallelKeyAggregationInvoker<K, R> implements Invocable {
     @PortableProperty(POF_ISOLATION)
     private IsolationLevel isolationLevel;
 
-    private transient PartitionSet memberParts;
     private transient R aggregationResult;
     private transient Map<K, VersionCacheKey<K>> retryMap;
 
@@ -97,24 +95,6 @@ public class ParallelKeyAggregationInvoker<K, R> implements Invocable {
      */
     public ParallelKeyAggregationInvoker() {
         super();
-    }
-
-    /**
-     * Constructor. No partitions so partitions local to the member will be used
-     * @param cacheName name of cache to aggregate
-     * @param keys keys to aggregate over
-     * @param tid transaction id
-     * @param aggregator the aggregator
-     * @param isolationLevel isolation level
-     */
-    public ParallelKeyAggregationInvoker(final CacheName cacheName, final Collection<K> keys, 
-            final TransactionId tid, final ParallelAwareAggregator aggregator, final IsolationLevel isolationLevel) {
-        super();
-        this.cacheName = cacheName;
-        this.keys = keys;
-        this.tid = tid;
-        this.aggregator = aggregator;
-        this.isolationLevel = isolationLevel;
     }
 
     /**
@@ -149,18 +129,12 @@ public class ParallelKeyAggregationInvoker<K, R> implements Invocable {
         NamedCache versionCache = CacheFactory.getCache(cacheName.getVersionCacheName());
         NamedCache keyCache = CacheFactory.getCache(cacheName.getKeyCacheName());
         DistributedCacheService cacheService = (DistributedCacheService) versionCache.getCacheService();
-        Member thisMember = CacheFactory.getCluster().getLocalMember();
-
-        memberParts = cacheService.getOwnedPartitions(thisMember);
-        if (partitions != null) {
-            memberParts.retain(partitions);
-        }
 
         KeyPartitioningStrategy kps = cacheService.getKeyPartitioningStrategy();
         Set<K> localKeys = new HashSet<K>();
         for (K key : keys) {
             int kp = kps.getKeyPartition(key);
-            if (memberParts.contains(kp)) {
+            if (partitions.contains(kp)) {
                 localKeys.add(key);
             }
         }
@@ -186,7 +160,7 @@ public class ParallelKeyAggregationInvoker<K, R> implements Invocable {
 
     @Override
     public ParallelAggregationInvokerResult<K, R> getResult() {
-        return new ParallelAggregationInvokerResult<K, R>(partitions, aggregationResult, retryMap);
+        return new ParallelAggregationInvokerResult<K, R>(aggregationResult, retryMap);
     }
 
 }

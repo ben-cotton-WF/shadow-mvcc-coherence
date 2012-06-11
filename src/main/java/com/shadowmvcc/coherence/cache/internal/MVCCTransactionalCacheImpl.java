@@ -55,6 +55,8 @@ import com.shadowmvcc.coherence.invocable.DecorationExtractorProcessor;
 import com.shadowmvcc.coherence.invocable.EntryProcessorInvoker;
 import com.shadowmvcc.coherence.invocable.EntryProcessorInvokerResult;
 import com.shadowmvcc.coherence.invocable.FilterValidateEntryProcessor;
+import com.shadowmvcc.coherence.invocable.InvocationServiceHelper;
+import com.shadowmvcc.coherence.invocable.InvocationServiceHelper.InvocableFactory;
 import com.shadowmvcc.coherence.invocable.MVCCEntryProcessorWrapper;
 import com.shadowmvcc.coherence.invocable.MVCCReadOnlyEntryProcessorWrapper;
 import com.shadowmvcc.coherence.invocable.ParallelAggregationInvoker;
@@ -67,7 +69,7 @@ import com.shadowmvcc.coherence.utils.MapUtils;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.CacheService;
 import com.tangosol.net.DistributedCacheService;
-import com.tangosol.net.InvocationService;
+import com.tangosol.net.Invocable;
 import com.tangosol.net.Member;
 import com.tangosol.net.NamedCache;
 import com.tangosol.net.partition.KeyPartitioningStrategy;
@@ -99,7 +101,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     private final NamedCache keyCache;
     private final NamedCache versionCache;
     private final CacheName cacheName;
-    private final InvocationService invocationService;
+    private final String invocationServiceName;
 
     /**
      * Key class for the local map of MapListeners. Containing the supplied
@@ -172,7 +174,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         this.keyCache = CacheFactory.getCache(this.cacheName.getKeyCacheName());
         this.versionCache = CacheFactory.getCache(this.cacheName.getVersionCacheName());
         versionCache.addIndex(MVCCExtractor.INSTANCE, false, null);
-        this.invocationService = (InvocationService) CacheFactory.getService(invocationServiceName);
+        this.invocationServiceName = invocationServiceName;
     }
 
     @Override
@@ -345,12 +347,12 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public int size(final TransactionId tid, final IsolationLevel isolationLevel) {
+    public int size(final TransactionId tid, final IsolationLevel isolationLevel) throws Throwable {
         return (Integer) aggregate(tid, isolationLevel, (Filter) null, new Count());
     }
 
     @Override
-    public boolean isEmpty(final TransactionId tid, final IsolationLevel isolationLevel) {
+    public boolean isEmpty(final TransactionId tid, final IsolationLevel isolationLevel) throws Throwable {
         return size(tid, isolationLevel) == 0;
     }
 
@@ -363,7 +365,8 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public boolean containsValue(final TransactionId tid, final IsolationLevel isolationLevel, final V value) {
+    public boolean containsValue(
+            final TransactionId tid, final IsolationLevel isolationLevel, final V value) throws Throwable {
         EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K, Boolean>(
                 tid, new ExistenceCheckProcessor(), isolationLevel, cacheName);
         Filter filter = new EqualsFilter(IdentityExtractor.INSTANCE, value);
@@ -408,20 +411,20 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public void clear(final TransactionId tid, final boolean autoCommit) {
+    public void clear(final TransactionId tid, final boolean autoCommit) throws Throwable {
         EntryProcessor ep = new MVCCEntryProcessorWrapper<K, V>(
                 tid, new UnconditionalRemoveProcessor(false), readProhibited, autoCommit, cacheName);
         invokeAllUntilCommitted((Filter) null, tid, ep);
     }
 
     @Override
-    public Set<K> keySet(final TransactionId tid, final IsolationLevel isolationLevel) {
+    public Set<K> keySet(final TransactionId tid, final IsolationLevel isolationLevel) throws Throwable {
         //TODO Wrap to add java.util.Map semantics to update underlying cache
         return keySet(tid, isolationLevel, null);
     }
 
     @Override
-    public Collection<V> values(final TransactionId tid, final IsolationLevel isolationLevel) {
+    public Collection<V> values(final TransactionId tid, final IsolationLevel isolationLevel) throws Throwable {
         //TODO find a more efficient implementation that doesn't require the complete map to be returned
         EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K, V>(
                 tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, cacheName, null);
@@ -430,7 +433,8 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public Set<Map.Entry<K, V>> entrySet(final TransactionId tid, final IsolationLevel isolationLevel) {
+    public Set<Map.Entry<K, V>> entrySet(
+            final TransactionId tid, final IsolationLevel isolationLevel) throws Throwable {
         //TODO Wrap to add java.util.Map semantics to update underlying cache
         return entrySet(tid, isolationLevel, null);
     }
@@ -452,7 +456,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     @Override
     public Set<Map.Entry<K, V>> entrySet(final TransactionId tid,
-            final IsolationLevel isolationLevel, final Filter filter) {
+            final IsolationLevel isolationLevel, final Filter filter) throws Throwable {
         EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K, V>(
                 tid, new ExtractorProcessor(new IdentityExtractor()), isolationLevel, cacheName, filter);
         InvocationFinalResult<K, V> fr = invokeAllUntilCommitted(filter, tid, ep);
@@ -468,7 +472,8 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     }
 
     @Override
-    public Set<K> keySet(final TransactionId tid, final IsolationLevel isolationLevel, final Filter filter) {
+    public Set<K> keySet(final TransactionId tid,
+            final IsolationLevel isolationLevel, final Filter filter) throws Throwable {
         EntryProcessor ep = new MVCCReadOnlyEntryProcessorWrapper<K, Object>(
                 tid, null, isolationLevel, cacheName, filter);
         InvocationFinalResult<K, Object> fr = invokeAllUntilCommitted(filter, tid, ep);
@@ -482,7 +487,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     @Override
     public <R> R aggregate(final TransactionId tid, final IsolationLevel isolationLevel,
-            final Collection<K> collKeys, final EntryAggregator agent) {
+            final Collection<K> collKeys, final EntryAggregator agent) throws Throwable {
 
         if (agent instanceof ParallelAwareAggregator) {
             ParallelAwareAggregatorWrapper wrapper
@@ -496,7 +501,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     @Override
     public <R> R aggregate(final TransactionId tid, final IsolationLevel isolationLevel,
-            final Filter filter, final EntryAggregator agent) {
+            final Filter filter, final EntryAggregator agent) throws Throwable {
         if (agent instanceof ParallelAwareAggregator) {
             ParallelAwareAggregatorWrapper wrapper
                 = new ParallelAwareAggregatorWrapper((ParallelAwareAggregator) agent);
@@ -515,10 +520,11 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @param agent aggregator
      * @return the aggregation result
      * @param <R> aggregator result type
+     * @throws Throwable if an invocation fails in the cluster
      */
     @SuppressWarnings("unchecked")
     private <R> R aggregateSerial(final TransactionId tid, final IsolationLevel isolationLevel,
-            final Filter filter, final EntryAggregator agent) {
+            final Filter filter, final EntryAggregator agent) throws Throwable {
         if (isolationLevel == repeatableRead || isolationLevel == serializable) {
             invokeAllUntilCommitted(filter, tid, new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName));
         }
@@ -570,31 +576,38 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @param agent aggregator
      * @return the aggregation result
      * @param <R> aggregator result type
+     * @throws Throwable if an invocation fails
      */
     @SuppressWarnings("unchecked")
     private <R> R aggregateParallel(final TransactionId tid, final IsolationLevel isolationLevel,
-            final Filter filter, final ParallelAwareAggregator agent) {
+            final Filter filter, final ParallelAwareAggregator agent) throws Throwable {
         DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
         remainingPartitions.fill();
 
         Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
-
-        do {
-            ParallelAggregationInvoker<K, R> invoker = new ParallelAggregationInvoker<K, R>(
-                    cacheName, filter, tid, agent, isolationLevel, remainingPartitions);
-
-            Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
-                    invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
-
-            for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
-                partialResults.add(result.getResult());
-                retryMap.putAll(result.getRetryMap());
-                remainingPartitions.remove(result.getPartitions());
+        
+        InvocationServiceHelper<ParallelAggregationInvokerResult<K, R>> invocationServiceHelper =
+                new InvocationServiceHelper<ParallelAggregationInvokerResult<K, R>>(invocationServiceName);
+        
+        InvocableFactory<PartitionSet> invocableFactory = new InvocableFactory<PartitionSet>() {
+            @Override
+            public Invocable getInvocable(final PartitionSet invocationTargetSet) {
+                return new ParallelAggregationInvoker<K, R>(
+                        cacheName, filter, tid, agent, isolationLevel, invocationTargetSet);
             }
+        };
+        
+        invocationServiceHelper.invokeActionForPartitionSet(remainingPartitions, cacheName, invocableFactory);
 
-        } while (!remainingPartitions.isEmpty());
+        Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
+                    invocationServiceHelper.waitForAllInvocations();
+
+        for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
+            partialResults.add(result.getResult());
+            retryMap.putAll(result.getRetryMap());
+        }
 
         if (retryMap.size() > 0) {
             Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
@@ -637,33 +650,42 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @param agent the aggregator
      * @return the aggregation results
      * @param <R> aggregation result type
+     * @throws Throwable if an invocation fails
      */
     @SuppressWarnings("unchecked")
     private <R> R aggregateParallel(final TransactionId tid, final IsolationLevel isolationLevel,
-            final Collection<K> keys, final ParallelAwareAggregator agent) {
+            final Collection<K> keys, final ParallelAwareAggregator agent) throws Throwable {
         DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
         remainingPartitions.fill();
 
         Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Collection<R> partialResults = new ArrayList<R>(service.getOwnershipEnabledMembers().size());
+        
+        InvocationServiceHelper<ParallelAggregationInvokerResult<K, R>> invocationHelper =
+                new InvocationServiceHelper<ParallelAggregationInvokerResult<K, R>>(invocationServiceName);
 
-        do {
-            ParallelKeyAggregationInvoker<K, R> invoker = new ParallelKeyAggregationInvoker<K, R>(
-                    cacheName, keys, tid, agent, isolationLevel, remainingPartitions);
+        InvocableFactory<PartitionSet> invocableFactory = new InvocableFactory<PartitionSet>() {
 
-            Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
-                    invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
-
-            for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
-                if (result != null) {
-                    partialResults.add(result.getResult());
-                    retryMap.putAll(result.getRetryMap());
-                    remainingPartitions.remove(result.getPartitions());
-                }
+            @Override
+            public Invocable getInvocable(final PartitionSet invocationTargetSet) {
+                return new ParallelKeyAggregationInvoker<K, R>(
+                        cacheName, keys, tid, agent, isolationLevel, invocationTargetSet);
             }
+            
+        };
+        
+        invocationHelper.invokeActionForPartitionSet(remainingPartitions, cacheName, invocableFactory);
+        
+        Collection<ParallelAggregationInvokerResult<K, R>> invocationResults =
+                    invocationHelper.waitForAllInvocations();
 
-        } while (!remainingPartitions.isEmpty());
+        for (ParallelAggregationInvokerResult<K, R> result : invocationResults) {
+            if (result != null) {
+                partialResults.add(result.getResult());
+                retryMap.putAll(result.getRetryMap());
+            }
+        }
 
         if (retryMap.size() > 0) {
             Set<VersionedKey<K>> remnantKeys = new HashSet<VersionedKey<K>>();
@@ -705,10 +727,11 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
      * @param entryProcessor the entryProcessor
      * @return an invocation result including results and changed keys.
      * @param <R> EntryProcessor result type
+     * @throws Throwable if an invocation fails
      */
     @SuppressWarnings("unchecked")
     private <R> InvocationFinalResult<K, R> invokeAllUntilCommitted(final Filter filter, final TransactionId tid, 
-            final EntryProcessor entryProcessor) {
+            final EntryProcessor entryProcessor) throws Throwable {
 
         DistributedCacheService service = (DistributedCacheService) versionCache.getCacheService();
         PartitionSet remainingPartitions = new PartitionSet(service.getPartitionCount());
@@ -717,27 +740,34 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         Map<K, VersionCacheKey<K>> retryMap = new HashMap<K, VersionCacheKey<K>>();
         Map<K, R> resultMap = new HashMap<K, R>();
         Map<CacheName, Set<Object>> changedKeys = new HashMap<CacheName, Set<Object>>();
+        
+        InvocationServiceHelper<EntryProcessorInvokerResult<K, R>> invocationHelper =
+                new InvocationServiceHelper<EntryProcessorInvokerResult<K, R>>(invocationServiceName);
+        InvocableFactory<PartitionSet> invocableFactory = new InvocableFactory<PartitionSet>() {
 
-        do {
-            EntryProcessorInvoker<K, R> invoker = new EntryProcessorInvoker<K, R>(
-                    cacheName, filter, tid, entryProcessor, remainingPartitions);
-
-            Collection<EntryProcessorInvokerResult<K, R>> invocationResults =
-                    invocationService.query(invoker, service.getOwnershipEnabledMembers()).values();
-
-            for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
-                resultMap.putAll(result.getResultMap());
-                retryMap.putAll(result.getRetryMap());
-                for (Map.Entry<CacheName, Set<Object>> ckEntry : result.getChangedKeys().entrySet()) {
-                    CacheName cacheName = ckEntry.getKey();
-                    if (!changedKeys.containsKey(cacheName)) {
-                        changedKeys.put(cacheName, new HashSet<Object>());
-                    }
-                    changedKeys.get(cacheName).addAll(ckEntry.getValue());
-                }
-                remainingPartitions.remove(result.getPartitions());
+            @Override
+            public Invocable getInvocable(final PartitionSet invocationTargetSet) {
+                return new EntryProcessorInvoker<K, R>(
+                        cacheName, filter, tid, entryProcessor, invocationTargetSet);
             }
-        } while (!remainingPartitions.isEmpty());
+            
+        };
+        
+        invocationHelper.invokeActionForPartitionSet(remainingPartitions, cacheName, invocableFactory);
+        
+        Collection<EntryProcessorInvokerResult<K, R>> invocationResults = invocationHelper.waitForAllInvocations();
+
+        for (EntryProcessorInvokerResult<K, R> result : invocationResults) {
+            resultMap.putAll(result.getResultMap());
+            retryMap.putAll(result.getRetryMap());
+            for (Map.Entry<CacheName, Set<Object>> ckEntry : result.getChangedKeys().entrySet()) {
+                CacheName cacheName = ckEntry.getKey();
+                if (!changedKeys.containsKey(cacheName)) {
+                    changedKeys.put(cacheName, new HashSet<Object>());
+                }
+                changedKeys.get(cacheName).addAll(ckEntry.getValue());
+            }
+        }
 
         for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
             waitForCommit(entry.getValue());
@@ -878,13 +908,15 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     /**
      * {@inheritDoc}.
+     * @throws Throwable 
      * 
      * @throws IllegalArgumentException if called with autocommit set as it is not possible to guarantee
      * atomic completion of invocation against all keys
      */
     @Override
     public <R> InvocationFinalResult<K, R> invokeAll(final TransactionId tid, final IsolationLevel isolationLevel,
-            final boolean autoCommit, final boolean readOnly, final Filter filter, final EntryProcessor agent) {
+            final boolean autoCommit, final boolean readOnly,
+            final Filter filter, final EntryProcessor agent) throws Throwable {
 
         if (autoCommit) {
             throw new IllegalArgumentException("autocommit not permitted for invokeAll");

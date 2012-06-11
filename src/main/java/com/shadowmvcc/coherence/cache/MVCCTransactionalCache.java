@@ -160,17 +160,19 @@ public interface MVCCTransactionalCache<K, V> {
      * @param tid transaction id the transaction id
      * @param isolationLevel isolation level the isolation level
      * @return the cache size
+     * @throws Throwable if an invocation fails in the cluster
      */
-    int size(TransactionId tid, IsolationLevel isolationLevel);
+    int size(TransactionId tid, IsolationLevel isolationLevel) throws Throwable;
 
     /**
      * Determine if the cache is empty at the timestamp.
      * @param tid transaction id transaction id
      * @param isolationLevel isolation level isolation level
      * @return true if the cache has no current entries
+     * @throws Throwable if an invocation fails in the cluster
      */
     boolean isEmpty(TransactionId tid, 
-            IsolationLevel isolationLevel);
+            IsolationLevel isolationLevel) throws Throwable;
 
     /**
      * Determine if the cache contains a specific key.
@@ -187,9 +189,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param isolationLevel isolation level
      * @param value the value
      * @return true if the value is present at the timestamp
+     * @throws Throwable if an invocation fails in the cluster
      */
     boolean containsValue(TransactionId tid, 
-            IsolationLevel isolationLevel, V value);
+            IsolationLevel isolationLevel, V value) throws Throwable;
 
     /**
      * @param tid transaction id transaction id
@@ -211,31 +214,35 @@ public interface MVCCTransactionalCache<K, V> {
      * Clear the cache at the given transaction id by creating a new deleted marker for every extant entry.
      * @param tid transaction id transaction id
      * @param autoCommit implicit commit if true
+     * @throws Throwable if an invocation fails in the cluster
      */
-    void clear(TransactionId tid, boolean autoCommit);
+    void clear(TransactionId tid, boolean autoCommit) throws Throwable;
 
     /**
      * @param tid transaction id transaction id
      * @param isolationLevel isolation level
      * @return all the extant keys at the timestamp
+     * @throws Throwable if an invocation fails in the cluster
      */
-    Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel);
+    Set<K> keySet(TransactionId tid, IsolationLevel isolationLevel) throws Throwable;
 
     /**
      * @param tid transaction id transaction id
      * @param isolationLevel isolation level
      * @return all the extant values at the timestamp
+     * @throws Throwable if an invocation fails in the cluster
      */
     Collection<V> values(TransactionId tid, 
-            IsolationLevel isolationLevel);
+            IsolationLevel isolationLevel) throws Throwable;
 
     /**
      * @param tid transaction id transaction id
      * @param isolationLevel isolation level
      * @return all the extant entries at the timestamp
+     * @throws Throwable if an invocation fails in the cluster
      */
     Set<Map.Entry<K, V>> entrySet(TransactionId tid, 
-            IsolationLevel isolationLevel);
+            IsolationLevel isolationLevel) throws Throwable;
 
     /**
      * @param tid transaction id
@@ -260,9 +267,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param isolationLevel isolation level
      * @param filter the filter
      * @return the set of extant entries at timestamp matching the filter
+     * @throws Throwable if an invocation fails in the cluster
      */
     Set<Map.Entry<K, V>> entrySet(TransactionId tid, 
-            IsolationLevel isolationLevel, Filter filter);
+            IsolationLevel isolationLevel, Filter filter) throws Throwable;
 
     /**
      * @param tid transaction id
@@ -279,9 +287,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param isolationLevel isolation level
      * @param filter the filter
      * @return extant keys matching the filter
+     * @throws Throwable if an invocation fails in the cluster
      */
     Set<K> keySet(TransactionId tid, 
-            IsolationLevel isolationLevel, Filter filter);
+            IsolationLevel isolationLevel, Filter filter) throws Throwable;
 
     /**
      * Delete the index identified by the extractor.
@@ -297,10 +306,11 @@ public interface MVCCTransactionalCache<K, V> {
      * @param agent aggregator
      * @return the result of the aggregation
      * @param <R> result type of the aggregation
+     * @throws Throwable if an invocation fails in the cluster
      */
     <R> R aggregate(TransactionId tid, 
             IsolationLevel isolationLevel, Collection<K> collKeys, 
-            EntryAggregator agent);
+            EntryAggregator agent) throws Throwable;
 
     /**
      * Perform an aggregation against a filter as at the timestamp.
@@ -310,9 +320,10 @@ public interface MVCCTransactionalCache<K, V> {
      * @param agent aggregator
      * @return the result of the aggregation
      * @param <R> result type of the aggregation
+     * @throws Throwable if an invocation fails in the cluster
      */
     <R> R aggregate(TransactionId tid, 
-            IsolationLevel isolationLevel, Filter filter, EntryAggregator agent);
+            IsolationLevel isolationLevel, Filter filter, EntryAggregator agent) throws Throwable;
 
     /**
      * Invoke an EntryProcessor against a collection of keys.
@@ -339,9 +350,11 @@ public interface MVCCTransactionalCache<K, V> {
      * @param agent the EntryProcessor
      * @return a map of key, result pairs, with the set of keys changed
      * @param <R> result type of the entryprocessor
+     * @throws Throwable if an invocation fails in the cluster
      */
     <R> InvocationFinalResult<K, R> invokeAll(TransactionId tid, 
-            IsolationLevel isolationLevel, boolean autoCommit, boolean readonly, Filter filter, EntryProcessor agent);
+            IsolationLevel isolationLevel, boolean autoCommit,
+            boolean readonly, Filter filter, EntryProcessor agent) throws Throwable;
 
     /**
      * Destroy the cache.

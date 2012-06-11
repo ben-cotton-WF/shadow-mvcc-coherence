@@ -38,7 +38,6 @@ import com.shadowmvcc.coherence.domain.IsolationLevel;
 import com.shadowmvcc.coherence.domain.TransactionId;
 import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.ConfigurablePofContext;
-import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Binary;
 import com.tangosol.util.ExternalizableHelper;
 import com.tangosol.util.aggregator.Count;
@@ -109,7 +108,7 @@ public class InvocableSerialisationTest {
     @Test
     public void testEntryProcessorInvokerResult() {
 
-        Object obj = new EntryProcessorInvokerResult<String, Object>(new PartitionSet(5), 
+        Object obj = new EntryProcessorInvokerResult<String, Object>(
                 new HashMap<String, Object>(), new HashMap<String, VersionCacheKey<String>>(),
                 new HashMap<CacheName, Set<Object>>());
 

@@ -22,6 +22,7 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
 
 package com.shadowmvcc.coherence.invocable;
 
+import com.shadowmvcc.coherence.invocable.InvocationServiceHelper.InvocableFactory;
 import com.tangosol.net.InvocationObserver;
 
 /**
@@ -30,14 +31,39 @@ import com.tangosol.net.InvocationObserver;
  * 
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
+ * @param <P> type of the target of the invocation.
+ * @param <R> result type of the invocation
  */
-public interface InvocationObserverStatus extends InvocationObserver {
+public interface InvocationObserverStatus<P, R> extends InvocationObserver {
     
     /**
      * Has the observed invocation failed.
      * @return true if the invocation has failed
      */
     boolean isFailed();
+
+    /**
+     * Get the invocation target.
+     * @return the invocation target
+     */
+    P getInvocationTarget();
+
+    /**
+     * Get the cause of failure.
+     * @return the cause, or null if none.
+     */
+    Throwable getFailureCause();
+
+    /**
+     * Get the factory used to create the invocable being monitored.
+     * @return the invocable factory
+     */
+    InvocableFactory<P> getInvocableFactory();
     
+    /**
+     * Get the invocation result, or null if it failed.
+     * @return the invocation result
+     */
+    R getResult();
 
 }

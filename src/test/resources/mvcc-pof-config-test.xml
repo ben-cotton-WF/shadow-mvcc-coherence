@@ -46,6 +46,10 @@ along with Shadow MVCC for Oracle Coherence.  If not, see
       <type-id>2004</type-id>
       <class-name>com.shadowmvcc.coherence.invocable.PartitionLocalTransactionProcessor</class-name>
     </user-type>
+    <user-type>
+      <type-id>2005</type-id>
+      <class-name>com.shadowmvcc.coherence.integration.ExceptionThrowingProcessor</class-name>
+    </user-type>
 
   </user-type-list>
 

@@ -29,7 +29,6 @@ import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
-import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Result type from an {@code EntryProcessorInvoker} that encapsulates
@@ -45,10 +44,9 @@ import com.tangosol.net.partition.PartitionSet;
 @Portable
 public class EntryProcessorInvokerResult<K, R> {
 
-    @PortableProperty(0) private PartitionSet partitions;
-    @PortableProperty(1) private Map<K, R> resultMap;
-    @PortableProperty(2) private Map<K, VersionCacheKey<K>> retryMap;
-    @PortableProperty(3) private Map<CacheName, Set<Object>> changedKeys;
+    @PortableProperty(0) private Map<K, R> resultMap;
+    @PortableProperty(1) private Map<K, VersionCacheKey<K>> retryMap;
+    @PortableProperty(2) private Map<CacheName, Set<Object>> changedKeys;
 
     /**
      *  Default constructor for POF use only.
@@ -59,27 +57,16 @@ public class EntryProcessorInvokerResult<K, R> {
 
     /**
      * Constructor.
-     * @param partitions the set of partitions processed
      * @param resultMap the entry processor results
      * @param retryMap the uncommitted entries
      * @param changedKeys the set of keys changed by this invocation
      */
-    public EntryProcessorInvokerResult(final PartitionSet partitions, 
-            final Map<K, R> resultMap, final Map<K, VersionCacheKey<K>> retryMap,
+    public EntryProcessorInvokerResult(final Map<K, R> resultMap, final Map<K, VersionCacheKey<K>> retryMap,
             final Map<CacheName, Set<Object>> changedKeys) {
         super();
-        this.partitions = partitions;
         this.resultMap = resultMap;
         this.retryMap = retryMap;
         this.changedKeys = changedKeys;
-    }
-
-    /**
-     * Get the set of partitions that were processed by the invocation.
-     * @return the set of partitions processed
-     */
-    public PartitionSet getPartitions() {
-        return partitions;
     }
 
     /**

@@ -27,7 +27,6 @@ import java.util.Map;
 import com.shadowmvcc.coherence.domain.VersionCacheKey;
 import com.tangosol.io.pof.annotation.Portable;
 import com.tangosol.io.pof.annotation.PortableProperty;
-import com.tangosol.net.partition.PartitionSet;
 
 /**
  * Result type from a {@code ParallelAggregationInvoker}. Encapsulates a 
@@ -42,15 +41,10 @@ import com.tangosol.net.partition.PartitionSet;
 @Portable
 public class ParallelAggregationInvokerResult<K, R> {
 
-    public static final int POF_PARTITIONS = 0;
-    @PortableProperty(POF_PARTITIONS)
-    private PartitionSet partitions;
-    public static final int POF_RESULT = 1;
-    @PortableProperty(POF_RESULT)
-    private R result;
-    public static final int POF_RETRY = 2;
-    @PortableProperty(POF_RETRY)
-    private Map<K, VersionCacheKey<K>> retryMap;
+    public static final int POF_RESULT = 0;
+    @PortableProperty(POF_RESULT) private R result;
+    public static final int POF_RETRY = 1;
+    @PortableProperty(POF_RETRY) private Map<K, VersionCacheKey<K>> retryMap;
 
     /**
      *  Default constructor for POF use only.
@@ -60,23 +54,13 @@ public class ParallelAggregationInvokerResult<K, R> {
     }
 
     /**
-     * @param partitions the set of partitions processed
      * @param result the partial aggregation result
      * @param retryMap the uncommitted entries
      */
-    public ParallelAggregationInvokerResult(final PartitionSet partitions, 
-            final R result, final Map<K, VersionCacheKey<K>> retryMap) {
+    public ParallelAggregationInvokerResult(final R result, final Map<K, VersionCacheKey<K>> retryMap) {
         super();
-        this.partitions = partitions;
         this.result = result;
         this.retryMap = retryMap;
-    }
-
-    /**
-     * @return the set of partitions processed
-     */
-    public PartitionSet getPartitions() {
-        return partitions;
     }
 
     /**

@@ -109,13 +109,21 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public int size() {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.size(context.getTransactionId(), context.getIsolationLevel());
+        try {
+            return mvccCache.size(context.getTransactionId(), context.getIsolationLevel());
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public boolean isEmpty() {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
+        try {
+            return mvccCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -129,7 +137,11 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public boolean containsValue(final Object value) {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
+        try {
+            return mvccCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -180,9 +192,9 @@ public class MVCCNamedCache implements NamedCache {
         try {
             mvccCache.clear(context.getTransactionId(), context.isAutoCommit());
             context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), getFullPartitionSet());
-        } catch (RuntimeException t) {
+        } catch (Throwable t) {
             context.setRollbackOnly();
-            throw t;
+            throw new RuntimeException(t);
         }
     }
     
@@ -203,21 +215,33 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet() {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel());
+        try {
+            return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel());
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public Collection values() {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.values(context.getTransactionId(), context.getIsolationLevel());
+        try {
+            return mvccCache.values(context.getTransactionId(), context.getIsolationLevel());
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public Set entrySet() {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
+        try {
+            return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -253,7 +277,11 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set entrySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        try {
+            return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -267,7 +295,11 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        try {
+            return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -279,13 +311,21 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object aggregate(final Collection collKeys, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
+        try {
+            return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public Object aggregate(final Filter filter, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
-        return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
+        try {
+            return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -375,7 +415,7 @@ public class MVCCNamedCache implements NamedCache {
             
             return fr.getResultMap();
             
-        } catch (RuntimeException t) {
+        } catch (Throwable t) {
             
             context.setRollbackOnly();
             context.addPartitionSetAffected(mvccCache.getMVCCCacheName(), mvccCache.getPartitionSet());
@@ -388,7 +428,7 @@ public class MVCCNamedCache implements NamedCache {
                 }
             }
             
-            throw t;
+            throw new RuntimeException(t);
         }
     }
 

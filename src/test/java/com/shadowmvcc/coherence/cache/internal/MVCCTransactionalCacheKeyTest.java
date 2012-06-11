@@ -296,9 +296,10 @@ public class MVCCTransactionalCacheKeyTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test the containsValue method.
+     * @throws Throwable 
      */
     @Test
-    public void testContainsValue() {
+    public void testContainsValue() throws Throwable {
     
         System.out.println("******ContainsValue");
     

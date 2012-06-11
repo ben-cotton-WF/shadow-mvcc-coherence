@@ -64,9 +64,10 @@ public class MVCCTransactionalCacheKillMemberTest extends AbstractLittlegridTest
      * invoke a long-running entryprocessor on all members,
      * then kill a member before it completes. Check that the
      * invocation still produces the correct result
+     * @throws Throwable 
      */
     @Test(timeout = 20000)
-    public void testInvokeAllFilter() {
+    public void testInvokeAllFilter() throws Throwable {
         System.out.println("******InvokeAll(Filter)");
 
         final TransactionId ts1 = new TransactionId(BASETIME, 0, 0);

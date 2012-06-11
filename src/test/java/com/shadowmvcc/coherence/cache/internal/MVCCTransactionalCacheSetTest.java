@@ -63,9 +63,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
     /**
      * Test that the size() method returns the correct value for
      * the timestamp at which it is invoked.
+     * @throws Throwable 
      */
     @Test
-    public void testSize() {
+    public void testSize() throws Throwable {
 
         System.out.println("******Size");
 
@@ -107,9 +108,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test that entrySet with a filter returns the correct values for its timestamp.
+     * @throws Throwable 
      */
     @Test
-    public void testEntrySet() {
+    public void testEntrySet() throws Throwable {
         System.out.println("******EntrySet");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -138,9 +140,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test that entrySet without a filter returns the correct values for its timestamp.
+     * @throws Throwable 
      */
     @Test
-    public void testEntrySetAll() {
+    public void testEntrySetAll() throws Throwable {
         System.out.println("******EntrySetAll");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -168,9 +171,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
     /**
      * Test that entrySet correctly waits for uncommitted changes
      * and returns the right result with rollbacks and commits.
+     * @throws Throwable 
      */
     @Test
-    public void testEntrySetWithUncommitted() {
+    public void testEntrySetWithUncommitted() throws Throwable {
         System.out.println("******EntrySet");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -215,9 +219,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test keySet with a filter.
+     * @throws Throwable 
      */
     @Test
-    public void testKeySet() {
+    public void testKeySet() throws Throwable {
         System.out.println("******KeySet");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -246,9 +251,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * test keySet without a filter.
+     * @throws Throwable 
      */
     @Test
-    public void testKeySetAll() {
+    public void testKeySetAll() throws Throwable {
         System.out.println("******KeySetAll");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -275,9 +281,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test invokeAll with a filter.
+     * @throws Throwable 
      */
     @Test
-    public void testInvokeAllFilter() {
+    public void testInvokeAllFilter() throws Throwable {
         System.out.println("******InvokeAll(Filter)");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -392,9 +399,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test putAll.
+     * @throws Throwable 
      */
     @Test
-    public void testPutAll() {
+    public void testPutAll() throws Throwable {
 
         System.out.println("******PutAll");
 
@@ -414,9 +422,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test that clear() works correctly. Creates deleted events for all extant entries
+     * @throws Throwable 
      */
     @Test
-    public void testClear() {
+    public void testClear() throws Throwable {
 
         System.out.println("******Clear");
 
@@ -440,9 +449,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test the values() method.
+     * @throws Throwable 
      */
     @Test
-    public void testValues() {
+    public void testValues() throws Throwable {
         System.out.println("******Values");
 
         SampleDomainObject val1 = new SampleDomainObject(88, "eighty-eight");
@@ -471,9 +481,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test aggregation over a filter.
+     * @throws Throwable 
      */
     @Test
-    public void testAggregateFilter() {
+    public void testAggregateFilter() throws Throwable {
 
         System.out.println("******AggregateFilter");
 
@@ -495,9 +506,10 @@ public class MVCCTransactionalCacheSetTest extends AbstractMVCCTransactionalCach
 
     /**
      * Test aggregation over a collection of keys.
+     * @throws Throwable 
      */
     @Test
-    public void testAggregateKeys() {
+    public void testAggregateKeys() throws Throwable {
 
         System.out.println("******AggregateKeys");
 

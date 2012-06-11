@@ -185,7 +185,7 @@ public class ParallelAggregationInvoker<K, R> implements Invocable {
 
     @Override
     public ParallelAggregationInvokerResult<K, R> getResult() {
-        return new ParallelAggregationInvokerResult<K, R>(partitions, aggregationResult, retryMap);
+        return new ParallelAggregationInvokerResult<K, R>(aggregationResult, retryMap);
     }
 
 }
