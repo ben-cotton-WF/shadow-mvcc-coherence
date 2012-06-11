@@ -46,11 +46,12 @@ import com.tangosol.net.NamedCache;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest {
+public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest implements TransactionExpiryMonitor {
 
     private NamedCache basetxcache;
     private TransactionCache transactionCache;
     private static final TransactionId TX = new TransactionId(BASETIME, 0, 0);
+    private TransactionExpiryListener expiryListener = new TransactionExpiryListener(this);
     
     /**
      * Set up the caches.
@@ -67,7 +68,7 @@ public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testBeginTransaction() {
         
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
         
         assertEquals(TransactionProcStatus.open,
                 ((TransactionCacheValue) basetxcache.get(TX)).getProcStatus());
@@ -80,9 +81,9 @@ public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test(expected = TransactionException.class)
     public void testBeginDuplicate() {
 
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
 
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
 
     }
     
@@ -117,7 +118,7 @@ public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void sunnyDayCommit() {
 
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
 
         transactionCache.commitTransaction(TX, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
         
@@ -132,12 +133,16 @@ public class EmptyTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void sunnyDayRollback() {
 
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
 
         transactionCache.rollbackTransaction(TX, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
         
         assertNull(basetxcache.get(TX));
 
+    }
+
+    @Override
+    public void setTransactionExpired() {
     }
 
 }

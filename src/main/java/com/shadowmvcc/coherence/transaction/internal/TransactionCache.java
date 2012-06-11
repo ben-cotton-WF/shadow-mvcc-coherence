@@ -44,9 +44,10 @@ public interface TransactionCache {
      *
      * @param transactionId the transaction Id being started
      * @param isolationLevel requested isolation level
-     * transaction id, and read only flag permitted
+     * @param expiryListener expiry listsner to register
      */
-    void beginTransaction(TransactionId transactionId, IsolationLevel isolationLevel);
+    void beginTransaction(TransactionId transactionId, IsolationLevel isolationLevel,
+            TransactionExpiryListener expiryListener);
 
     /**
      * Commit an open transaction.
@@ -66,4 +67,10 @@ public interface TransactionCache {
     void rollbackTransaction(TransactionId transactionId, 
             Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, PartitionSet> cachePartitionMap);
 
+    /**
+     * Unregister a listener on expired transaction.
+     * @param transactionId the transaction id
+     * @param expiryListener the listener
+     */
+    void unregisterExpiryListener(TransactionId transactionId, TransactionExpiryListener expiryListener);
 }

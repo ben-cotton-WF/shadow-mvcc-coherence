@@ -48,7 +48,7 @@ import com.tangosol.net.partition.PartitionSet;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class TransactionImpl implements Transaction {
+public class TransactionImpl implements Transaction, TransactionExpiryMonitor {
 
     private final TransactionId transactionId;
     private final IsolationLevel isolationLevel;
@@ -56,6 +56,8 @@ public class TransactionImpl implements Transaction {
     private final TransactionCache transactionCache;
     private volatile boolean rollbackOnly = false;
     private volatile TransactionStatus transactionStatus = open;
+    private volatile Boolean expired = false;
+    private final TransactionExpiryListener expiryListener;
 
     private Map<CacheName, Set<Object>> cacheKeyMap = new HashMap<CacheName, Set<Object>>();
     private Map<CacheName, PartitionSet> cachePartitionMap = new HashMap<CacheName, PartitionSet>();
@@ -74,7 +76,8 @@ public class TransactionImpl implements Transaction {
         this.transactionCache = transactionCache;
         this.transactionId = transactionId;
         this.isolationLevel = getIsolationLevel();
-        transactionCache.beginTransaction(transactionId, isolationLevel);
+        this.expiryListener = new TransactionExpiryListener(this);
+        transactionCache.beginTransaction(transactionId, isolationLevel, expiryListener);
     }
 
     @Override
@@ -156,6 +159,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot commit, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
+            transactionCache.unregisterExpiryListener(transactionId, expiryListener);
             transactionCache.commitTransaction(transactionId, cacheKeyMap, cachePartitionMap);
         }
         transactionStatus = committed;
@@ -168,7 +172,7 @@ public class TransactionImpl implements Transaction {
                 throw new TransactionException("Cannot rollback, transaction status is " + transactionStatus);
             }
             notificationListener.transactionComplete(this);
-            //TODO implement blanket rollback
+            transactionCache.unregisterExpiryListener(transactionId, expiryListener);
             transactionCache.rollbackTransaction(transactionId, cacheKeyMap, cachePartitionMap);
         }
         transactionStatus = rolledback;
@@ -177,6 +181,17 @@ public class TransactionImpl implements Transaction {
     @Override
     public boolean isReadOnly() {
         return false;
+    }
+
+    @Override
+    public boolean isExpired() {
+        return expired;
+    }
+
+    @Override
+    public void setTransactionExpired() {
+        expired = true;
+        transactionCache.unregisterExpiryListener(transactionId, expiryListener);
     }
 
 }

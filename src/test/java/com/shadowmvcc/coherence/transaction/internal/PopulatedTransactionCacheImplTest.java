@@ -55,13 +55,14 @@ import com.tangosol.util.InvocableMap.EntryProcessor;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest {
+public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest implements TransactionExpiryMonitor {
 
     private CacheName testCacheName = new CacheName("testcache");
     private NamedCache testCache;
     private TransactionCache transactionCache;
     private static final TransactionId TX = new TransactionId(BASETIME, 0, 0);
     private static final String TESTVALUE = "a test value";
+    private TransactionExpiryListener expiryListener = new TransactionExpiryListener(this);
     
     /**
      * Set up the caches.
@@ -80,7 +81,7 @@ public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testKeyCommit() {
         
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
         
         Set<Object> txkeys = new HashSet<Object>();
         for (int i = 0; i < 10; i++) {
@@ -140,7 +141,7 @@ public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest {
     @Test
     public void testKeyRollback() {
         
-        transactionCache.beginTransaction(TX, readCommitted);
+        transactionCache.beginTransaction(TX, readCommitted, expiryListener);
         
         Set<Object> txkeys = new HashSet<Object>();
         for (int i = 0; i < 10; i++) {
@@ -171,6 +172,10 @@ public class PopulatedTransactionCacheImplTest extends AbstractLittlegridTest {
         NamedCache keyCache = CacheFactory.getCache(cacheName.getKeyCacheName());
         keyCache.invoke(key, ep);
         
+    }
+
+    @Override
+    public void setTransactionExpired() {
     }
 
 }

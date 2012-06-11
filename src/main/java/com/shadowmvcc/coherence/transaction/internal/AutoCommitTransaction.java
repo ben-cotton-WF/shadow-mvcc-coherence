@@ -107,4 +107,9 @@ public class AutoCommitTransaction implements Transaction {
         return false;
     }
 
+    @Override
+    public boolean isExpired() {
+        return false;
+    }
+
 }

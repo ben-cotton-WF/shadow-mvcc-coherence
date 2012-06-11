@@ -123,9 +123,31 @@ public class IntegrationTest extends AbstractLittlegridTest {
 
         Assert.assertEquals(1, vcache.size());
 
-        Thread.sleep(1500);
+        Thread.sleep(2500);
         
         Assert.assertEquals(0, vcache.size());
+
+    }
+    
+    /**
+     * Test that an update fails after the transaction times out.
+     * @throws InterruptedException if interrupted
+     */
+    @Test(expected = TransactionException.class)
+    public void testUpdateExpiredTransaction() throws InterruptedException {
+
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache = transactionManager.getCache(cachename.getLogicalName());
+        
+        cache.put(1, "version 1");
+        
+        NamedCache vcache = CacheFactory.getCache(cachename.getVersionCacheName());
+
+        Assert.assertEquals(1, vcache.size());
+
+        Thread.sleep(1500);
+        
+        cache.put(1, "version 1");
 
     }
     

@@ -96,4 +96,10 @@ public interface Transaction {
      */
     void rollback();
     
+    /**
+     * Has the transaction been open too long and been expired?
+     * @return true if the transaction has expired
+     */
+    boolean isExpired();
+    
 }

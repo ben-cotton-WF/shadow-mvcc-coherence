@@ -69,6 +69,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object get(final Object key) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         return mvccCache.get(context.getTransactionId(), context.getIsolationLevel(), key);
     }
 
@@ -109,6 +112,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public int size() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.size(context.getTransactionId(), context.getIsolationLevel());
         } catch (Throwable e) {
@@ -119,6 +125,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public boolean isEmpty() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.isEmpty(context.getTransactionId(), context.getIsolationLevel());
         } catch (Throwable e) {
@@ -130,6 +139,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public boolean containsKey(final Object key) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         return mvccCache.containsKey(context.getTransactionId(), context.getIsolationLevel(), key);
     }
 
@@ -137,6 +149,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public boolean containsValue(final Object value) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.containsValue(context.getTransactionId(), context.getIsolationLevel(), value);
         } catch (Throwable e) {
@@ -151,6 +166,9 @@ public class MVCCNamedCache implements NamedCache {
         if (context.isReadOnly()) {
             throw new TransactionException("read-only transaction");
         }
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.put(context.getTransactionId(), context.getIsolationLevel(),
                 context.isAutoCommit(), key, value);
@@ -163,6 +181,9 @@ public class MVCCNamedCache implements NamedCache {
         if (context.isReadOnly()) {
             throw new TransactionException("read-only transaction");
         }
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         context.addKeyAffected(mvccCache.getMVCCCacheName(), key);
         return mvccCache.remove(context.getTransactionId(), context.getIsolationLevel(), context.isAutoCommit(), key);
     }
@@ -173,6 +194,9 @@ public class MVCCNamedCache implements NamedCache {
         Transaction context = transactionManager.getTransaction();
         if (context.isReadOnly()) {
             throw new TransactionException("read-only transaction");
+        }
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
         }
         context.addKeySetAffected(mvccCache.getMVCCCacheName(), m.keySet());
         try {
@@ -188,6 +212,9 @@ public class MVCCNamedCache implements NamedCache {
         Transaction context = transactionManager.getTransaction();
         if (context.isReadOnly()) {
             throw new TransactionException("read-only transaction");
+        }
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
         }
         try {
             mvccCache.clear(context.getTransactionId(), context.isAutoCommit());
@@ -215,6 +242,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel());
         } catch (Throwable e) {
@@ -226,6 +256,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Collection values() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.values(context.getTransactionId(), context.getIsolationLevel());
         } catch (Throwable e) {
@@ -237,6 +270,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set entrySet() {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel());
         } catch (Throwable e) {
@@ -248,6 +284,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Map getAll(final Collection colKeys) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         return mvccCache.getAll(context.getTransactionId(), context.getIsolationLevel(), colKeys);
     }
 
@@ -277,6 +316,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set entrySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter);
         } catch (Throwable e) {
@@ -288,6 +330,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set entrySet(final Filter filter, final Comparator comparator) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         return mvccCache.entrySet(context.getTransactionId(), context.getIsolationLevel(), filter, comparator);
     }
 
@@ -295,6 +340,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Set keySet(final Filter filter) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.keySet(context.getTransactionId(), context.getIsolationLevel(), filter);
         } catch (Throwable e) {
@@ -311,6 +359,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object aggregate(final Collection collKeys, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), collKeys, agent);
         } catch (Throwable e) {
@@ -321,6 +372,9 @@ public class MVCCNamedCache implements NamedCache {
     @Override
     public Object aggregate(final Filter filter, final EntryAggregator agent) {
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         try {
             return mvccCache.aggregate(context.getTransactionId(), context.getIsolationLevel(), filter, agent);
         } catch (Throwable e) {
@@ -333,6 +387,9 @@ public class MVCCNamedCache implements NamedCache {
     public Object invoke(final Object key, final EntryProcessor agent) {
         
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         
         Collection<CacheName> potentiallyAffectedCaches = null;
         if (agent instanceof MultiCacheProcessor) {
@@ -359,6 +416,9 @@ public class MVCCNamedCache implements NamedCache {
     public Map invokeAll(final Collection collKeys, final EntryProcessor agent) {
         
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
         
         Collection<CacheName> potentiallyAffectedCaches = null;
         if (agent instanceof MultiCacheProcessor) {
@@ -397,7 +457,11 @@ public class MVCCNamedCache implements NamedCache {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public Map invokeAll(final Filter filter, final EntryProcessor agent) {
+
         Transaction context = transactionManager.getTransaction();
+        if (context.isExpired()) {
+            throw new TransactionException("Transaction " + context.getTransactionId() + " has expired");
+        }
 
         Collection<CacheName> potentiallyAffectedCaches = null;
         if (agent instanceof MultiCacheProcessor) {

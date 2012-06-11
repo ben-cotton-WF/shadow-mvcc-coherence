@@ -143,9 +143,12 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
 
     /**
      * Check all of the transactions in partitions of the transaction cache owned by this member.
-     * Any that have been open too long are set to rollback, these together with any that have been
-     * rolling back for too long have rollback completed, Transactions that have been in committing state
-     * to long have the transaction commits completed. All completed transactions are then deleted.
+     * Any that have been rolling back for too long have rollback completed, Transactions that have
+     * been in committing state too long have the transaction commits completed. All completed
+     * transactions are then deleted. Transactions that have been open too long are set to rollback,
+     * these should then be picked up on the next poll to have rollback completed. The intervening
+     * poll period allows any in-flight processing to be completed and client notified to prevent races
+     * conditions.
      */
     private void checkTransactions() {
 
@@ -162,8 +165,7 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
         Filter expiredOpenFilter = new AndFilter(OPENFILTER, openTimeout);
         Filter expiredOpenPartitionFilter = new PartitionedFilter(expiredOpenFilter, memberParts);
         
-        @SuppressWarnings("unchecked")
-        Set<TransactionId> expiredOpenTransactions = transactionCache.invokeAll(
+        transactionCache.invokeAll(
                 expiredOpenPartitionFilter, TransactionStateUpdater.ROLLBACK).keySet();
         
         Filter completeTimeout = new LessFilter(TIMEEXTRACTOR, now - transactionCompletionTimeoutMillis);
@@ -174,8 +176,6 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
         @SuppressWarnings("unchecked")
         Set<TransactionId> expiredRollBacks = transactionCache.keySet(rollbackPartionFilter);
         
-        expiredRollBacks.addAll(expiredOpenTransactions);
-
         Filter expiredCommitFilter = new AndFilter(COMMITFILTER, completeTimeout);
         Filter commitPartionFilter = new PartitionedFilter(expiredCommitFilter, memberParts);
         

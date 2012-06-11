@@ -108,4 +108,9 @@ public class ReadOnlyTransaction implements Transaction {
         return true;
     }
 
+    @Override
+    public boolean isExpired() {
+        return false;
+    }
+
 }

@@ -100,9 +100,10 @@ public class TransactionCacheImpl implements TransactionCache {
     
     @Override
     public void beginTransaction(final TransactionId transactionId,
-            final IsolationLevel isolationLevel) {
+            final IsolationLevel isolationLevel, final TransactionExpiryListener expiryListener) {
         
         NamedCache transactionCache = getCache(CACHENAME);
+        transactionCache.addMapListener(expiryListener, transactionId, false);
 
         long now = ClusterTimeProviderFactory.getInstance().getClusterTime();
         
@@ -213,6 +214,13 @@ public class TransactionCacheImpl implements TransactionCache {
             throw new TransactionException(t);
         }
         
+    }
+
+    @Override
+    public void unregisterExpiryListener(final TransactionId transactionId,
+            final TransactionExpiryListener expiryListener) {
+        NamedCache transactionCache = getCache(CACHENAME);
+        transactionCache.removeMapListener(expiryListener, transactionId);
     }
     
 }
