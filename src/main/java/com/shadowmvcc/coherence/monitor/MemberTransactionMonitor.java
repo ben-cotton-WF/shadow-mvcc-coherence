@@ -49,6 +49,8 @@ import com.tangosol.net.partition.PartitionSet;
 import com.tangosol.util.Disposable;
 import com.tangosol.util.Filter;
 import com.tangosol.util.InvocableMap.EntryProcessor;
+import com.tangosol.util.ServiceEvent;
+import com.tangosol.util.ServiceListener;
 import com.tangosol.util.extractor.PofExtractor;
 import com.tangosol.util.filter.AlwaysFilter;
 import com.tangosol.util.filter.AndFilter;
@@ -76,12 +78,13 @@ import com.tangosol.util.processor.ConditionalRemove;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class MemberTransactionMonitor implements Runnable, Disposable {
+public class MemberTransactionMonitor implements Runnable, ServiceListener, Disposable {
 
     private final long openTransactionTimeoutMillis;
     private final long transactionCompletionTimeoutMillis;
     private final long pollInterval;
     private final Semaphore shutdownFlag = new Semaphore(0);
+    private final Semaphore shutdownCompleteFlag = new Semaphore(0);
 
     private static final PofExtractor TIMEEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_REALTIME);
     private static final PofExtractor STATUSEXTRACTOR = new PofExtractor(null, TransactionCacheValue.POF_STATUS);
@@ -109,21 +112,41 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
             return;
         }
         
-        Cluster cluster = CacheFactory.getCluster();
-        cluster.registerResource("memberTransactionMonitor:" + cluster.getLocalMember().getId(), this);
+        registerListener();
         
         do {
             try {
                 if (shutdownFlag.tryAcquire(pollInterval, TimeUnit.MILLISECONDS)) {
+                    shutdownCompleteFlag.release();
                     return;
                 }
             } catch (InterruptedException e) {
             }
             
             //TODO consider error conditions - die, carry on regardless?
-            checkTransactions();
+            if (checkTransactions()) {
+                shutdownCompleteFlag.release();
+                return;
+            }
             
         } while (true);
+        
+    }
+    
+    /**
+     * Register to catch service stopping and dispose events so as to shut down gracefully
+     * before the member stops.
+     */
+    private void registerListener() {
+        
+        Cluster cluster = CacheFactory.getCluster();
+        cluster.registerResource("memberTransactionMonitor:" + cluster.getLocalMember().getId(), this);
+        
+        NamedCache transactionCache = CacheFactory.getCache(TransactionCache.CACHENAME);
+        
+        DistributedCacheService cacheService = (DistributedCacheService) transactionCache.getCacheService();
+        
+        cacheService.addServiceListener(this);
         
     }
     
@@ -148,60 +171,90 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
      * transactions are then deleted. Transactions that have been open too long are set to rollback,
      * these should then be picked up on the next poll to have rollback completed. The intervening
      * poll period allows any in-flight processing to be completed and client notified to prevent races
-     * conditions.
+     * conditions. Between potentially time-consuming operations check the shutdown flag
+     * @return true if a thread shutdown is required
      */
-    private void checkTransactions() {
+    private boolean checkTransactions() {
 
-        NamedCache transactionCache = CacheFactory.getCache(TransactionCache.CACHENAME);
-        
-        DistributedCacheService cacheService = (DistributedCacheService) transactionCache.getCacheService();
-        Member thisMember = CacheFactory.getCluster().getLocalMember();
-        
-        long now = System.currentTimeMillis();
+        try {
+            NamedCache transactionCache = CacheFactory.getCache(TransactionCache.CACHENAME);
 
-        // set expired open transactions to rollback status, remembering the transaction ids
-        PartitionSet memberParts = cacheService.getOwnedPartitions(thisMember);
-        Filter openTimeout = new LessFilter(TIMEEXTRACTOR, now - openTransactionTimeoutMillis);
-        Filter expiredOpenFilter = new AndFilter(OPENFILTER, openTimeout);
-        Filter expiredOpenPartitionFilter = new PartitionedFilter(expiredOpenFilter, memberParts);
-        
-        transactionCache.invokeAll(
-                expiredOpenPartitionFilter, TransactionStateUpdater.ROLLBACK).keySet();
-        
-        Filter completeTimeout = new LessFilter(TIMEEXTRACTOR, now - transactionCompletionTimeoutMillis);
+            DistributedCacheService cacheService = (DistributedCacheService) transactionCache.getCacheService();
+            Member thisMember = CacheFactory.getCluster().getLocalMember();
 
-        Filter expiredRollbackFilter = new AndFilter(ROLLBACKFILTER, completeTimeout);
-        Filter rollbackPartionFilter = new PartitionedFilter(expiredRollbackFilter, memberParts);
-        
-        @SuppressWarnings("unchecked")
-        Set<TransactionId> expiredRollBacks = transactionCache.keySet(rollbackPartionFilter);
-        
-        Filter expiredCommitFilter = new AndFilter(COMMITFILTER, completeTimeout);
-        Filter commitPartionFilter = new PartitionedFilter(expiredCommitFilter, memberParts);
-        
-        @SuppressWarnings("unchecked")
-        Set<TransactionId> expiredCommits = transactionCache.keySet(commitPartionFilter);
+            long now = System.currentTimeMillis();
 
-        if (!expiredCommits.isEmpty()) {
-            for (String cacheName : getCachesForTransactions(expiredCommits)) {
-                NamedCache cache = CacheFactory.getCache(cacheName);
-                Filter inTransactionsFilter = new InFilter(Constants.TRANSACTIONIDEXTRACTOR, expiredCommits);
-                cache.invokeAll(inTransactionsFilter, EntryCommitProcessor.INSTANCE);
+            // set expired open transactions to rollback status, remembering the transaction ids
+            PartitionSet memberParts = cacheService.getOwnedPartitions(thisMember);
+            Filter openTimeout = new LessFilter(TIMEEXTRACTOR, now - openTransactionTimeoutMillis);
+            Filter expiredOpenFilter = new AndFilter(OPENFILTER, openTimeout);
+            Filter expiredOpenPartitionFilter = new PartitionedFilter(expiredOpenFilter, memberParts);
+
+            transactionCache.invokeAll(
+                    expiredOpenPartitionFilter, TransactionStateUpdater.ROLLBACK).keySet();
+
+            if (shutdownFlag.tryAcquire()) {
+                return true;
             }
 
-            //TODO consider any failure conditions that we should deal with before doing this?
-            transactionCache.invokeAll(expiredCommits, REMOVEPROCESSOR);
-        }
-        
-        if (!expiredRollBacks.isEmpty()) {
-            for (String cacheName : getCachesForTransactions(expiredRollBacks)) {
-                NamedCache cache = CacheFactory.getCache(new CacheName(cacheName).getVersionCacheName());
-                Filter inTransactionsFilter = new InFilter(Constants.TRANSACTIONIDEXTRACTOR, expiredRollBacks);
-                cache.invokeAll(inTransactionsFilter, EntryRollbackProcessor.INSTANCE);
+            Filter completeTimeout = new LessFilter(TIMEEXTRACTOR, now - transactionCompletionTimeoutMillis);
+
+            Filter expiredRollbackFilter = new AndFilter(ROLLBACKFILTER, completeTimeout);
+            Filter rollbackPartionFilter = new PartitionedFilter(expiredRollbackFilter, memberParts);
+
+            @SuppressWarnings("unchecked")
+            Set<TransactionId> expiredRollBacks = transactionCache.keySet(rollbackPartionFilter);
+
+            if (shutdownFlag.tryAcquire()) {
+                return true;
             }
 
-            transactionCache.invokeAll(expiredRollBacks, REMOVEPROCESSOR);
+            Filter expiredCommitFilter = new AndFilter(COMMITFILTER, completeTimeout);
+            Filter commitPartionFilter = new PartitionedFilter(expiredCommitFilter, memberParts);
+
+            @SuppressWarnings("unchecked")
+            Set<TransactionId> expiredCommits = transactionCache.keySet(commitPartionFilter);
+
+            if (shutdownFlag.tryAcquire()) {
+                return true;
+            }
+
+            if (!expiredCommits.isEmpty()) {
+                for (String cacheName : getCachesForTransactions(expiredCommits)) {
+                    NamedCache cache = CacheFactory.getCache(cacheName);
+                    Filter inTransactionsFilter = new InFilter(Constants.TRANSACTIONIDEXTRACTOR, expiredCommits);
+                    cache.invokeAll(inTransactionsFilter, EntryCommitProcessor.INSTANCE);
+
+                    if (shutdownFlag.tryAcquire()) {
+                        return true;
+                    }
+                }
+
+                //TODO consider any failure conditions that we should deal with before doing this?
+                transactionCache.invokeAll(expiredCommits, REMOVEPROCESSOR);
+            }
+
+            if (!expiredRollBacks.isEmpty()) {
+                for (String cacheName : getCachesForTransactions(expiredRollBacks)) {
+                    NamedCache cache = CacheFactory.getCache(new CacheName(cacheName).getVersionCacheName());
+                    Filter inTransactionsFilter = new InFilter(Constants.TRANSACTIONIDEXTRACTOR, expiredRollBacks);
+                    cache.invokeAll(inTransactionsFilter, EntryRollbackProcessor.INSTANCE);
+
+                    if (shutdownFlag.tryAcquire()) {
+                        return true;
+                    }
+
+                }
+
+                transactionCache.invokeAll(expiredRollBacks, REMOVEPROCESSOR);
+            }
+        } catch (Throwable t) {
+            if (shutdownFlag.tryAcquire()) {
+                return true;
+            }
         }
+        
+        return false;
     }
     
     /**
@@ -232,6 +285,27 @@ public class MemberTransactionMonitor implements Runnable, Disposable {
         
     }
     
+    @Override
+    public void serviceStarting(final ServiceEvent serviceevent) {
+    }
+
+    @Override
+    public void serviceStarted(final ServiceEvent serviceevent) {
+    }
+
+    @Override
+    public void serviceStopping(final ServiceEvent serviceevent) {
+        shutdownFlag.release();
+        try {
+            shutdownCompleteFlag.acquire();
+        } catch (InterruptedException e) {
+        }
+    }
+
+    @Override
+    public void serviceStopped(final ServiceEvent serviceevent) {
+    }
+
     @Override
     public void dispose() {
         shutdownFlag.release();
