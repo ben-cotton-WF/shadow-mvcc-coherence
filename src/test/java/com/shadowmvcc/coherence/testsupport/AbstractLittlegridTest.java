@@ -79,7 +79,7 @@ public class AbstractLittlegridTest {
     @After
     public void tearDown() {
         System.out.println("******tearDown");
-        CacheFactory.shutdown();
+        CacheFactory.getCluster().stop();
         cmg.stopAll();
     }
 

@@ -222,5 +222,12 @@ public class TransactionCacheImpl implements TransactionCache {
         NamedCache transactionCache = getCache(CACHENAME);
         transactionCache.removeMapListener(expiryListener, transactionId);
     }
+
+    @Override
+    public void registerExpiryListener(final TransactionId transactionId,
+            final TransactionExpiryListener expiryListener) {
+        NamedCache transactionCache = getCache(CACHENAME);
+        transactionCache.addMapListener(expiryListener, transactionId, false);
+    }
     
 }

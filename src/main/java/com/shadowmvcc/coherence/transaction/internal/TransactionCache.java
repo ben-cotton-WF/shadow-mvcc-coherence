@@ -68,9 +68,16 @@ public interface TransactionCache {
             Map<CacheName, Set<Object>> cacheKeyMap, Map<CacheName, PartitionSet> cachePartitionMap);
 
     /**
-     * Unregister a listener on expired transaction.
+     * Unregister a listener for expired transaction.
      * @param transactionId the transaction id
      * @param expiryListener the listener
      */
     void unregisterExpiryListener(TransactionId transactionId, TransactionExpiryListener expiryListener);
+    
+    /**
+     * Register a listener for expired transaction.
+     * @param transactionId the transaction id
+     * @param expiryListener the listener
+     */
+    void registerExpiryListener(TransactionId transactionId, TransactionExpiryListener expiryListener);
 }

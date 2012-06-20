@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import com.shadowmvcc.coherence.cache.CacheName;
 import com.shadowmvcc.coherence.testsupport.AbstractLittlegridTest;
+import com.shadowmvcc.coherence.testsupport.OffsetableTimestampSource;
 import com.shadowmvcc.coherence.transaction.SystemTimestampSource;
 import com.shadowmvcc.coherence.transaction.ThreadTransactionManager;
 import com.shadowmvcc.coherence.transaction.TimestampSource;
@@ -149,6 +150,39 @@ public class IntegrationTest extends AbstractLittlegridTest {
         
         cache.put(1, "version 1");
 
+    }
+    
+    /**
+     * Test that an update fails after the transaction times out.
+     * @throws InterruptedException if interrupted
+     */
+    @Test(expected = TransactionException.class)
+    public void testExpireWhileWaitForUncommitted() throws InterruptedException {
+        
+        CacheName cachename = new CacheName("test-cache1");
+        NamedCache cache1 = transactionManager.getCache(cachename.getLogicalName());
+
+        try {
+            OffsetableTimestampSource ts2 = new OffsetableTimestampSource(new SystemTimestampSource());
+            ts2.setOffset(-1000L);
+
+            TransactionManager tm2 = new ThreadTransactionManager(
+                    ts2, false, false, readCommitted);
+
+
+            NamedCache cache2 = tm2.getCache(cachename.getLogicalName());
+
+            cache1.put(1, "version 1");
+
+            Thread.sleep(800);
+
+            cache2.put(2, "backdated transaction");
+        } catch (TransactionException ex) {
+            Assert.fail("unexpected transaction exception");
+        }
+        
+        cache1.get(2);
+        
     }
     
     /**

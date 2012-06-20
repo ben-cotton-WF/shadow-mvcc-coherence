@@ -24,6 +24,8 @@ package com.shadowmvcc.coherence.cache.internal;
 
 import java.util.concurrent.Semaphore;
 
+import com.shadowmvcc.coherence.transaction.TransactionException;
+import com.shadowmvcc.coherence.transaction.internal.TransactionExpiryMonitor;
 import com.tangosol.util.AbstractMapListener;
 import com.tangosol.util.MapEvent;
 
@@ -33,9 +35,10 @@ import com.tangosol.util.MapEvent;
  * @author David Whitmarsh <david.whitmarsh@sixwhits.com>
  *
  */
-public class VersionCommitListener extends AbstractMapListener {
+public class VersionCommitListener extends AbstractMapListener implements TransactionExpiryMonitor {
 
     private final Semaphore completeFlag;
+    private volatile boolean expired = false;
 
     /**
      * Constructor.
@@ -65,5 +68,15 @@ public class VersionCommitListener extends AbstractMapListener {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        
+        if (expired) {
+            throw new TransactionException("Transaction expired while waiting for uncommitted entry");
+        }
+    }
+
+    @Override
+    public void setTransactionExpired() {
+        expired = true;
+        completeFlag.release();
     }
 }

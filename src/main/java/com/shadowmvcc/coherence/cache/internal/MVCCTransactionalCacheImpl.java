@@ -65,6 +65,9 @@ import com.shadowmvcc.coherence.invocable.ParallelAwareAggregatorWrapper;
 import com.shadowmvcc.coherence.invocable.ParallelKeyAggregationInvoker;
 import com.shadowmvcc.coherence.transaction.internal.ExistenceCheckProcessor;
 import com.shadowmvcc.coherence.transaction.internal.ReadMarkingProcessor;
+import com.shadowmvcc.coherence.transaction.internal.TransactionCache;
+import com.shadowmvcc.coherence.transaction.internal.TransactionCacheImpl;
+import com.shadowmvcc.coherence.transaction.internal.TransactionExpiryListener;
 import com.shadowmvcc.coherence.utils.MapUtils;
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.CacheService;
@@ -102,6 +105,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
     private final NamedCache versionCache;
     private final CacheName cacheName;
     private final String invocationServiceName;
+    private final TransactionCache transactionCache;
 
     /**
      * Key class for the local map of MapListeners. Containing the supplied
@@ -175,6 +179,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         this.versionCache = CacheFactory.getCache(this.cacheName.getVersionCacheName());
         versionCache.addIndex(MVCCExtractor.INSTANCE, false, null);
         this.invocationServiceName = invocationServiceName;
+        this.transactionCache = new TransactionCacheImpl(invocationServiceName);
     }
 
     @Override
@@ -236,7 +241,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                 return null;
             }
             if (epr.isUncommitted()) {
-                waitForCommit(epr.getWaitKey());
+                waitForCommit(epr.getWaitKey(), tid);
             } else {
                 Map<K, R> resultMap = new HashMap<K, R>();
                 resultMap.put(key, epr.getResult());
@@ -264,7 +269,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                 return null;
             }
             if (epr.isUncommitted()) {
-                waitForCommit(epr.getWaitKey());
+                waitForCommit(epr.getWaitKey(), tid);
             } else {
                 return epr.getResult();
             }
@@ -273,13 +278,17 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
     /**
      * Wait for the specified uncommitted version cache entry to be committed or rolled back.
+     * Throws TransactionException if the current transaction expires while waiting
      * @param awaitedKey the key to wait for
+     * @param transactionId id of current transaction
      */
-    private void waitForCommit(final VersionCacheKey<K> awaitedKey) {
+    private void waitForCommit(final VersionCacheKey<K> awaitedKey, final TransactionId transactionId) {
         NamedCache waitCache = CacheFactory.getCache(awaitedKey.getCacheName().getVersionCacheName());
         VersionCommitListener vcl = new VersionCommitListener();
+        TransactionExpiryListener txl = new TransactionExpiryListener(vcl);
         try {
             waitCache.addMapListener(vcl, awaitedKey.getKey(), false);
+            transactionCache.registerExpiryListener(transactionId, txl);
             Boolean committed = (Boolean) versionCache.invoke(
                     awaitedKey.getKey(), DecorationExtractorProcessor.COMMITTED_INSTANCE);
             if (committed != null && !committed) {
@@ -288,6 +297,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
             return;
         } finally {
             waitCache.removeMapListener(vcl, awaitedKey.getKey());
+            transactionCache.unregisterExpiryListener(transactionId, txl);
         }
     }
 
@@ -556,7 +566,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         for (Map.Entry<K, ProcessorResult<K, VersionedKey<K>>> entry : markMap.entrySet()) {
             ProcessorResult<K, VersionedKey<K>> pr = entry.getValue();
             while (isolationLevel != readUncommitted && pr != null && pr.isUncommitted()) {
-                waitForCommit(pr.getWaitKey());
+                waitForCommit(pr.getWaitKey(), tid);
                 pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
             }
             if (pr != null) {
@@ -614,7 +624,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
 
             while (retryMap.size() > 0) {
                 for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
-                    waitForCommit(entry.getValue());
+                    waitForCommit(entry.getValue(), tid);
                 }
                 Set<K> retryKeys = new HashSet<K>(retryMap.keySet());
                 retryMap.clear();
@@ -697,7 +707,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                         new ReadMarkingProcessor<K>(tid, isolationLevel, cacheName, true);
                 VersionCacheKey<K> waitKey = entry.getValue();
                 do {
-                    waitForCommit(waitKey);
+                    waitForCommit(waitKey, tid);
                     pr = (ProcessorResult<K, VersionedKey<K>>) keyCache.invoke(entry.getKey(), readMarker);
                     if (pr != null) {
                         waitKey = pr.getWaitKey();
@@ -770,7 +780,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         }
 
         for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
-            waitForCommit(entry.getValue());
+            waitForCommit(entry.getValue(), tid);
             while (true) {
                 ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);
                 if (epr == null) {
@@ -780,7 +790,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                     resultMap.put(entry.getKey(), epr.getResult());
                     break;
                 }
-                waitForCommit(epr.getWaitKey());
+                waitForCommit(epr.getWaitKey(), tid);
             }
         }
 
@@ -815,7 +825,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         }
 
         for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
-            waitForCommit(entry.getValue());
+            waitForCommit(entry.getValue(), tid);
             while (true) {
                 ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);
                 if (epr == null) {
@@ -825,7 +835,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                     resultMap.put(entry.getKey(), epr.getResult());
                     break;
                 }
-                waitForCommit(epr.getWaitKey());
+                waitForCommit(epr.getWaitKey(), tid);
             }
         }
 
@@ -863,7 +873,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
         }
 
         for (Map.Entry<K, VersionCacheKey<K>> entry : retryMap.entrySet()) {
-            waitForCommit(entry.getValue());
+            waitForCommit(entry.getValue(), tid);
             while (true) {
                 ProcessorResult<K, R> epr = (ProcessorResult<K, R>) keyCache.invoke(entry.getKey(), entryProcessor);
                 if (epr == null) {
@@ -874,7 +884,7 @@ public class MVCCTransactionalCacheImpl<K, V> implements MVCCTransactionalCache<
                     MapUtils.mergeSets(changedKeys, epr.getChangedCacheKeys());
                     break;
                 }
-                waitForCommit(epr.getWaitKey());
+                waitForCommit(epr.getWaitKey(), tid);
             }
         }
 
