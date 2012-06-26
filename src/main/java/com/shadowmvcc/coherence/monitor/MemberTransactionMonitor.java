@@ -301,6 +301,13 @@ public class MemberTransactionMonitor implements Runnable, ServiceListener, Disp
         } catch (InterruptedException e) {
         }
     }
+    
+    /**
+     * explicitly stop the monitor.
+     */
+    public void stop() {
+        shutdownFlag.release();
+    }
 
     @Override
     public void serviceStopped(final ServiceEvent serviceevent) {

@@ -34,6 +34,7 @@ import com.tangosol.net.DefaultCacheFactoryBuilder;
 public class CacheFactoryBuilder extends DefaultCacheFactoryBuilder {
     
     private final MemberTransactionMonitor monitor;
+    private final Thread monitorThread;
     
     /**
      * Constructor. Starts the monitor thread.
@@ -42,15 +43,16 @@ public class CacheFactoryBuilder extends DefaultCacheFactoryBuilder {
         super();
         
         monitor = new MemberTransactionMonitor();
-        startMonitorThread(monitor);
+        monitorThread = startMonitorThread(monitor);
         
     }
     
     /**
      * Start the monitor thread.
      * @param monitor the monitor object
+     * @return teh monitor thread
      */
-    protected void startMonitorThread(final Runnable monitor) {
+    protected Thread startMonitorThread(final Runnable monitor) {
         
         Thread memberTransactionMonitorThread = new Thread(
                 monitor, "MemberTransactionMonitor");
@@ -59,6 +61,19 @@ public class CacheFactoryBuilder extends DefaultCacheFactoryBuilder {
         
         memberTransactionMonitorThread.start();
         
+        return memberTransactionMonitorThread;
+        
+    }
+    
+    /**
+     * Stop the monitor thread.
+     */
+    public void stopMonitorThread() {
+        monitor.stop();
+        try {
+            monitorThread.join();
+        } catch (InterruptedException e) {
+        }
     }
 
 }
