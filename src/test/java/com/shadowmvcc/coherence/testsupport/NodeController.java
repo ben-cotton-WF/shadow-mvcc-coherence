@@ -2,7 +2,6 @@ package com.shadowmvcc.coherence.testsupport;
 
 import com.shadowmvcc.coherence.monitor.CacheFactoryBuilder;
 import com.tangosol.net.CacheFactory;
-import com.tangosol.net.DefaultCacheServer;
 
 /**
  * Utility class to stop a node's monitor thread gracefully under littlegrid.
