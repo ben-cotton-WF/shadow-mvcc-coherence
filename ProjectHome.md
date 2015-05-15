@@ -1,0 +1,1 @@
+An implementation of MVCC for Oracle Coherence providing transactions, bi-temporal access, and consistent data snapshots. Most Oracle Coherence APIs are usable transparently.
